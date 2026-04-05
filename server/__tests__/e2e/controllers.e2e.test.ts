@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 describe('Controllers E2E', () => {
   let strapi: any;
@@ -14,6 +14,12 @@ describe('Controllers E2E', () => {
   });
 
   describe('Whitelist Controller', () => {
+    afterAll(async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
+        where: { email: { $in: ['sync1@test.com', 'sync2@test.com', 'sync3@test.com'] } }
+      });
+    });
+
     it('should get and update settings via controller', async () => {
       const ctxUpdate = {
         request: {
@@ -104,7 +110,7 @@ describe('Controllers E2E', () => {
 
   describe('Role Controller', () => {
     it('should find roles', async () => {
-      const ctxFind = { body: null, send: function(data: any) { this.body = data; } };
+      const ctxFind = { body: null as any, send: function(data: any) { this.body = data; } };
       await roleController.find(ctxFind);
       
       expect(Array.isArray(ctxFind.body)).toBe(true);
@@ -125,7 +131,7 @@ describe('Controllers E2E', () => {
       await roleController.update(ctxUpdate);
       expect(ctxUpdate.body).toMatchObject({ data: {}, status: 204 });
 
-      const ctxFind = { body: null, send: function(data: any) { this.body = data; } };
+      const ctxFind = { body: null as any, send: function(data: any) { this.body = data; } };
       await roleController.find(ctxFind);
       
       const updatedRole = ctxFind.body.find((r: any) => r.oauth_type === '4');

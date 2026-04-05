@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 describe('OIDC Services E2E', () => {
   let strapi: any;
@@ -14,6 +14,12 @@ describe('OIDC Services E2E', () => {
   });
 
   describe('Whitelist Service', () => {
+    afterAll(async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
+        where: { email: { $in: ['e2e-test@whitelist.com', 'unknown@whitelist.com'] } }
+      });
+    });
+
     it('should set and get settings from store', async () => {
       await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: true });
       const settings = await whitelistService.getSettings();
