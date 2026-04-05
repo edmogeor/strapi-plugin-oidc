@@ -7,15 +7,6 @@ A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality
 
 This plugin allows your administrators to log in to the Strapi administration interface using external OIDC identity providers such as Zitadel, Keycloak, Auth0, AWS Cognito, and others.
 
-## Compatibility
-
-| NodeJS | Strapi Version | strapi-plugin-oidc Version |
-| --- | --- | --- |
-| 16.0.0 - 21.0.0 | v4 | 0.x.x |
-| 20.0.0 - 24.x.x | v5 | 1.x.x |
-
-*(Note: Please use version 1.0.7 or later when working with Strapi 5.24.1 or above.)*
-
 ## Installation
 
 You can install the plugin via `npm` or `yarn`:
