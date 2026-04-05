@@ -60,11 +60,13 @@ module.exports = ({ env }) => ({
 
 Make sure to replace the placeholder values (e.g., `[Client ID from OpenID Provider]`) with the actual connection details from your chosen OIDC identity provider.
 
-## Features
+## Admin Settings
 
-- **Admin Login Integration:** Seamlessly log in to the Strapi admin dashboard via an external OIDC provider.
-- **Whitelist Management:** Limit access by maintaining a whitelist of allowed users directly from the Strapi admin interface. Only approved users or email domains will be able to log in.
-- **Customizable Attributes:** Easily map provider attributes (like given name and family name) to Strapi admin user profiles.
+Once the plugin is installed and configured, you can manage the OIDC settings from the Strapi Admin Panel under **Settings** > **OIDC Plugin**.
+
+- **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. You can also whitelist entire email domains (e.g., `*@company.com`). If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
+- **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
+- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled, forcing all administrators to log in using your OIDC provider. *(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel).*
 
 ## Credits & Changes
 
