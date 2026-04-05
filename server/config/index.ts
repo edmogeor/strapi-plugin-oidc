@@ -1,7 +1,7 @@
 export default {
   default: {
     REMEMBER_ME: false,
-    REMEMBER_ME_DURATION: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
+    REMEMBER_ME_DAYS: 30, // 30 days
 
     OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
     OIDC_CLIENT_ID: '',

@@ -167,9 +167,10 @@ export default function oauthService({ strapi }) {
       };
 
       if (rememberMe) {
-        const REMEMBER_ME_DURATION = config['REMEMBER_ME_DURATION'] || 30 * 24 * 60 * 60 * 1000;
-        cookieOptions.maxAge = REMEMBER_ME_DURATION;
-        cookieOptions.expires = new Date(Date.now() + REMEMBER_ME_DURATION);
+        const REMEMBER_ME_DAYS = config['REMEMBER_ME_DAYS'] || 30;
+        const durationInMs = REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000;
+        cookieOptions.maxAge = durationInMs;
+        cookieOptions.expires = new Date(Date.now() + durationInMs);
       }
 
       ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);

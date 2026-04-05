@@ -36,6 +36,8 @@ module.exports = ({ env }) => ({
     config: {
       // Set to true to store the token in local storage, false for session storage
       REMEMBER_ME: false,
+      // How long the remember me session should last in days (defaults to 30 days)
+      REMEMBER_ME_DAYS: 30,
 
       // OpenID Connect Settings
       OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback', // Callback URI after successful login
