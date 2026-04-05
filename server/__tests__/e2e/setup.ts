@@ -35,9 +35,6 @@ export async function setupStrapi() {
       appDir: appDir,
       distDir: path.join(appDir, 'dist'),
     });
-    
-    // Set cwd to test-app so Strapi finds its package.json properly
-    process.chdir(appDir);
 
     await instance.load();
     await instance.server.mount();
@@ -58,7 +55,10 @@ afterAll(async () => {
   oidcServer.close();
   const instance = (global as any).strapiInstance;
   if (instance) {
-    await instance.server.httpServer.close();
-    await instance.destroy();
+    if (instance.server && instance.server.httpServer) {
+      instance.server.httpServer.close();
+    }
+    // Let the process exit naturally instead of explicitly destroying the database connection
+    // as it was causing better-sqlite3 EPIPE / segfaults during worker teardown
   }
 });
