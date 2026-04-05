@@ -88,6 +88,7 @@ This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.
 - Redesigned the Whitelist and Role management UI (switched to native Strapi cards, added pagination, etc.).
 - Added an OIDC logout redirect URL.
 - Added an option to "Enforce OIDC login" with an admin toggle (automatically disabled if the whitelist is empty).
+- Added configurable "Remember Me" duration for sessions (`REMEMBER_ME_DAYS`).
 - Migrated the testing framework to Vitest and added comprehensive test coverage for controllers and services.
 - Cleaned up dead code and unused dependencies to improve maintainability.
 - Upgraded to use newer versions of Node.js.
