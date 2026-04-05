@@ -6,7 +6,7 @@
       <img src="https://img.shields.io/npm/v/strapi-plugin-oidc.svg" alt="npm version">
     </a>
     <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml">
-      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg" alt="Tests">
+      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg?branch=main" alt="Tests">
     </a>
   </p>
 </div>
