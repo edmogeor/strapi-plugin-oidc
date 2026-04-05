@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 describe('OIDC E2E Tests', () => {
   let strapi: any;
@@ -28,6 +28,13 @@ describe('OIDC E2E Tests', () => {
 
     // Disable whitelist for tests
     await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: false, enforceOIDC: false } });
+  });
+
+  afterAll(async () => {
+    // Clean up the created mock user from the database
+    await strapi.db.query('admin::user').deleteMany({
+      where: { email: 'test@company.com' }
+    });
   });
 
   it('should have initialized the plugin', () => {
