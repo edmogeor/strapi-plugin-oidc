@@ -15,8 +15,8 @@ export default function oauthService({ strapi }) {
       }
 
       const createdUser = await userService.create({
-        firstname: firstname ? firstname : 'unset',
-        lastname: lastname ? lastname : '',
+        firstname: firstname || 'unset',
+        lastname: lastname || '',
         email: email.toLocaleLowerCase(),
         roles,
         preferedLanguage: locale,
@@ -25,8 +25,8 @@ export default function oauthService({ strapi }) {
       return await userService.register({
         registrationToken: createdUser.registrationToken,
         userInfo: {
-          firstname: firstname ? firstname : 'unset',
-          lastname: lastname ? lastname : 'user',
+          firstname: firstname || 'unset',
+          lastname: lastname || 'user',
           password: generator.generate({
             length: 43, // 256 bits (https://en.wikipedia.org/wiki/Password_strength#Random_passwords)
             numbers: true,
@@ -49,11 +49,7 @@ export default function oauthService({ strapi }) {
       return `${origin}+${alias}${domain}`;
     },
     localeFindByHeader(headers) {
-      if (headers['accept-language'] && headers['accept-language'].includes('ja')) {
-        return 'ja';
-      } else {
-        return 'en';
-      }
+      return headers['accept-language']?.includes('ja') ? 'ja' : 'en';
     },
     async triggerWebHook(user) {
       let ENTRY_CREATE;
@@ -77,7 +73,7 @@ export default function oauthService({ strapi }) {
       });
     },
     triggerSignInSuccess(user) {
-      delete user['password'];
+      delete user.password;
       const eventHub = strapi.serviceMap.get('eventHub');
       eventHub.emit('admin.auth.success', {
         user,

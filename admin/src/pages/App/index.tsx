@@ -13,11 +13,12 @@ function App() {
   return (
     <div>
       <Routes>
-          <Route index element={<HomePage />} />
-          <Route path="*" element={<Page.Error />} />
+        <Route index element={<HomePage />} />
+        <Route path="*" element={<Page.Error />} />
       </Routes>
     </div>
   );
 }
 
+// fallow-ignore-next-line unused-export
 export default App;

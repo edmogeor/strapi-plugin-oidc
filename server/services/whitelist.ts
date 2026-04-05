@@ -14,42 +14,44 @@ export default function whitelistService({ strapi }) {
       await pluginStore.set({ key: 'settings', value: settings });
     },
     async getUsers() {
-      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists')
-      return await query.findMany()
+      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists');
+      return query.findMany();
     },
     async registerUser(email, roles) {
-      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists')
+      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists');
       await query.create({
         data: {
           email,
-          roles
-        }
-      })
+          roles,
+        },
+      });
     },
     async removeUser(id) {
-      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists')
+      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists');
       await query.delete({
         where: {
-          id
-        }
-      })
+          id,
+        },
+      });
     },
     async checkWhitelistForEmail(email) {
       const settings = await this.getSettings();
+      console.log('checkWhitelistForEmail settings:', settings);
       if (!settings.useWhitelist) {
         // If whitelist is disabled, set to true and skip
         return null;
       }
-      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists')
+      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists');
       const result = await query.findOne({
         where: {
-          email
-        }
-      })
-      if (result === null) {
-        throw new Error('Not present in whitelist')
+          email,
+        },
+      });
+      console.log('checkWhitelistForEmail result:', result);
+      if (!result) {
+        throw new Error('Not present in whitelist');
       }
       return result;
-    }
+    },
   };
 }

@@ -26,7 +26,7 @@ export default {
           return await import('./pages/App');
         },
         permissions: [{ action: 'plugin::strapi-plugin-oidc.read', subject: null }],
-      }
+      },
     );
     app.registerPlugin({
       id: pluginId,
@@ -46,27 +46,22 @@ export default {
             if (currentPath.endsWith('/auth/login')) {
               window.location.href = '/strapi-plugin-oidc/oidc';
             }
-            
-            // Intercept React Router navigation
-            const originalPushState = window.history.pushState;
-            window.history.pushState = function(...args: [data: unknown, unused: string, url?: string | URL | null | undefined]) {
-              const url = args[2];
-              if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
-                window.location.href = '/strapi-plugin-oidc/oidc';
-                return;
-              }
-              return originalPushState.apply(window.history, args);
+
+            const interceptHistory = (originalMethod: any) => {
+              return function (
+                ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
+              ) {
+                const url = args[2];
+                if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
+                  window.location.href = '/strapi-plugin-oidc/oidc';
+                  return;
+                }
+                return originalMethod.apply(window.history, args);
+              };
             };
 
-            const originalReplaceState = window.history.replaceState;
-            window.history.replaceState = function(...args: [data: unknown, unused: string, url?: string | URL | null | undefined]) {
-              const url = args[2];
-              if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
-                window.location.href = '/strapi-plugin-oidc/oidc';
-                return;
-              }
-              return originalReplaceState.apply(window.history, args);
-            };
+            window.history.pushState = interceptHistory(window.history.pushState);
+            window.history.replaceState = interceptHistory(window.history.replaceState);
           }
         }
       } catch (error) {
@@ -78,14 +73,15 @@ export default {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
-      const isLogout = url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
-      
+      const isLogout =
+        url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
+
       const response = await originalFetch(...args);
-      
+
       if (isLogout && response.ok) {
         window.location.href = '/strapi-plugin-oidc/logout';
       }
-      
+
       return response;
     };
   },
@@ -93,12 +89,12 @@ export default {
     const importedTrads = await Promise.all(
       locales.map((locale: string) => {
         return import(`./translations/${locale}.json`)
-          .then(({default: data}) => {
+          .then(({ default: data }) => {
             const newData = Object.fromEntries(
               Object.entries(data).map(([key, value]) => [
-                key.startsWith('global.') ? key : getTranslation(key), 
-                value
-              ])
+                key.startsWith('global.') ? key : getTranslation(key),
+                value,
+              ]),
             );
             return {
               data: newData,
@@ -111,7 +107,7 @@ export default {
               locale,
             };
           });
-      })
+      }),
     );
     return Promise.resolve(importedTrads);
   },
