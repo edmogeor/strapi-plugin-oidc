@@ -64,7 +64,7 @@ jobs:
       - name: Update package.json version and commit
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --allow-same-version --no-git-tag-version
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git commit -am "chore(release): bump version to ${VERSION} [skip ci]" || echo "No changes to commit"
