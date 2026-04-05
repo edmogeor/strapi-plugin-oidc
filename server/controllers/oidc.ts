@@ -2,8 +2,8 @@ import axios from 'axios';
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from "pkce-challenge";
 
-function configValidation() {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc')
+function configValidation(): Record<string, string> {
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
   if (config['OIDC_CLIENT_ID'] && config['OIDC_CLIENT_SECRET']
       && config['OIDC_REDIRECT_URI'] && config['OIDC_SCOPES']
       && config['OIDC_TOKEN_ENDPOINT'] && config['OIDC_USER_INFO_ENDPOINT']
@@ -15,13 +15,13 @@ function configValidation() {
   throw new Error('OIDC_AUTHORIZATION_ENDPOINT,OIDC_TOKEN_ENDPOINT, OIDC_USER_INFO_ENDPOINT,OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI, and OIDC_SCOPES are required')
 }
 
-async function oidcSignIn(ctx) {
-  let { state } = ctx.query;
+async function oidcSignIn(ctx: any) {
+  let { state } = ctx.query as { state?: string };
   const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPES, OIDC_AUTHORIZATION_ENDPOINT } = configValidation();
 
   // Generate code verifier and code challenge
   const { code_verifier: codeVerifier, code_challenge: codeChallenge } =
-    pkceChallenge();
+    await pkceChallenge();
 
   // Store the code verifier in the session
   ctx.session.codeVerifier = codeVerifier;
@@ -44,7 +44,7 @@ async function oidcSignIn(ctx) {
   return ctx.send({}, 302);
 }
 
-async function oidcSignInCallback(ctx) {
+async function oidcSignInCallback(ctx: any) {
   const config = configValidation()
   const httpClient = axios.create()
   const userService = strapi.service('admin::user')
@@ -143,7 +143,7 @@ async function oidcSignInCallback(ctx) {
   }
 }
 
-async function logout(ctx) {
+async function logout(ctx: any) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc');
   const logoutUrl = config['OIDC_LOGOUT_URL'];
 

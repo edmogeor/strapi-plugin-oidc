@@ -50,7 +50,7 @@ const SwitchSlider = styled.span`
   }
 `;
 
-export default function CustomSwitch({ checked, onChange, label }) {
+export default function CustomSwitch({ checked, onChange, label }: { checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, label?: string }) {
   return (
     <Flex gap={3}>
       <SwitchContainer>

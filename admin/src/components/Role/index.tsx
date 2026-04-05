@@ -9,7 +9,23 @@ import {
 import getTrad from "../../utils/getTrad";
 import {useIntl} from "react-intl";
 
-export default function Role({ssoRoles, roles, onChangeRole}) {
+export interface SSORole {
+  oauth_type: string;
+  role?: string[];
+}
+
+export interface RoleDef {
+  id: string | number;
+  name: string;
+}
+
+export interface RoleProps {
+  ssoRoles: SSORole[];
+  roles: RoleDef[];
+  onChangeRole: (values: string[], ssoId: string) => void;
+}
+
+export default function Role({ssoRoles, roles, onChangeRole}: RoleProps) {
   const {formatMessage} = useIntl();
   return (
     <>

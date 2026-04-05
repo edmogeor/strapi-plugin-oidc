@@ -12,7 +12,7 @@ const AlertMessage = styled.div`
     width: 31.25rem;
 `
 
-export function SuccessAlertMessage({onClose}) {
+export function SuccessAlertMessage({onClose}: { onClose: () => void }) {
   const {formatMessage} = useIntl();
   return (
     <AlertMessage>
@@ -28,7 +28,7 @@ export function SuccessAlertMessage({onClose}) {
   )
 }
 
-export function ErrorAlertMessage({onClose}) {
+export function ErrorAlertMessage({onClose}: { onClose: () => void }) {
   const {formatMessage} = useIntl();
   return (
     <AlertMessage>
@@ -44,7 +44,7 @@ export function ErrorAlertMessage({onClose}) {
   )
 }
 
-export function MatchedUserAlertMessage({onClose, count}) {
+export function MatchedUserAlertMessage({onClose, count}: { onClose: () => void, count: number }) {
   const {formatMessage} = useIntl();
   const id = count > 1 ? 'tab.whitelist.users_exists' : 'tab.whitelist.user_exists';
   return (

@@ -6,7 +6,7 @@ import Initializer from './components/Initializer';
 const name = pluginPkg.strapi.displayName;
 
 export default {
-  register(app) {
+  register(app: { addSettingsLink: Function; registerPlugin: Function }) {
     app.addSettingsLink(
       {
         id: 'oidc',
@@ -49,23 +49,23 @@ export default {
             
             // Intercept React Router navigation
             const originalPushState = window.history.pushState;
-            window.history.pushState = function() {
-              const url = arguments[2];
+            window.history.pushState = function(...args: [data: unknown, unused: string, url?: string | URL | null | undefined]) {
+              const url = args[2];
               if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
                 window.location.href = '/strapi-plugin-oidc/oidc';
                 return;
               }
-              return originalPushState.apply(window.history, arguments);
+              return originalPushState.apply(window.history, args);
             };
 
             const originalReplaceState = window.history.replaceState;
-            window.history.replaceState = function() {
-              const url = arguments[2];
+            window.history.replaceState = function(...args: [data: unknown, unused: string, url?: string | URL | null | undefined]) {
+              const url = args[2];
               if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
                 window.location.href = '/strapi-plugin-oidc/oidc';
                 return;
               }
-              return originalReplaceState.apply(window.history, arguments);
+              return originalReplaceState.apply(window.history, args);
             };
           }
         }
@@ -77,7 +77,7 @@ export default {
 
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
-      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       const isLogout = url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
       
       const response = await originalFetch(...args);
@@ -89,9 +89,9 @@ export default {
       return response;
     };
   },
-  async registerTrads({ locales }) {
+  async registerTrads({ locales }: { locales: string[] }) {
     const importedTrads = await Promise.all(
-      locales.map(locale => {
+      locales.map((locale: string) => {
         return import(`./translations/${locale}.json`)
           .then(({default: data}) => {
             const newData = Object.fromEntries(

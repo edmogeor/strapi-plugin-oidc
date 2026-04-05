@@ -13,7 +13,7 @@
     "watch": "strapi-plugin watch",
     "watch:link": "strapi-plugin watch:link",
     "verify": "strapi-plugin verify",
-    "test": "jest",
+    "test": "vitest run",
     "lint": "eslint"
   },
   "keywords": [
@@ -68,18 +68,13 @@
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
     "@strapi/sdk-plugin": "^6.0.1",
+    "@strapi/typescript-utils": "^5.41.1",
+    "@types/node": "^25.5.2",
+    "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^10.2.0",
     "globals": "^17.4.0",
-    "jest": "^30.3.0"
-  },
-  "jest": {
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      ".tmp",
-      "dist",
-      ".cache"
-    ],
-    "testEnvironment": "node"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   },
   "exports": {
     "./package.json": "./package.json",

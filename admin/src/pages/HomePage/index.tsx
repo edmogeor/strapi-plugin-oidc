@@ -10,8 +10,8 @@ import {Page, Layouts} from '@strapi/strapi/admin';
 import {useIntl} from 'react-intl';
 import {useFetchClient} from '@strapi/strapi/admin';
 import getTrad from "../../utils/getTrad";
-import Role from "../../components/Role";
-import Whitelist from "../../components/Whitelist";
+import Role, { SSORole, RoleDef } from "../../components/Role";
+import Whitelist, { WhitelistUser } from "../../components/Whitelist";
 import {ErrorAlertMessage, SuccessAlertMessage, MatchedUserAlertMessage} from "../../components/AlertMessage";
 import CustomSwitch from "../../components/CustomSwitch";
 
@@ -20,17 +20,17 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
 
   // Roles
-  const [initialSsoRoles, setInitialSSORoles] = useState([])
-  const [ssoRoles, setSSORoles] = useState([])
-  const [roles, setRoles] = useState([])
+  const [initialSsoRoles, setInitialSSORoles] = useState<SSORole[]>([])
+  const [ssoRoles, setSSORoles] = useState<SSORole[]>([])
+  const [roles, setRoles] = useState<RoleDef[]>([])
 
   // Whitelist
   const [initialUseWhitelist, setInitialUseWhitelist] = useState(false)
   const [useWhitelist, setUseWhitelist] = useState(false)
   const [initialEnforceOIDC, setInitialEnforceOIDC] = useState(false)
   const [enforceOIDC, setEnforceOIDC] = useState(false)
-  const [initialUsers, setInitialUsers] = useState([])
-  const [users, setUsers] = useState([])
+  const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([])
+  const [users, setUsers] = useState<WhitelistUser[]>([])
 
   const [showSuccess, setSuccess] = useState(false)
   const [showError, setError] = useState(false)
@@ -56,7 +56,7 @@ function HomePage() {
     })
   }, [setSSORoles, setRoles])
 
-  const onChangeRole = (values, ssoId) => {
+  const onChangeRole = (values: string[], ssoId: string) => {
     for (const ssoRole of ssoRoles) {
       if (ssoRole['oauth_type'] === ssoId) {
         ssoRole['role'] = values;
@@ -111,21 +111,21 @@ function HomePage() {
     }
   }
 
-  const onRegisterWhitelist = async (email, selectedRoles) => {
+  const onRegisterWhitelist = async (email: string, selectedRoles: string[]) => {
     const newUser = { email, roles: selectedRoles, createdAt: new Date().toISOString() };
     setUsers([...users, newUser]);
   }
 
-  const onDeleteWhitelist = async (email) => {
+  const onDeleteWhitelist = async (email: string) => {
     setUsers(users.filter(u => u.email !== email));
   }
 
-  const onToggleWhitelist = (e) => {
+  const onToggleWhitelist = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.checked;
     setUseWhitelist(newValue)
   }
 
-  const onToggleEnforce = (e) => {
+  const onToggleEnforce = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.checked;
     setEnforceOIDC(newValue)
   }

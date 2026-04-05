@@ -1,0 +1,19 @@
+{
+  "extends": "@strapi/typescript-utils/tsconfigs/server",
+  "compilerOptions": {
+    "outDir": "dist/server",
+    "rootDir": "server",
+    "moduleResolution": "node16",
+    "module": "node16"
+  },
+  "include": [
+    "server"
+  ],
+  "exclude": [
+    "node_modules/",
+    "build/",
+    "dist/",
+    ".yalc",
+    "**/*.test.ts"
+  ]
+}

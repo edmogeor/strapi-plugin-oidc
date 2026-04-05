@@ -32,7 +32,7 @@ const CustomTable = styled(Table)`
   }
 `;
 
-const LocalizedDate = ({date}) => {
+const LocalizedDate = ({date}: { date: string }) => {
   const userLocale = navigator.language || "en-US";
   return new Intl.DateTimeFormat(userLocale, {
     year: "numeric",
@@ -43,9 +43,27 @@ const LocalizedDate = ({date}) => {
   }).format(new Date(date))
 };
 
-export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, loading, onSave, onDelete}) {
+import { SSORole, RoleDef } from '../Role';
+
+export interface WhitelistUser {
+  email: string;
+  roles?: string[];
+  createdAt: string;
+}
+
+export interface WhitelistProps {
+  users: WhitelistUser[];
+  roles: RoleDef[];
+  ssoRoles?: SSORole[];
+  useWhitelist: boolean;
+  loading: boolean;
+  onSave: (email: string, roles: string[]) => Promise<void>;
+  onDelete: (email: string) => Promise<void>;
+}
+
+export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, loading, onSave, onDelete}: WhitelistProps) {
   const [email, setEmail] = useState("");
-  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const {formatMessage} = useIntl();
   const PAGE_SIZE = 10;
@@ -87,7 +105,7 @@ export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, lo
                     type={'text'}
                     disabled={loading}
                     value={email}
-                    hasError={email && !isValidEmail()}
+                    hasError={Boolean(email && !isValidEmail())}
                     onChange={(e) => setEmail(e.currentTarget.value)}
                     placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
                   />
@@ -174,7 +192,7 @@ export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, lo
                         }).join(', ');
 
                       if (!userRolesNames) {
-                        const defaultRolesIds = ssoRoles.reduce((acc, sso) => {
+                        const defaultRolesIds = ssoRoles.reduce<string[]>((acc, sso) => {
                           if (sso.role) {
                             acc.push(...sso.role);
                           }
