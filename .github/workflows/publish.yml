@@ -6,7 +6,35 @@ on:
       - 'v*' # Trigger on version tags, e.g., v1.0.0
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies in root
+        run: npm ci || npm install
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Install dependencies in test-app
+        run: |
+          cd test-app
+          npm ci || npm install
+          npm run build
+
+      - name: Run E2E Tests
+        run: npm run test
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write # Needed to create GitHub Release
