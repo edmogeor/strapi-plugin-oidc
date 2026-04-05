@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/main/assets/icon.png" width="140" alt="OIDC Plugin for Strapi Logo"/>
-  <h1>OIDC Plugin for Strapi</h1>
+  <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/main/assets/icon.png" width="140" alt="OIDC Login for Strapi Logo"/>
+  <h1>OIDC Login for Strapi</h1>
   <p>
     <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml">
       <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg" alt="Tests">
@@ -8,7 +8,7 @@
   </p>
 </div>
 
-A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel. 
+A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.
 
 This plugin allows your administrators to log in to the Strapi administration interface using external OIDC identity providers such as Zitadel, Keycloak, Auth0, AWS Cognito, and others.
 
@@ -43,22 +43,22 @@ module.exports = ({ env }) => ({
       OIDC_CLIENT_SECRET: '[Client Secret from OpenID Provider]',
 
       OIDC_SCOPES: 'openid profile email', // Standard OIDC scopes
-      
+
       // API Endpoints required for OIDC provider
       OIDC_AUTHORIZATION_ENDPOINT: '[Authorization Endpoint]',
       OIDC_TOKEN_ENDPOINT: '[Token Endpoint]',
       OIDC_USER_INFO_ENDPOINT: '[User Info Endpoint]',
       OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false,
-      OIDC_GRANT_TYPE: 'authorization_code', 
-      
+      OIDC_GRANT_TYPE: 'authorization_code',
+
       // Customizable user field mapping for user creation
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      
+
       // Redirect to OIDC provider's logout page when users log out of Strapi
-      OIDC_LOGOUT_URL: '[OIDC Provider Logout URL]' 
-    }
-  }
+      OIDC_LOGOUT_URL: '[OIDC Provider Logout URL]',
+    },
+  },
   // ...
 });
 ```
@@ -71,13 +71,14 @@ Once the plugin is installed and configured, you can manage the OIDC settings fr
 
 - **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. You can also whitelist entire email domains (e.g., `*@company.com`). If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
 - **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
-- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled, forcing all administrators to log in using your OIDC provider. *(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel).*
+- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled, forcing all administrators to log in using your OIDC provider. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
 
 ## Credits & Changes
 
 This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) created by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
 
 ### Changes made to the original codebase:
+
 - Removed alternative SSO methods to simplify the plugin.
 - Redesigned the Whitelist and Role management UI (switched to native Strapi cards, added pagination, etc.).
 - Added an OIDC logout redirect URL.
