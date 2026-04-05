@@ -16,6 +16,29 @@ export default async function bootstrap({ strapi }) {
   
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
 
+  try {
+    const oidcRoleCount = await strapi.query('plugin::strapi-plugin-oidc.roles').count({
+      where: { oauth_type: '4' }
+    });
+
+    if (oidcRoleCount === 0) {
+      const editorRole = await strapi.query('admin::role').findOne({
+        where: { code: 'strapi-editor' }
+      });
+
+      if (editorRole) {
+        await strapi.query('plugin::strapi-plugin-oidc.roles').create({
+          data: {
+            oauth_type: '4',
+            roles: [editorRole.id.toString()]
+          }
+        });
+      }
+    }
+  } catch (err) {
+    strapi.log.warn('Could not initialize default OIDC role:', err.message);
+  }
+
   strapi.db.lifecycles.subscribe({
     models: ['admin::user'],
     async afterUpdate(event) {

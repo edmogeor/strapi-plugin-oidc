@@ -65,9 +65,7 @@ module.exports = ({env}) => ({
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
       
-      OIDC_LOGOUT_URL: '[OIDC Provider Logout URL]', // redirect to OIDC logout page when users log out of Strapi
-
-      USE_WHITELIST: true // allow authentication only at the specified email address.
+      OIDC_LOGOUT_URL: '[OIDC Provider Logout URL]' // redirect to OIDC logout page when users log out of Strapi
     }
   }
 })

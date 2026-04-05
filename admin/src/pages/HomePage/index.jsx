@@ -1,7 +1,9 @@
 import React, {memo, useEffect, useState} from 'react';
 import {
   Box,
-  Tabs,
+  Flex,
+  Typography,
+  Button
 } from '@strapi/design-system';
 import {Page, Layouts} from '@strapi/strapi/admin';
 import {useIntl} from 'react-intl';
@@ -9,121 +11,90 @@ import {useFetchClient} from '@strapi/strapi/admin';
 import getTrad from "../../utils/getTrad";
 import Role from "../../components/Role";
 import Whitelist from "../../components/Whitelist";
-import {ErrorAlertMessage, SuccessAlertMessage} from "../../components/AlertMessage";
+import {ErrorAlertMessage, SuccessAlertMessage, MatchedUserAlertMessage} from "../../components/AlertMessage";
+import CustomSwitch from "../../components/CustomSwitch";
 
 function HomePage() {
   const {formatMessage} = useIntl();
   const [loading, setLoading] = useState(false);
 
   // Roles
+  const [initialSsoRoles, setInitialSSORoles] = useState([])
   const [ssoRoles, setSSORoles] = useState([])
   const [roles, setRoles] = useState([])
 
   // Whitelist
+  const [initialUseWhitelist, setInitialUseWhitelist] = useState(false)
   const [useWhitelist, setUseWhitelist] = useState(false)
+  const [initialUsers, setInitialUsers] = useState([])
   const [users, setUsers] = useState([])
 
   const [showSuccess, setSuccess] = useState(false)
   const [showError, setError] = useState(false)
+  const [showMatched, setMatched] = useState(0)
 
   const {get, put, post, del} = useFetchClient();
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/sso-roles`).then((response) => {
       setSSORoles(response.data)
+      setInitialSSORoles(JSON.parse(JSON.stringify(response.data)))
     })
     get(`/admin/roles`).then((response) => {
       setRoles(response.data.data)
     })
     get('/strapi-plugin-oidc/whitelist').then(response => {
       setUsers(response.data.whitelistUsers)
+      setInitialUsers(JSON.parse(JSON.stringify(response.data.whitelistUsers)))
       setUseWhitelist(response.data.useWhitelist)
+      setInitialUseWhitelist(response.data.useWhitelist)
     })
   }, [setSSORoles, setRoles])
 
-  const onChangeRoleCheck = (value, ssoId, role) => {
+  const onChangeRole = (values, ssoId) => {
     for (const ssoRole of ssoRoles) {
       if (ssoRole['oauth_type'] === ssoId) {
-        if (ssoRole['role']) {
-          if (value) {
-            ssoRole['role'].push(role)
-          } else {
-            ssoRole['role'] = ssoRole['role'].filter(selectRole => selectRole !== role)
-          }
-        } else {
-          ssoRole['role'] = [role]
-        }
+        ssoRole['role'] = values;
       }
     }
     setSSORoles(ssoRoles.slice())
   }
-  const onSaveRole = async () => {
+  const onSaveAll = async () => {
+    setLoading(true)
     try {
       await put('/strapi-plugin-oidc/sso-roles', {
         roles: ssoRoles.map(role => ({
           'oauth_type': role['oauth_type'], role: role['role']
         }))
       })
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
+      await put('/strapi-plugin-oidc/whitelist/settings', {
+        useWhitelist: useWhitelist
+      })
+      const syncResponse = await put('/strapi-plugin-oidc/whitelist/sync', {
+        users: users.map(u => ({ email: u.email, roles: u.roles }))
+      })
+      
+      setInitialSSORoles(JSON.parse(JSON.stringify(ssoRoles)))
+      setInitialUseWhitelist(useWhitelist)
+      
+      get('/strapi-plugin-oidc/whitelist').then(getResponse => {
+        setUsers(getResponse.data.whitelistUsers)
+        setInitialUsers(JSON.parse(JSON.stringify(getResponse.data.whitelistUsers)))
+      })
+
+      if (syncResponse.data && syncResponse.data.matchedExistingUsersCount > 0) {
+        setMatched(syncResponse.data.matchedExistingUsersCount)
+        setTimeout(() => {
+          setMatched(0)
+        }, 3000)
+      } else {
+        setSuccess(true)
+        setTimeout(() => {
+          setSuccess(false)
+        }, 3000)
+      }
     } catch (e) {
       console.error(e)
-      setError(true)
-      setTimeout(() => {
-        setError(false)
-      }, 3000)
-    }
-  }
-
-  const onRegisterWhitelist = async (email, selectedRoles) => {
-    setLoading(true)
-    post('/strapi-plugin-oidc/whitelist', {
-      email,
-      roles: selectedRoles,
-    }).then(response => {
-      get('/strapi-plugin-oidc/whitelist').then(response => {
-        setUsers(response.data.whitelistUsers)
-        setUseWhitelist(response.data.useWhitelist)
-      })
-      setLoading(false)
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
-    })
-  }
-
-  const onDeleteWhitelist = async (id) => {
-    setLoading(true)
-    del(`/strapi-plugin-oidc/whitelist/${id}`).then(response => {
-      get('/strapi-plugin-oidc/whitelist').then(response => {
-        setUsers(response.data.whitelistUsers)
-        setUseWhitelist(response.data.useWhitelist)
-      })
-      setLoading(false)
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
-    })
-  }
-
-  const onToggleWhitelist = async (e) => {
-    const newValue = e.target.checked;
-    setLoading(true)
-    try {
-      await put('/strapi-plugin-oidc/whitelist/settings', {
-        useWhitelist: newValue
-      })
-      setUseWhitelist(newValue)
-      setSuccess(true)
-      setTimeout(() => {
-        setSuccess(false)
-      }, 3000)
-    } catch(err) {
-      console.error(err)
       setError(true)
       setTimeout(() => {
         setError(false)
@@ -133,17 +104,27 @@ function HomePage() {
     }
   }
 
+  const onRegisterWhitelist = async (email, selectedRoles) => {
+    const newUser = { email, roles: selectedRoles, createdAt: new Date().toISOString() };
+    setUsers([...users, newUser]);
+  }
+
+  const onDeleteWhitelist = async (email) => {
+    setUsers(users.filter(u => u.email !== email));
+  }
+
+  const onToggleWhitelist = (e) => {
+    const newValue = e.target.checked;
+    setUseWhitelist(newValue)
+  }
+
+  const isDirty = useWhitelist !== initialUseWhitelist || JSON.stringify(ssoRoles) !== JSON.stringify(initialSsoRoles) || JSON.stringify(users) !== JSON.stringify(initialUsers);
+
   return (
     <Page.Protect permissions={[{action: 'plugin::strapi-plugin-oidc.read', subject: null}]}>
       <Layouts.Header
-        title={formatMessage({
-          id: getTrad('page.title.oidc'),
-          defaultMessage: 'OIDC'
-        })}
-        subtitle={formatMessage({
-          id: getTrad('page.title'),
-          defaultMessage: 'Default role setting at first login'
-        })}
+        title={formatMessage(getTrad('page.title.oidc'))}
+        subtitle={formatMessage(getTrad('page.title'))}
       />
       {
         showSuccess && (
@@ -155,46 +136,62 @@ function HomePage() {
           <ErrorAlertMessage onClose={() => setError(false)}/>
         )
       }
-      <Box padding={10}>
-        <Tabs.Root defaultValue="role">
-          <Tabs.List aria-label={formatMessage({
-            id: getTrad('page.tabs.aria'),
-            defaultMessage: 'Manage your configuration'
-          })} style={{maxWidth: 300}}>
-            <Tabs.Trigger value="role">{formatMessage({
-              id: getTrad('tab.roles'),
-              defaultMessage: 'Roles'
-            })}</Tabs.Trigger>
-            <Tabs.Trigger value="whitelist">{formatMessage({
-              id: getTrad('tab.whitelist'),
-              defaultMessage: 'Whitelist'
-            })}</Tabs.Trigger>
-          </Tabs.List>
-
-          {/* Roles Tab */}
-          <Tabs.Content value="role" style={{background: 'initial'}}>
+      {
+        showMatched > 0 && (
+          <MatchedUserAlertMessage count={showMatched} onClose={() => setMatched(0)}/>
+        )
+      }
+      <Layouts.Content>
+        <Flex direction="column" alignItems="stretch" gap={6}>
+          <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
+            <Box paddingBottom={4}>
+              <Typography variant="beta" tag="h2">
+                {formatMessage(getTrad('roles.title'))}
+              </Typography>
+            </Box>
             <Role
               roles={roles}
               ssoRoles={ssoRoles}
-              onSaveRole={onSaveRole}
-              onChangeRoleCheck={onChangeRoleCheck}
+              onChangeRole={onChangeRole}
             />
-          </Tabs.Content>
-
-          {/* Whitelist Tab */}
-          <Tabs.Content value="whitelist">
+          </Box>
+          <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
+            <Flex justifyContent="space-between" paddingBottom={4}>
+              <Typography variant="beta" tag="h2">
+                {formatMessage(getTrad('whitelist.title'))}
+              </Typography>
+              <CustomSwitch
+                checked={useWhitelist}
+                onChange={onToggleWhitelist}
+                label={
+                  useWhitelist
+                    ? formatMessage(getTrad('whitelist.toggle.enabled'))
+                    : formatMessage(getTrad('whitelist.toggle.disabled'))
+                }
+              />
+            </Flex>
             <Whitelist
               loading={loading}
               users={users}
               roles={roles}
+              ssoRoles={ssoRoles}
               useWhitelist={useWhitelist}
               onSave={onRegisterWhitelist}
               onDelete={onDeleteWhitelist}
-              onToggle={onToggleWhitelist}
             />
-          </Tabs.Content>
-        </Tabs.Root>
-      </Box>
+          </Box>
+          <Flex justifyContent="flex-end">
+            <Button
+              size="L"
+              onClick={onSaveAll}
+              disabled={!isDirty || loading}
+              loading={loading}
+            >
+              {formatMessage(getTrad('page.save'))}
+            </Button>
+          </Flex>
+        </Flex>
+      </Layouts.Content>
     </Page.Protect>
   );
 }

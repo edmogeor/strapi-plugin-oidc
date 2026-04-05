@@ -5,9 +5,9 @@ import {useIntl} from "react-intl";
 import styled from "styled-components";
 
 const AlertMessage = styled.div`
-    margin-left: -250px;
     position: fixed;
     left: 50%;
+    transform: translateX(-50%);
     top: 2.875rem;
     z-index: 10;
     width: 31.25rem;
@@ -23,10 +23,7 @@ export function SuccessAlertMessage({onClose}) {
         closeLabel={''}
         onClose={onClose}
       >
-        {formatMessage({
-          id: getTrad('page.save.success'),
-          defaultMessage: 'Updated settings'
-        })}
+        {formatMessage(getTrad('page.save.success'))}
       </Alert>
     </AlertMessage>
   )
@@ -42,10 +39,24 @@ export function ErrorAlertMessage({onClose}) {
         closeLabel={''}
         onClose={onClose}
       >
-        {formatMessage({
-          id: getTrad('page.save.error'),
-          defaultMessage: 'Update failed.'
-        })}
+        {formatMessage(getTrad('page.save.error'))}
+      </Alert>
+    </AlertMessage>
+  )
+}
+
+export function MatchedUserAlertMessage({onClose, count}) {
+  const {formatMessage} = useIntl();
+  const id = count > 1 ? 'tab.whitelist.users_exists' : 'tab.whitelist.user_exists';
+  return (
+    <AlertMessage>
+      <Alert
+        title="Info"
+        variant={'default'}
+        closeLabel={''}
+        onClose={onClose}
+      >
+        {formatMessage(getTrad(id))}
       </Alert>
     </AlertMessage>
   )

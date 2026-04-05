@@ -21,11 +21,40 @@ async function register(ctx) {
     ctx.body = {
       message: 'Please enter a valid email address',
     }
+    return;
   }
-  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist')
-  await whitelistService.registerUser(email, roles)
 
-  ctx.body = {}
+  // Handle both comma-separated strings and arrays of emails
+  const emailList = Array.isArray(email) ? email : email.split(',').map(e => e.trim()).filter(e => e);
+
+  const existingUsers = await strapi.query('admin::user').findMany({
+    where: { email: { $in: emailList } },
+    populate: ['roles']
+  });
+
+  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist')
+  let matchedExistingUsersCount = 0;
+
+  for (const singleEmail of emailList) {
+    const existingUser = existingUsers.find(u => u.email === singleEmail);
+    let finalRoles = roles;
+
+    if (existingUser && existingUser.roles) {
+      finalRoles = existingUser.roles.map(r => r.id.toString());
+      matchedExistingUsersCount++;
+    }
+
+    // Only register if not already in whitelist to prevent errors
+    const alreadyWhitelisted = await strapi.query('plugin::strapi-plugin-oidc.whitelists').findOne({
+      where: { email: singleEmail }
+    });
+    
+    if (!alreadyWhitelisted) {
+      await whitelistService.registerUser(singleEmail, finalRoles);
+    }
+  }
+
+  ctx.body = { matchedExistingUsersCount }
 }
 
 async function removeEmail(ctx) {
@@ -35,9 +64,54 @@ async function removeEmail(ctx) {
   ctx.body = {}
 }
 
+async function syncUsers(ctx) {
+  const { users } = ctx.request.body;
+  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist')
+  
+  const currentUsers = await whitelistService.getUsers();
+  let matchedExistingUsersCount = 0;
+  
+  const emailsToSync = users.map(u => u.email);
+  const existingStrapiUsers = await strapi.query('admin::user').findMany({
+    where: { email: { $in: emailsToSync } },
+    populate: ['roles']
+  });
+
+  for (const currUser of currentUsers) {
+    if (!users.find(u => u.email === currUser.email)) {
+      await whitelistService.removeUser(currUser.id);
+    }
+  }
+
+  for (const user of users) {
+    const existingStrapiUser = existingStrapiUsers.find(u => u.email === user.email);
+    let finalRoles = user.roles;
+    const currUser = currentUsers.find(u => u.email === user.email);
+
+    if (!currUser && existingStrapiUser && existingStrapiUser.roles) {
+      finalRoles = existingStrapiUser.roles.map(r => r.id.toString());
+      matchedExistingUsersCount++;
+    }
+
+    if (currUser) {
+      // Avoid unnecessary db writes by checking if roles actually changed?
+      // Since it's a sync, let's just update safely
+      await strapi.query('plugin::strapi-plugin-oidc.whitelists').update({
+        where: { id: currUser.id },
+        data: { roles: finalRoles }
+      });
+    } else {
+      await whitelistService.registerUser(user.email, finalRoles);
+    }
+  }
+
+  ctx.body = { matchedExistingUsersCount };
+}
+
 export default {
   info,
   updateSettings,
   register,
-  removeEmail
+  removeEmail,
+  syncUsers
 }

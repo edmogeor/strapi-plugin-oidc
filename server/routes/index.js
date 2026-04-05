@@ -68,6 +68,17 @@ export default [
     },
   },
   {
+    method: 'PUT',
+    path: '/whitelist/sync',
+    handler: 'whitelist.syncUsers',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+      ],
+    },
+  },
+  {
     method: 'POST',
     path: '/whitelist',
     handler: 'whitelist.register',

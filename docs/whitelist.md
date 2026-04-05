@@ -8,22 +8,7 @@ For compatibility with other versions, this feature is disabled by default.
 
 ## How to use it?
 
-To enable, configure as follows
-
-```
-// config/plugins.js
-
-export default () => ({
-  'strapi-plugin-oidc': {
-    enabled: true,
-    config: {
-      USE_WHITELIST: true // <- explicitly set to true
-      
-      // other settings omitted.
-    }
-  },
-}
-```
+You can enable the whitelist toggle directly from the Strapi administration UI under the Settings > OIDC Plugin page.
 
 ## Lastly
 If you enable the whitelist without preparation, you will lose access to the system.
