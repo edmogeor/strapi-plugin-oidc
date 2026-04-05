@@ -4,15 +4,24 @@ async function info(ctx) {
   const whitelistUsers = await whitelistService.getUsers();
   ctx.body = {
     useWhitelist: settings.useWhitelist,
+    enforceOIDC: settings.enforceOIDC || false,
     whitelistUsers
   };
 }
 
 async function updateSettings(ctx) {
-  const { useWhitelist } = ctx.request.body;
+  const { useWhitelist, enforceOIDC } = ctx.request.body;
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist')
-  await whitelistService.setSettings({ useWhitelist });
-  ctx.body = { useWhitelist };
+  await whitelistService.setSettings({ useWhitelist, enforceOIDC });
+  ctx.body = { useWhitelist, enforceOIDC };
+}
+
+async function publicSettings(ctx) {
+  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist')
+  const settings = await whitelistService.getSettings();
+  ctx.body = {
+    enforceOIDC: settings.enforceOIDC || false
+  };
 }
 
 async function register(ctx) {
@@ -111,6 +120,7 @@ async function syncUsers(ctx) {
 export default {
   info,
   updateSettings,
+  publicSettings,
   register,
   removeEmail,
   syncUsers

@@ -5,6 +5,7 @@ import {
   Typography,
   Button
 } from '@strapi/design-system';
+import { WarningCircle } from '@strapi/icons';
 import {Page, Layouts} from '@strapi/strapi/admin';
 import {useIntl} from 'react-intl';
 import {useFetchClient} from '@strapi/strapi/admin';
@@ -26,6 +27,8 @@ function HomePage() {
   // Whitelist
   const [initialUseWhitelist, setInitialUseWhitelist] = useState(false)
   const [useWhitelist, setUseWhitelist] = useState(false)
+  const [initialEnforceOIDC, setInitialEnforceOIDC] = useState(false)
+  const [enforceOIDC, setEnforceOIDC] = useState(false)
   const [initialUsers, setInitialUsers] = useState([])
   const [users, setUsers] = useState([])
 
@@ -48,6 +51,8 @@ function HomePage() {
       setInitialUsers(JSON.parse(JSON.stringify(response.data.whitelistUsers)))
       setUseWhitelist(response.data.useWhitelist)
       setInitialUseWhitelist(response.data.useWhitelist)
+      setEnforceOIDC(response.data.enforceOIDC)
+      setInitialEnforceOIDC(response.data.enforceOIDC)
     })
   }, [setSSORoles, setRoles])
 
@@ -68,7 +73,8 @@ function HomePage() {
         }))
       })
       await put('/strapi-plugin-oidc/whitelist/settings', {
-        useWhitelist: useWhitelist
+        useWhitelist: useWhitelist,
+        enforceOIDC: enforceOIDC
       })
       const syncResponse = await put('/strapi-plugin-oidc/whitelist/sync', {
         users: users.map(u => ({ email: u.email, roles: u.roles }))
@@ -76,6 +82,7 @@ function HomePage() {
       
       setInitialSSORoles(JSON.parse(JSON.stringify(ssoRoles)))
       setInitialUseWhitelist(useWhitelist)
+      setInitialEnforceOIDC(enforceOIDC)
       
       get('/strapi-plugin-oidc/whitelist').then(getResponse => {
         setUsers(getResponse.data.whitelistUsers)
@@ -118,7 +125,12 @@ function HomePage() {
     setUseWhitelist(newValue)
   }
 
-  const isDirty = useWhitelist !== initialUseWhitelist || JSON.stringify(ssoRoles) !== JSON.stringify(initialSsoRoles) || JSON.stringify(users) !== JSON.stringify(initialUsers);
+  const onToggleEnforce = (e) => {
+    const newValue = e.target.checked;
+    setEnforceOIDC(newValue)
+  }
+
+  const isDirty = useWhitelist !== initialUseWhitelist || enforceOIDC !== initialEnforceOIDC || JSON.stringify(ssoRoles) !== JSON.stringify(initialSsoRoles) || JSON.stringify(users) !== JSON.stringify(initialUsers);
 
   return (
     <Page.Protect permissions={[{action: 'plugin::strapi-plugin-oidc.read', subject: null}]}>
@@ -179,6 +191,34 @@ function HomePage() {
               onSave={onRegisterWhitelist}
               onDelete={onDeleteWhitelist}
             />
+          </Box>
+          <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
+            <Flex direction="column" alignItems="stretch" gap={4}>
+              <Flex justifyContent="space-between" alignItems="center">
+                <Typography variant="epsilon" tag="h4">
+                  {formatMessage(getTrad('enforce.title'))}
+                </Typography>
+                <CustomSwitch
+                  checked={enforceOIDC}
+                  onChange={onToggleEnforce}
+                  label={
+                    enforceOIDC
+                      ? formatMessage(getTrad('enforce.toggle.enabled'))
+                      : formatMessage(getTrad('enforce.toggle.disabled'))
+                  }
+                />
+              </Flex>
+              {enforceOIDC && enforceOIDC !== initialEnforceOIDC && (
+                <Box background="danger100" padding={3} hasRadius>
+                  <Flex gap={3} alignItems="center">
+                    <WarningCircle fill="danger600" />
+                    <Typography textColor="danger600">
+                      {formatMessage(getTrad('enforce.warning'))}
+                    </Typography>
+                  </Flex>
+                </Box>
+              )}
+            </Flex>
           </Box>
           <Flex justifyContent="flex-end">
             <Button

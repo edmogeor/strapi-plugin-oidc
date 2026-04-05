@@ -1,3 +1,3 @@
-export default function destroy({ strapi }) {
+export default function destroy() {
   // destroy phase
 }

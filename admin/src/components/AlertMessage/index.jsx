@@ -1,6 +1,5 @@
 import {Alert} from "@strapi/design-system";
 import getTrad from "../../utils/getTrad";
-import React from "react";
 import {useIntl} from "react-intl";
 import styled from "styled-components";
 

@@ -30,5 +30,9 @@
   "whitelist.table.roles.default": "Default",
   "whitelist.table.empty": "No email addresses",
   "whitelist.delete.label": "Delete",
-  "page.title.oidc": "OIDC"
+  "page.title.oidc": "OIDC",
+  "enforce.title": "Enforce OIDC Login",
+  "enforce.toggle.enabled": "Enabled",
+  "enforce.toggle.disabled": "Disabled",
+  "enforce.warning": "Make sure OIDC is setup correctly before saving changes, you won't be able to login normally."
 }

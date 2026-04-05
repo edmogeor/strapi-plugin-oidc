@@ -12,15 +12,21 @@ const compat = new FlatCompat({
     allConfig: js.configs.all
 });
 
-export default [...compat.extends("eslint:recommended"), {
+export default [
+    { ignores: ["dist/**/*", "test-app/**/*", "node_modules/**/*", ".fallow/**/*", "coverage/**/*"] },
+    ...compat.extends("eslint:recommended"), {
     languageOptions: {
         globals: {
             ...globals.browser,
             ...globals.commonjs,
+            ...globals.node,
+            ...globals.jest,
+            strapi: "readonly",
+            process: "readonly"
         },
 
         ecmaVersion: "latest",
-        sourceType: "script",
+        sourceType: "module",
     },
 
     rules: {},

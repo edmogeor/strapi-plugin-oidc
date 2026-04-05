@@ -1,3 +1,3 @@
-export default function register({ strapi }) {
+export default function register() {
     // registration phase
 }

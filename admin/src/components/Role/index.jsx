@@ -7,7 +7,6 @@ import {
   Typography
 } from '@strapi/design-system';
 import getTrad from "../../utils/getTrad";
-import React from "react";
 import {useIntl} from "react-intl";
 
 export default function Role({ssoRoles, roles, onChangeRole}) {

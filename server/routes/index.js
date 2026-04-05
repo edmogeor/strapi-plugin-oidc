@@ -68,6 +68,14 @@ export default [
     },
   },
   {
+    method: 'GET',
+    path: '/settings/public',
+    handler: 'whitelist.publicSettings',
+    config: {
+      auth: false,
+    },
+  },
+  {
     method: 'PUT',
     path: '/whitelist/sync',
     handler: 'whitelist.syncUsers',

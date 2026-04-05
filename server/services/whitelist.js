@@ -4,7 +4,7 @@ export default function whitelistService({ strapi }) {
       const pluginStore = strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc' });
       let settings = await pluginStore.get({ key: 'settings' });
       if (!settings) {
-        settings = { useWhitelist: true };
+        settings = { useWhitelist: true, enforceOIDC: false };
         await pluginStore.set({ key: 'settings', value: settings });
       }
       return settings;

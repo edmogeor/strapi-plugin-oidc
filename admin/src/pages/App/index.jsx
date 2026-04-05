@@ -5,7 +5,6 @@
  *
  */
 
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Page } from '@strapi/strapi/admin';
 import HomePage from '../HomePage';

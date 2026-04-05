@@ -2,7 +2,6 @@ import { getTranslation } from './utils/getTranslation';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 import Initializer from './components/Initializer';
-import PluginIcon from './components/PluginIcon';
 
 const name = pluginPkg.strapi.displayName;
 
@@ -36,7 +35,46 @@ export default {
     });
   },
 
-  bootstrap(app) {
+  bootstrap() {
+    const checkEnforceOIDC = async () => {
+      try {
+        const response = await window.fetch('/strapi-plugin-oidc/settings/public');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.enforceOIDC) {
+            const currentPath = window.location.pathname;
+            if (currentPath.endsWith('/auth/login')) {
+              window.location.href = '/strapi-plugin-oidc/oidc';
+            }
+            
+            // Intercept React Router navigation
+            const originalPushState = window.history.pushState;
+            window.history.pushState = function() {
+              const url = arguments[2];
+              if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
+                window.location.href = '/strapi-plugin-oidc/oidc';
+                return;
+              }
+              return originalPushState.apply(window.history, arguments);
+            };
+
+            const originalReplaceState = window.history.replaceState;
+            window.history.replaceState = function() {
+              const url = arguments[2];
+              if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
+                window.location.href = '/strapi-plugin-oidc/oidc';
+                return;
+              }
+              return originalReplaceState.apply(window.history, arguments);
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check OIDC enforcement setting:', error);
+      }
+    };
+    checkEnforceOIDC();
+
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
