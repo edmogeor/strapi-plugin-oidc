@@ -57,4 +57,42 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.text).toContain('jwtToken'); // Check if the HTML contains the generated token logic
     expect(callbackRes.text).toContain('localStorage.setItem');
   });
+
+  it('should expose public settings for OIDC enforcement', async () => {
+    // 1. Initial state (should be false)
+    let res = await agent.get('/strapi-plugin-oidc/settings/public');
+    expect(res.status).toBe(200);
+    expect(res.body.enforceOIDC).toBe(false);
+
+    // 2. Enable enforceOIDC in settings
+    await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: true, enforceOIDC: true } });
+
+    // 3. Check again
+    res = await agent.get('/strapi-plugin-oidc/settings/public');
+    expect(res.status).toBe(200);
+    expect(res.body.enforceOIDC).toBe(true);
+  });
+
+  it('should block login if whitelist is enabled and user is not in whitelist', async () => {
+    // Ensure whitelist is active and no one is in it
+    await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: true, enforceOIDC: false } });
+
+    // 1. Initiate login to get a valid state
+    const loginRes = await agent
+      .get('/strapi-plugin-oidc/oidc')
+      .redirects(0);
+      
+    const locationUrl = new URL(loginRes.headers.location);
+    const state = locationUrl.searchParams.get('state');
+
+    // 2. Simulate callback from OIDC provider with the valid state
+    const callbackRes = await agent
+      .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+      .redirects(0);
+
+    // The plugin should return a 200 OK with an HTML page showing the error
+    expect(callbackRes.status).toBe(200);
+    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('Not present in whitelist');
+  });
 });
