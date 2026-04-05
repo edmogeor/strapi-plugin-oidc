@@ -2,6 +2,9 @@
   <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/main/assets/icon.png" width="140" alt="OIDC Login for Strapi Logo"/>
   <h1>OIDC Login for Strapi</h1>
   <p>
+    <a href="https://www.npmjs.com/package/strapi-plugin-oidc">
+      <img src="https://img.shields.io/npm/v/strapi-plugin-oidc.svg" alt="npm version">
+    </a>
     <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml">
       <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg" alt="Tests">
     </a>
