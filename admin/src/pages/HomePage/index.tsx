@@ -201,6 +201,7 @@ function HomePage() {
                 <CustomSwitch
                   checked={enforceOIDC}
                   onChange={onToggleEnforce}
+                  disabled={useWhitelist && users.length === 0}
                   label={
                     enforceOIDC
                       ? formatMessage(getTrad('enforce.toggle.enabled'))
