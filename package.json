@@ -1,6 +1,6 @@
 {
   "name": "strapi-plugin-oidc",
-  "version": "1.0.8",
+  "version": "1.0.0",
   "description": "OIDC plugin for Strapi!",
   "strapi": {
     "displayName": "OIDC Plugin",
