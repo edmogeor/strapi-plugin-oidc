@@ -59,6 +59,16 @@ describe('Controllers E2E', () => {
       await whitelistController.register(ctxRegister);
       expect(ctxRegister.body.matchedExistingUsersCount).toBeGreaterThanOrEqual(0);
 
+      // Verify it fails without an email
+      const ctxRegisterFail = {
+        request: {
+          body: { email: '', roles: [1] }
+        },
+        body: null as any
+      };
+      await whitelistController.register(ctxRegisterFail);
+      expect(ctxRegisterFail.body.message).toBe('Please enter a valid email address');
+
       // Verify it's added
       const ctxInfo = { body: null as any };
       await whitelistController.info(ctxInfo);

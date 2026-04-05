@@ -102,4 +102,24 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.text).toContain('Authentication failed');
     expect(callbackRes.text).toContain('Not present in whitelist');
   });
+
+  it('should fail if callback is missing code', async () => {
+    const callbackRes = await agent
+      .get('/strapi-plugin-oidc/oidc/callback?state=mock-state')
+      .redirects(0);
+
+    expect(callbackRes.status).toBe(200);
+    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('code Not Found');
+  });
+
+  it('should fail if callback has invalid state', async () => {
+    const callbackRes = await agent
+      .get('/strapi-plugin-oidc/oidc/callback?code=mock-code&state=invalid-state')
+      .redirects(0);
+
+    expect(callbackRes.status).toBe(200);
+    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('Invalid state');
+  });
 });
