@@ -1,6 +1,11 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/main/assets/icon.png" width="140" alt="OIDC Plugin for Strapi Logo"/>
   <h1>OIDC Plugin for Strapi</h1>
+  <p>
+    <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml">
+      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg" alt="Tests">
+    </a>
+  </p>
 </div>
 
 A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel. 
