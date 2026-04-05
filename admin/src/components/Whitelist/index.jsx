@@ -11,7 +11,10 @@ import {
   Th,
   Thead,
   Tr,
-  Typography
+  Typography,
+  Toggle,
+  MultiSelect,
+  MultiSelectOption
 } from "@strapi/design-system";
 import React, {useCallback, useState} from "react";
 import {Check, Plus, Trash, WarningCircle} from "@strapi/icons";
@@ -30,9 +33,11 @@ const LocalizedDate = ({date}) => {
   }).format(new Date(date))
 };
 
-export default function Whitelist({users, useWhitelist, loading, onSave, onDelete}) {
+export default function Whitelist({users, roles, useWhitelist, loading, onSave, onDelete, onToggle}) {
   const [email, setEmail] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const {formatMessage} = useIntl();
+  
   const onSaveEmail = useCallback(async () => {
     const emailText = email.trim()
     if (users.some(user => user.email === emailText)) {
@@ -43,10 +48,11 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
         })
       )
     } else {
-      await onSave(emailText)
+      await onSave(emailText, selectedRoles)
       setEmail('')
+      setSelectedRoles([])
     }
-  }, [email, users])
+  }, [email, selectedRoles, users, onSave, formatMessage])
 
   const isValidEmail = useCallback(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,46 +62,42 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
   return (
     <>
       <Box padding={4}>
-        <Typography tag="div">
-          {
-            useWhitelist && (
-              <>
-                <Flex>
-                  <Check color={'green'}/>
-                  &nbsp;
-                  {
-                    formatMessage({
-                      id: getTrad('tab.whitelist.enabled'),
-                      defaultMessage: 'Whitelist is currently enabled.'
-                    })
-                  }
-                  <br/>
-                </Flex>
-                {
-                  formatMessage({
-                    id: getTrad('tab.whitelist.description'),
-                    defaultMessage: 'Only the following email addresses are allowed to authenticate with SSO.'
+        <Flex gap={4} marginBottom={4}>
+          <Toggle
+            checked={useWhitelist}
+            onLabel={formatMessage({
+              id: getTrad('tab.whitelist.toggle.enabled'),
+              defaultMessage: 'Enabled'
+            })}
+            offLabel={formatMessage({
+              id: getTrad('tab.whitelist.toggle.disabled'),
+              defaultMessage: 'Disabled'
+            })}
+            onChange={onToggle}
+          />
+          <Typography variant="delta">
+            {
+              useWhitelist
+                ? formatMessage({
+                    id: getTrad('tab.whitelist.enabled'),
+                    defaultMessage: 'Whitelist is currently enabled.'
                   })
-                }
-              </>
-            )
-          }
-          {
-            !useWhitelist && (
-              <Flex>
-                <WarningCircle color={'#dd0000'}/>
-                &nbsp;
-                {
-                  formatMessage({
+                : formatMessage({
                     id: getTrad('tab.whitelist.disabled'),
                     defaultMessage: 'Whitelist is currently disabled.'
                   })
-                }
-              </Flex>
-            )
+            }
+          </Typography>
+        </Flex>
+        <Typography tag="p" marginBottom={4}>
+          {
+            formatMessage({
+              id: getTrad('tab.whitelist.description'),
+              defaultMessage: 'Only the following email addresses are allowed to authenticate with SSO.'
+            })
           }
         </Typography>
-        <Grid.Root tag="fieldset" gap={4} padding="0px" gridCols={2} borderWidth={0} marginTop={5} marginBottom={5}>
+        <Grid.Root tag="fieldset" gap={4} padding="0px" gridCols={3} borderWidth={0} marginTop={5} marginBottom={5}>
           <Grid.Item xs={1}>
             <Field.Root>
               <Field.Input
@@ -104,9 +106,33 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
                 value={email}
                 hasError={email && !isValidEmail()}
                 onChange={(e) => setEmail(e.currentTarget.value)}
+                placeholder={formatMessage({
+                  id: getTrad('tab.whitelist.email.placeholder'),
+                  defaultMessage: 'Email address'
+                })}
               />
             </Field.Root>
-            &nbsp;
+          </Grid.Item>
+          <Grid.Item xs={1}>
+            <Field.Root>
+              <MultiSelect
+                placeholder={formatMessage({
+                  id: getTrad('tab.whitelist.roles.placeholder'),
+                  defaultMessage: 'Select specific roles'
+                })}
+                withTags
+                value={selectedRoles}
+                onChange={setSelectedRoles}
+              >
+                {roles.map((role) => (
+                  <MultiSelectOption key={role.id} value={role.id.toString()}>
+                    {role.name}
+                  </MultiSelectOption>
+                ))}
+              </MultiSelect>
+            </Field.Root>
+          </Grid.Item>
+          <Grid.Item xs={1}>
             <Button
               startIcon={<Plus/>}
               disabled={loading || email.trim() === '' || !isValidEmail()}
@@ -124,7 +150,7 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
         </Grid.Root>
 
         <Divider/>
-        <Table colCount={4} rowCount={users.length}>
+        <Table colCount={5} rowCount={users.length}>
           <Thead>
             <Tr>
               <Th>
@@ -146,6 +172,14 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
               <Th>
                 {
                   formatMessage({
+                    id: getTrad('tab.whitelist.table.roles'),
+                    defaultMessage: 'Roles'
+                  })
+                }
+              </Th>
+              <Th>
+                {
+                  formatMessage({
                     id: getTrad('tab.whitelist.table.created'),
                     defaultMessage: 'Created At'
                   })
@@ -156,17 +190,30 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
           </Thead>
           <Tbody>
             {
-              users.map(user => (
-                <Tr key={user.id}>
-                  <Td>{user.id}</Td>
-                  <Td>{user.email}</Td>
-                  <Td>
-                    <LocalizedDate date={user.createdAt}/>
-                  </Td>
-                  <Td>
-                    <Dialog.Root>
+              users.map(user => {
+                const userRolesNames = (user.roles || [])
+                  .map(roleId => {
+                    const r = roles.find(ro => ro.id.toString() === roleId.toString());
+                    return r ? r.name : roleId;
+                  }).join(', ');
+                return (
+                  <Tr key={user.id}>
+                    <Td>{user.id}</Td>
+                    <Td>{user.email}</Td>
+                    <Td>{userRolesNames || formatMessage({
+                      id: getTrad('tab.whitelist.table.roles.default'),
+                      defaultMessage: 'Default'
+                    })}</Td>
+                    <Td>
+                      <LocalizedDate date={user.createdAt}/>
+                    </Td>
+                    <Td>
+                      <Dialog.Root>
                       <Dialog.Trigger>
-                        <IconButton label={'Delete'} withTooltip={false}><Trash/></IconButton>
+                        <IconButton label={formatMessage({
+                          id: getTrad('tab.whitelist.delete.label'),
+                          defaultMessage: 'Delete'
+                        })} withTooltip={false}><Trash/></IconButton>
                       </Dialog.Trigger>
                       <Dialog.Content>
                         <Dialog.Header>
@@ -215,7 +262,8 @@ export default function Whitelist({users, useWhitelist, loading, onSave, onDelet
                     </Dialog.Root>
                   </Td>
                 </Tr>
-              ))
+                );
+              })
             }
           </Tbody>
         </Table>

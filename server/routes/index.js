@@ -1,61 +1,25 @@
 export default [
   {
     method: 'GET',
-    path: '/google',
-    handler: 'google.googleSignIn',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/google/callback',
-    handler: 'google.googleSignInCallback',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/cognito',
-    handler: 'cognito.cognitoSignIn',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/cognito/callback',
-    handler: 'cognito.cognitoSignInCallback',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/azuread',
-    handler: 'azuread.azureAdSignIn',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/azuread/callback',
-    handler: 'azuread.azureAdSignInCallback',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
     path: '/sso-roles',
-    handler: 'role.find'
+    handler: 'role.find',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.read'] } },
+      ],
+    },
   },
   {
     method: 'PUT',
     path: '/sso-roles',
-    handler: 'role.update'
+    handler: 'role.update',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+      ],
+    },
   },
   {
     method: 'GET',
@@ -75,17 +39,54 @@ export default [
   },
   {
     method: 'GET',
+    path: '/logout',
+    handler: 'oidc.logout',
+    config: {
+      auth: false,
+    },
+  },
+  {
+    method: 'GET',
     path: '/whitelist',
     handler: 'whitelist.info',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.read'] } },
+      ],
+    },
+  },
+  {
+    method: 'PUT',
+    path: '/whitelist/settings',
+    handler: 'whitelist.updateSettings',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+      ],
+    },
   },
   {
     method: 'POST',
     path: '/whitelist',
-    handler: 'whitelist.register'
+    handler: 'whitelist.register',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+      ],
+    },
   },
   {
     method: 'DELETE',
     path: '/whitelist/:id',
-    handler: 'whitelist.removeEmail'
+    handler: 'whitelist.removeEmail',
+    config: {
+      policies: [
+        'admin::isAuthenticatedAdmin',
+        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+      ],
+    },
   }
 ];

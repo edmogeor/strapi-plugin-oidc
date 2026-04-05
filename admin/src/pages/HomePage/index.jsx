@@ -11,7 +11,7 @@ import Role from "../../components/Role";
 import Whitelist from "../../components/Whitelist";
 import {ErrorAlertMessage, SuccessAlertMessage} from "../../components/AlertMessage";
 
-const HomePage = () => {
+function HomePage() {
   const {formatMessage} = useIntl();
   const [loading, setLoading] = useState(false);
 
@@ -29,13 +29,13 @@ const HomePage = () => {
   const {get, put, post, del} = useFetchClient();
 
   useEffect(() => {
-    get(`/strapi-plugin-sso/sso-roles`).then((response) => {
+    get(`/strapi-plugin-oidc/sso-roles`).then((response) => {
       setSSORoles(response.data)
     })
     get(`/admin/roles`).then((response) => {
       setRoles(response.data.data)
     })
-    get('/strapi-plugin-sso/whitelist').then(response => {
+    get('/strapi-plugin-oidc/whitelist').then(response => {
       setUsers(response.data.whitelistUsers)
       setUseWhitelist(response.data.useWhitelist)
     })
@@ -59,7 +59,7 @@ const HomePage = () => {
   }
   const onSaveRole = async () => {
     try {
-      await put('/strapi-plugin-sso/sso-roles', {
+      await put('/strapi-plugin-oidc/sso-roles', {
         roles: ssoRoles.map(role => ({
           'oauth_type': role['oauth_type'], role: role['role']
         }))
@@ -77,12 +77,13 @@ const HomePage = () => {
     }
   }
 
-  const onRegisterWhitelist = async (email) => {
+  const onRegisterWhitelist = async (email, selectedRoles) => {
     setLoading(true)
-    post('/strapi-plugin-sso/whitelist', {
+    post('/strapi-plugin-oidc/whitelist', {
       email,
+      roles: selectedRoles,
     }).then(response => {
-      get('/strapi-plugin-sso/whitelist').then(response => {
+      get('/strapi-plugin-oidc/whitelist').then(response => {
         setUsers(response.data.whitelistUsers)
         setUseWhitelist(response.data.useWhitelist)
       })
@@ -96,8 +97,8 @@ const HomePage = () => {
 
   const onDeleteWhitelist = async (id) => {
     setLoading(true)
-    del(`/strapi-plugin-sso/whitelist/${id}`).then(response => {
-      get('/strapi-plugin-sso/whitelist').then(response => {
+    del(`/strapi-plugin-oidc/whitelist/${id}`).then(response => {
+      get('/strapi-plugin-oidc/whitelist').then(response => {
         setUsers(response.data.whitelistUsers)
         setUseWhitelist(response.data.useWhitelist)
       })
@@ -109,10 +110,36 @@ const HomePage = () => {
     })
   }
 
+  const onToggleWhitelist = async (e) => {
+    const newValue = e.target.checked;
+    setLoading(true)
+    try {
+      await put('/strapi-plugin-oidc/whitelist/settings', {
+        useWhitelist: newValue
+      })
+      setUseWhitelist(newValue)
+      setSuccess(true)
+      setTimeout(() => {
+        setSuccess(false)
+      }, 3000)
+    } catch(err) {
+      console.error(err)
+      setError(true)
+      setTimeout(() => {
+        setError(false)
+      }, 3000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <Page.Protect permissions={[{action: 'plugin::strapi-plugin-sso.read', subject: null}]}>
+    <Page.Protect permissions={[{action: 'plugin::strapi-plugin-oidc.read', subject: null}]}>
       <Layouts.Header
-        title={'Single Sign On'}
+        title={formatMessage({
+          id: getTrad('page.title.oidc'),
+          defaultMessage: 'OIDC'
+        })}
         subtitle={formatMessage({
           id: getTrad('page.title'),
           defaultMessage: 'Default role setting at first login'
@@ -130,7 +157,10 @@ const HomePage = () => {
       }
       <Box padding={10}>
         <Tabs.Root defaultValue="role">
-          <Tabs.List aria-label="Manage your attribute" style={{maxWidth: 300}}>
+          <Tabs.List aria-label={formatMessage({
+            id: getTrad('page.tabs.aria'),
+            defaultMessage: 'Manage your configuration'
+          })} style={{maxWidth: 300}}>
             <Tabs.Trigger value="role">{formatMessage({
               id: getTrad('tab.roles'),
               defaultMessage: 'Roles'
@@ -156,9 +186,11 @@ const HomePage = () => {
             <Whitelist
               loading={loading}
               users={users}
+              roles={roles}
               useWhitelist={useWhitelist}
               onSave={onRegisterWhitelist}
               onDelete={onDeleteWhitelist}
+              onToggle={onToggleWhitelist}
             />
           </Tabs.Content>
         </Tabs.Root>

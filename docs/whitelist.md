@@ -1,8 +1,8 @@
-# strapi-plugin-sso
+# strapi-plugin-oidc
 
 ## About whitelist
 
-Enabling the whitelist restricts authentication for the strapi-plugin-sso to pre-defined email addresses only.
+Enabling the whitelist restricts authentication for the strapi-plugin-oidc to pre-defined email addresses only.
 
 For compatibility with other versions, this feature is disabled by default.
 
@@ -14,7 +14,7 @@ To enable, configure as follows
 // config/plugins.js
 
 export default () => ({
-  'strapi-plugin-sso': {
+  'strapi-plugin-oidc': {
     enabled: true,
     config: {
       USE_WHITELIST: true // <- explicitly set to true

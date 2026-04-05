@@ -7,7 +7,7 @@
 import { useEffect, useRef } from 'react';
 import pluginId from '../../pluginId';
 
-const Initializer = ({ setPlugin }) => {
+export default function Initializer({ setPlugin }) {
   const ref = useRef();
   ref.current = setPlugin;
 
@@ -16,6 +16,4 @@ const Initializer = ({ setPlugin }) => {
   }, []);
 
   return null;
-};
-
-export default Initializer;
+}

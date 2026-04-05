@@ -1,3 +1,3 @@
-export default ({ strapi }) => {
-    // registeration phase
-};
+export default function register({ strapi }) {
+    // registration phase
+}

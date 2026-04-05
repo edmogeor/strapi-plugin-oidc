@@ -2,7 +2,8 @@ import strapiUtils from "@strapi/utils";
 import generator from "generate-password";
 import {randomUUID} from 'node:crypto';
 
-export default ({strapi}) => ({
+export default function oauthService({ strapi }) {
+  return {
   async createUser(email, lastname, firstname, locale, roles = []) {
     // If the email address contains uppercase letters, convert it to lowercase and retrieve it from the DB. If not, register a new email address with a lower-case email address.
     const userService = strapi.service("admin::user");
@@ -77,13 +78,13 @@ export default ({strapi}) => ({
     const eventHub = strapi.serviceMap.get('eventHub')
     eventHub.emit("admin.auth.success", {
       user,
-      provider: "strapi-plugin-sso",
+      provider: "strapi-plugin-oidc",
     });
   },
   // Sign In Success
   renderSignUpSuccess(jwtToken, user, nonce) {
     // get REMEMBER_ME from config
-    const config = strapi.config.get("plugin::strapi-plugin-sso");
+    const config = strapi.config.get("plugin::strapi-plugin-oidc");
     const REMEMBER_ME = config["REMEMBER_ME"];
     const isRememberMe = !!REMEMBER_ME
 
@@ -131,7 +132,7 @@ export default ({strapi}) => ({
     // TODO: A deviceId is generated each time you log in.
     const deviceId = randomUUID();
 
-    const config = strapi.config.get("plugin::strapi-plugin-sso");
+    const config = strapi.config.get("plugin::strapi-plugin-oidc");
     const REMEMBER_ME = config["REMEMBER_ME"]
     const rememberMe = !!REMEMBER_ME
 
@@ -153,4 +154,5 @@ export default ({strapi}) => ({
     const {token: accessToken} = accessResult;
     return accessToken;
   }
-});
+  };
+}
