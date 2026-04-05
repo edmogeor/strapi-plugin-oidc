@@ -70,13 +70,22 @@ module.exports = ({ env }) => ({
 
 Make sure to replace the placeholder values (e.g., `[Client ID from OpenID Provider]`) with the actual connection details from your chosen OIDC identity provider.
 
+## How to Login
+
+Once configured, you can initiate the OIDC login flow by navigating to:
+`http://<your-strapi-domain>/strapi-plugin-oidc/oidc`
+
+(e.g., `http://localhost:1337/strapi-plugin-oidc/oidc` for local development).
+
+When the **Enforce OIDC Login** option is enabled in the Admin Settings, the standard Strapi admin login page will be automatically redirected to this URL.
+
 ## Admin Settings
 
 Once the plugin is installed and configured, you can manage the OIDC settings from the Strapi Admin Panel under **Settings** > **OIDC Plugin**.
 
 - **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. You can also whitelist entire email domains (e.g., `*@company.com`). If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
 - **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
-- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled, forcing all administrators to log in using your OIDC provider. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
+- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled and the standard login will be redirected to the OIDC login URL, forcing all administrators to log in using your OIDC provider. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
 
 ## Credits & Changes
 
