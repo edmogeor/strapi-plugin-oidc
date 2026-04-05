@@ -2,4 +2,6 @@
 node_modules
 .idea
 dist
-test-app
+coverage
+.env
+*.db
