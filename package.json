@@ -1,11 +1,11 @@
 {
   "name": "strapi-plugin-oidc",
   "version": "1.0.0",
-  "description": "OIDC plugin for Strapi!",
+  "description": "A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.",
   "strapi": {
     "displayName": "OIDC Plugin",
     "name": "strapi-plugin-oidc",
-    "description": "Provides OIDC middleware for Strapi instances",
+    "description": "A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.",
     "kind": "plugin"
   },
   "scripts": {
