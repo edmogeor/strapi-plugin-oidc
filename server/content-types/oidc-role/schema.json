@@ -1,9 +1,9 @@
 {
   "info": {
     "singularName": "roles",
-    "pluralName": "sso-roles",
-    "collectionName": "sso-roles",
-    "displayName": "sso-role",
+    "pluralName": "oidc-roles",
+    "collectionName": "oidc-roles",
+    "displayName": "oidc-role",
     "description": ""
   },
   "options": {

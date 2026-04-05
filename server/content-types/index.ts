@@ -1,4 +1,4 @@
-import roles from './sso-role'
+import roles from './oidc-role'
 import whitelists from './whitelist'
 
 export default {

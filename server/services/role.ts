@@ -1,10 +1,10 @@
 export default function roleService({ strapi }) {
   return {
-    SSO_TYPE_OIDC: '4',
-    ssoRoles() {
+    OIDC_TYPE: '4',
+    getOidcRoles() {
       return [
         {
-          'oauth_type': this.SSO_TYPE_OIDC,
+          'oauth_type': this.OIDC_TYPE,
           name: 'OIDC'
         },
       ];
@@ -14,7 +14,7 @@ export default function roleService({ strapi }) {
         .query('plugin::strapi-plugin-oidc.roles')
         .findOne({
           where: {
-            'oauth_type': this.SSO_TYPE_OIDC
+            'oauth_type': this.OIDC_TYPE
           }
         });
     },
@@ -27,8 +27,8 @@ export default function roleService({ strapi }) {
       const query = strapi.query('plugin::strapi-plugin-oidc.roles');
       await Promise.all(
         roles.map(async (role) => {
-          const ssoRole = await query.findOne({ where: { 'oauth_type': role['oauth_type'] } });
-          if (ssoRole) {
+          const oidcRole = await query.findOne({ where: { 'oauth_type': role['oauth_type'] } });
+          if (oidcRole) {
             await query.update({
               where: { 'oauth_type': role['oauth_type'] },
               data: { roles: role.role },

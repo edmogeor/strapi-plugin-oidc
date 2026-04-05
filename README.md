@@ -4,7 +4,7 @@
 
 # Strapi plugin strapi-plugin-oidc
 
-This plugin can provide single sign-on.
+This plugin can provide OIDC functionality.
 
 You will be able to log in to the administration screen using OIDC providers (like Zitadel).
 
@@ -75,7 +75,7 @@ Of the above, the environment variable for the provider you wish to use is all t
 
 # Documentation(English)
 
-[OIDC Single Sign On Setup](https://github.com/edmogeor/strapi-plugin-oidc/blob/main/docs/en/oidc/setup.md)
+[OIDC Setup](https://github.com/edmogeor/strapi-plugin-oidc/blob/main/docs/en/oidc/setup.md)
 
 [whitelist](https://github.com/edmogeor/strapi-plugin-oidc/blob/main/docs/whitelist.md)
 
@@ -83,7 +83,7 @@ Of the above, the environment variable for the provider you wish to use is all t
 
 [Description](https://github.com/edmogeor/strapi-plugin-oidc/blob/main/docs/README.md)
 
-TODO OIDC Single Sign On Setup
+TODO OIDC Setup
 
 # Demo
 

@@ -123,7 +123,7 @@ describe('Controllers', () => {
     it('find should return roles', async () => {
       const mockRoleService = {
         find: vi.fn().mockResolvedValue([{ oauth_type: '4', roles: [1, 2] }]),
-        ssoRoles: vi.fn().mockReturnValue([{ oauth_type: '4', name: 'OIDC' }]),
+        getOidcRoles: vi.fn().mockReturnValue([{ oauth_type: '4', name: 'OIDC' }]),
       };
       strapi.plugin.mockReturnValue({ service: () => mockRoleService });
 

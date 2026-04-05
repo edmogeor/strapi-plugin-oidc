@@ -43,7 +43,7 @@ const LocalizedDate = ({date}: { date: string }) => {
   }).format(new Date(date))
 };
 
-import { SSORole, RoleDef } from '../Role';
+import { OIDCRole, RoleDef } from '../Role';
 
 export interface WhitelistUser {
   email: string;
@@ -54,14 +54,14 @@ export interface WhitelistUser {
 export interface WhitelistProps {
   users: WhitelistUser[];
   roles: RoleDef[];
-  ssoRoles?: SSORole[];
+  oidcRoles?: OIDCRole[];
   useWhitelist: boolean;
   loading: boolean;
   onSave: (email: string, roles: string[]) => Promise<void>;
   onDelete: (email: string) => Promise<void>;
 }
 
-export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, loading, onSave, onDelete}: WhitelistProps) {
+export default function Whitelist({users, roles, oidcRoles = [], useWhitelist, loading, onSave, onDelete}: WhitelistProps) {
   const [email, setEmail] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [page, setPage] = useState(1);
@@ -192,9 +192,9 @@ export default function Whitelist({users, roles, ssoRoles = [], useWhitelist, lo
                         }).join(', ');
 
                       if (!userRolesNames) {
-                        const defaultRolesIds = ssoRoles.reduce<string[]>((acc, sso) => {
-                          if (sso.role) {
-                            acc.push(...sso.role);
+                        const defaultRolesIds = oidcRoles.reduce<string[]>((acc, oidc) => {
+                          if (oidc.role) {
+                            acc.push(...oidc.role);
                           }
                           return acc;
                         }, []);

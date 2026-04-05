@@ -10,7 +10,7 @@ import {Page, Layouts} from '@strapi/strapi/admin';
 import {useIntl} from 'react-intl';
 import {useFetchClient} from '@strapi/strapi/admin';
 import getTrad from "../../utils/getTrad";
-import Role, { SSORole, RoleDef } from "../../components/Role";
+import Role, { OIDCRole, RoleDef } from "../../components/Role";
 import Whitelist, { WhitelistUser } from "../../components/Whitelist";
 import {ErrorAlertMessage, SuccessAlertMessage, MatchedUserAlertMessage} from "../../components/AlertMessage";
 import CustomSwitch from "../../components/CustomSwitch";
@@ -20,8 +20,8 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
 
   // Roles
-  const [initialSsoRoles, setInitialSSORoles] = useState<SSORole[]>([])
-  const [ssoRoles, setSSORoles] = useState<SSORole[]>([])
+  const [initialOidcRoles, setInitialOIDCRoles] = useState<OIDCRole[]>([])
+  const [oidcRoles, setOIDCRoles] = useState<OIDCRole[]>([])
   const [roles, setRoles] = useState<RoleDef[]>([])
 
   // Whitelist
@@ -39,9 +39,9 @@ function HomePage() {
   const {get, put, post, del} = useFetchClient();
 
   useEffect(() => {
-    get(`/strapi-plugin-oidc/sso-roles`).then((response) => {
-      setSSORoles(response.data)
-      setInitialSSORoles(JSON.parse(JSON.stringify(response.data)))
+    get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
+      setOIDCRoles(response.data)
+      setInitialOIDCRoles(JSON.parse(JSON.stringify(response.data)))
     })
     get(`/admin/roles`).then((response) => {
       setRoles(response.data.data)
@@ -54,21 +54,21 @@ function HomePage() {
       setEnforceOIDC(response.data.enforceOIDC)
       setInitialEnforceOIDC(response.data.enforceOIDC)
     })
-  }, [setSSORoles, setRoles])
+  }, [setOIDCRoles, setRoles])
 
-  const onChangeRole = (values: string[], ssoId: string) => {
-    for (const ssoRole of ssoRoles) {
-      if (ssoRole['oauth_type'] === ssoId) {
-        ssoRole['role'] = values;
+  const onChangeRole = (values: string[], oidcId: string) => {
+    for (const oidcRole of oidcRoles) {
+      if (oidcRole['oauth_type'] === oidcId) {
+        oidcRole['role'] = values;
       }
     }
-    setSSORoles(ssoRoles.slice())
+    setOIDCRoles(oidcRoles.slice())
   }
   const onSaveAll = async () => {
     setLoading(true)
     try {
-      await put('/strapi-plugin-oidc/sso-roles', {
-        roles: ssoRoles.map(role => ({
+      await put('/strapi-plugin-oidc/oidc-roles', {
+        roles: oidcRoles.map(role => ({
           'oauth_type': role['oauth_type'], role: role['role']
         }))
       })
@@ -80,7 +80,7 @@ function HomePage() {
         users: users.map(u => ({ email: u.email, roles: u.roles }))
       })
       
-      setInitialSSORoles(JSON.parse(JSON.stringify(ssoRoles)))
+      setInitialOIDCRoles(JSON.parse(JSON.stringify(oidcRoles)))
       setInitialUseWhitelist(useWhitelist)
       setInitialEnforceOIDC(enforceOIDC)
       
@@ -130,7 +130,7 @@ function HomePage() {
     setEnforceOIDC(newValue)
   }
 
-  const isDirty = useWhitelist !== initialUseWhitelist || enforceOIDC !== initialEnforceOIDC || JSON.stringify(ssoRoles) !== JSON.stringify(initialSsoRoles) || JSON.stringify(users) !== JSON.stringify(initialUsers);
+  const isDirty = useWhitelist !== initialUseWhitelist || enforceOIDC !== initialEnforceOIDC || JSON.stringify(oidcRoles) !== JSON.stringify(initialOidcRoles) || JSON.stringify(users) !== JSON.stringify(initialUsers);
 
   return (
     <Page.Protect permissions={[{action: 'plugin::strapi-plugin-oidc.read', subject: null}]}>
@@ -163,7 +163,7 @@ function HomePage() {
             </Box>
             <Role
               roles={roles}
-              ssoRoles={ssoRoles}
+              oidcRoles={oidcRoles}
               onChangeRole={onChangeRole}
             />
           </Box>
@@ -186,7 +186,7 @@ function HomePage() {
               loading={loading}
               users={users}
               roles={roles}
-              ssoRoles={ssoRoles}
+              oidcRoles={oidcRoles}
               useWhitelist={useWhitelist}
               onSave={onRegisterWhitelist}
               onDelete={onDeleteWhitelist}

@@ -90,8 +90,8 @@ describe('strapi-plugin-oidc core services', () => {
       role = roleService({ strapi });
     });
 
-    it('should return SSO roles', () => {
-      expect(role.ssoRoles()).toEqual([{ oauth_type: '4', name: 'OIDC' }]);
+    it('should return OIDC roles', () => {
+      expect(role.getOidcRoles()).toEqual([{ oauth_type: '4', name: 'OIDC' }]);
     });
 
     it('should fetch oidcRoles', async () => {

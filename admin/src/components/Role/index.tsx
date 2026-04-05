@@ -9,7 +9,7 @@ import {
 import getTrad from "../../utils/getTrad";
 import {useIntl} from "react-intl";
 
-export interface SSORole {
+export interface OIDCRole {
   oauth_type: string;
   role?: string[];
 }
@@ -20,12 +20,12 @@ export interface RoleDef {
 }
 
 export interface RoleProps {
-  ssoRoles: SSORole[];
+  oidcRoles: OIDCRole[];
   roles: RoleDef[];
-  onChangeRole: (values: string[], ssoId: string) => void;
+  onChangeRole: (values: string[], oidcId: string) => void;
 }
 
-export default function Role({ssoRoles, roles, onChangeRole}: RoleProps) {
+export default function Role({oidcRoles, roles, onChangeRole}: RoleProps) {
   const {formatMessage} = useIntl();
   return (
     <>
@@ -34,15 +34,15 @@ export default function Role({ssoRoles, roles, onChangeRole}: RoleProps) {
       </Typography>
       <Flex direction="column" alignItems="stretch" gap={4} marginBottom={4}>
         {
-          ssoRoles.map((ssoRole) => (
-            <Box key={ssoRole['oauth_type']}>
+          oidcRoles.map((oidcRole) => (
+            <Box key={oidcRole['oauth_type']}>
               <MultiSelect
                 withTags
                 placeholder={formatMessage(getTrad('roles.placeholder'))}
-                value={ssoRole['role'] ? ssoRole['role'].map(r => r.toString()) : []}
+                value={oidcRole['role'] ? oidcRole['role'].map(r => r.toString()) : []}
                 onChange={(value) => {
                   if (value && value.length > 0) {
-                    onChangeRole(value, ssoRole['oauth_type'])
+                    onChangeRole(value, oidcRole['oauth_type'])
                   }
                 }}
               >

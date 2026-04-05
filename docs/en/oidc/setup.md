@@ -1,4 +1,4 @@
-# Single sign-on using OIDC providers
+# OIDC Setup
 
 First, follow README.md to install the plugin to Strapi Version 4.
 

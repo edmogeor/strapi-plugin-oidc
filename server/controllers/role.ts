@@ -1,15 +1,15 @@
 async function find(ctx) {
   const roleService = strapi.plugin('strapi-plugin-oidc').service('role')
   const roles = await roleService.find()
-  const ssoConstants = roleService.ssoRoles()
-  for (const sso of ssoConstants) {
+  const oidcConstants = roleService.getOidcRoles()
+  for (const oidc of oidcConstants) {
     for (const role of roles) {
-      if (role['oauth_type'] === sso['oauth_type']) {
-        sso['role'] = role['roles']
+      if (role['oauth_type'] === oidc['oauth_type']) {
+        oidc['role'] = role['roles']
       }
     }
   }
-  ctx.send(ssoConstants)
+  ctx.send(oidcConstants)
 }
 
 async function update(ctx) {

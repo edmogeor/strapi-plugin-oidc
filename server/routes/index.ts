@@ -1,7 +1,7 @@
 export default [
   {
     method: 'GET',
-    path: '/sso-roles',
+    path: '/oidc-roles',
     handler: 'role.find',
     config: {
       policies: [
@@ -12,7 +12,7 @@ export default [
   },
   {
     method: 'PUT',
-    path: '/sso-roles',
+    path: '/oidc-roles',
     handler: 'role.update',
     config: {
       policies: [

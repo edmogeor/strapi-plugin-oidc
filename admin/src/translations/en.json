@@ -1,6 +1,6 @@
 {
   "global.plugins.strapi-plugin-oidc": "OIDC Plugin",
-  "page.title": "Configure single sign-on default role(s) and access controls.",
+  "page.title": "Configure OIDC default role(s) and access controls.",
   "roles.notes": "Select the default role(s) assigned to new users upon their first login. This setting does not affect existing users.",
   "page.save": "Save Changes",
   "page.save.success": "Updated settings",
@@ -13,7 +13,7 @@
   "whitelist.error.unique": "Already registered email address.",
   "whitelist.enabled": "Whitelist is currently enabled.",
   "whitelist.disabled": "Whitelist is currently disabled.",
-  "whitelist.description": "Restrict SSO authentication to specific email addresses and optionally assign them custom role(s).",
+  "whitelist.description": "Restrict OIDC authentication to specific email addresses and optionally assign them custom role(s).",
   "whitelist.user_exists": "User already exists, matching existing role(s)",
   "whitelist.users_exists": "Users already exist, matching existing role(s)",
   "whitelist.table.no": "No.",

@@ -1,7 +1,7 @@
 {
   "name": "strapi-plugin-oidc",
   "version": "1.0.8",
-  "description": "OIDC Single Sign On plugin for Strapi!",
+  "description": "OIDC plugin for Strapi!",
   "strapi": {
     "displayName": "OIDC Plugin",
     "name": "strapi-plugin-oidc",
@@ -20,7 +20,6 @@
     "strapi",
     "plugin",
     "oauth",
-    "SSO",
     "OIDC",
     "Zitadel"
   ],
