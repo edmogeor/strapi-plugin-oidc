@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="strapi-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7B79FF" />
+      <stop offset="100%" stop-color="#4945FF" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="600" height="600" fill="transparent" />
+
+  <!-- Strapi Purple Squircle Shape -->
+  <rect x="40" y="40" width="520" height="520" rx="140" fill="url(#strapi-gradient)" filter="url(#shadow)" />
+
+  <!-- Lucide Icon: Shield Check (Auth / OIDC representation) -->
+  <g transform="translate(160, 160) scale(11.666)" stroke="#ffffff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+    <path d="m9 12 2 2 4-4" />
+  </g>
+</svg>
