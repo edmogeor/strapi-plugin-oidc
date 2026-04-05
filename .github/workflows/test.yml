@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies in root
         run: npm ci || npm install
         
+      - name: Build plugin
+        run: npm run build
+        
       - name: Install dependencies in test-app
         run: |
           cd test-app
