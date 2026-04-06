@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 
@@ -54,30 +53,49 @@ async function oidcSignIn(ctx: any) {
 }
 
 async function exchangeTokenAndFetchUserInfo(
-  httpClient: any,
   config: Record<string, string>,
   params: URLSearchParams,
 ) {
-  const response = await httpClient.post(config.OIDC_TOKEN_ENDPOINT, params, {
+  const response = await fetch(config.OIDC_TOKEN_ENDPOINT, {
+    method: 'POST',
+    body: params,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
   });
 
-  let userInfoEndpointHeaders = {};
-  let userInfoEndpointParameters = `?access_token=${response.data.access_token}`;
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(
+      `Failed to exchange token: ${response.status} ${response.statusText} - ${errText}`,
+    );
+  }
+
+  const tokenData = await response.json();
+
+  let userInfoEndpointHeaders: HeadersInit = {};
+  let userInfoEndpointParameters = `?access_token=${tokenData.access_token}`;
 
   if (config.OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER) {
     userInfoEndpointHeaders = {
-      headers: { Authorization: `Bearer ${response.data.access_token}` },
+      Authorization: `Bearer ${tokenData.access_token}`,
     };
     userInfoEndpointParameters = '';
   }
 
   const userInfoEndpoint = `${config.OIDC_USER_INFO_ENDPOINT}${userInfoEndpointParameters}`;
-  const userResponse = await httpClient.get(userInfoEndpoint, userInfoEndpointHeaders);
+  const userResponse = await fetch(userInfoEndpoint, {
+    headers: userInfoEndpointHeaders,
+  });
 
-  return userResponse.data;
+  if (!userResponse.ok) {
+    const errText = await userResponse.text();
+    throw new Error(
+      `Failed to fetch user info: ${userResponse.status} ${userResponse.statusText} - ${errText}`,
+    );
+  }
+
+  return await userResponse.json();
 }
 
 async function registerNewUser(
@@ -153,7 +171,6 @@ async function handleUserAuthentication(
 
 async function oidcSignInCallback(ctx: any) {
   const config = configValidation();
-  const httpClient = axios.create();
   const userService = strapi.service('admin::user');
   const oauthService = strapi.plugin('strapi-plugin-oidc').service('oauth');
   const roleService = strapi.plugin('strapi-plugin-oidc').service('role');
@@ -175,7 +192,7 @@ async function oidcSignInCallback(ctx: any) {
   params.append('code_verifier', ctx.session.codeVerifier);
 
   try {
-    const userResponseData = await exchangeTokenAndFetchUserInfo(httpClient, config, params);
+    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params);
 
     const { activateUser, jwtToken } = await handleUserAuthentication(
       userService,

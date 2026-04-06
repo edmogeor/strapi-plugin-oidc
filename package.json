@@ -38,7 +38,6 @@
     "@strapi/design-system": "^2.2.0",
     "@strapi/icons": "^2.2.0",
     "@strapi/utils": "^5.41.1",
-    "axios": "^1.14.0",
     "generate-password": "^1.7.1",
     "pkce-challenge": "^6.0.0",
     "react": "^18.3.1",
