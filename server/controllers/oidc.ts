@@ -30,13 +30,29 @@ async function oidcSignIn(ctx: any) {
   // Generate code verifier and code challenge
   const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
 
-  // Store the code verifier in the session
-  ctx.session.codeVerifier = codeVerifier;
-
   if (!state) {
     state = randomBytes(32).toString('base64url');
   }
-  ctx.session.oidcState = state;
+
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Store the code verifier and state in cookies
+  // We use `secure: isProduction && ctx.request.secure` to align with Strapi's own session management.
+  // This ensures cookies are secure in production, provided the reverse proxy is configured correctly
+  // (sending X-Forwarded-Proto and proxy: true in Strapi config).
+  ctx.cookies.set('oidc_code_verifier', codeVerifier, {
+    httpOnly: true,
+    maxAge: 600000,
+    secure: isProduction && ctx.request.secure,
+    sameSite: 'lax',
+  }); // 10 min
+
+  ctx.cookies.set('oidc_state', state, {
+    httpOnly: true,
+    maxAge: 600000,
+    secure: isProduction && ctx.request.secure,
+    sameSite: 'lax',
+  });
 
   const params = new URLSearchParams();
   params.append('response_type', 'code');
@@ -179,7 +195,10 @@ async function oidcSignInCallback(ctx: any) {
   if (!ctx.query.code) {
     return ctx.send(oauthService.renderSignUpError('code Not Found'));
   }
-  if (!ctx.query.state || ctx.query.state !== ctx.session.oidcState) {
+  const oidcState = ctx.cookies.get('oidc_state');
+  const codeVerifier = ctx.cookies.get('oidc_code_verifier');
+
+  if (!ctx.query.state || ctx.query.state !== oidcState) {
     return ctx.send(oauthService.renderSignUpError('Invalid state'));
   }
 
@@ -189,7 +208,7 @@ async function oidcSignInCallback(ctx: any) {
   params.append('client_secret', config.OIDC_CLIENT_SECRET);
   params.append('redirect_uri', config.OIDC_REDIRECT_URI);
   params.append('grant_type', config.OIDC_GRANT_TYPE);
-  params.append('code_verifier', ctx.session.codeVerifier);
+  params.append('code_verifier', codeVerifier);
 
   try {
     const userResponseData = await exchangeTokenAndFetchUserInfo(config, params);
