@@ -8,7 +8,7 @@ describe('OIDC E2E Tests', () => {
   beforeAll(async () => {
     strapi = (global as any).strapiInstance;
     agent = request.agent(strapi.server.httpServer);
-    
+
     // Give the plugin some mocked config
     strapi.config.set('plugin::strapi-plugin-oidc', {
       REMEMBER_ME: false,
@@ -23,17 +23,19 @@ describe('OIDC E2E Tests', () => {
       OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout'
+      OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
     });
 
     // Disable whitelist for tests
-    await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: false, enforceOIDC: false } });
+    await strapi
+      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
+      .set({ value: { useWhitelist: false, enforceOIDC: false } });
   });
 
   afterAll(async () => {
     // Clean up the created mock user from the database
     await strapi.db.query('admin::user').deleteMany({
-      where: { email: 'test@company.com' }
+      where: { email: 'test@company.com' },
     });
   });
 
@@ -43,13 +45,11 @@ describe('OIDC E2E Tests', () => {
 
   it('should handle the full OIDC login flow', async () => {
     // 1. Initiate login
-    const loginRes = await agent
-      .get('/strapi-plugin-oidc/oidc')
-      .redirects(0);
+    const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
 
     expect(loginRes.status).toBe(302);
     expect(loginRes.headers.location).toContain('https://mock-oidc.com/authorize');
-    
+
     const locationUrl = new URL(loginRes.headers.location);
     const state = locationUrl.searchParams.get('state');
     expect(state).toBeDefined();
@@ -72,7 +72,9 @@ describe('OIDC E2E Tests', () => {
     expect(res.body.enforceOIDC).toBe(false);
 
     // 2. Enable enforceOIDC in settings
-    await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: true, enforceOIDC: true } });
+    await strapi
+      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
+      .set({ value: { useWhitelist: true, enforceOIDC: true } });
 
     // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
@@ -82,13 +84,13 @@ describe('OIDC E2E Tests', () => {
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
     // Ensure whitelist is active and no one is in it
-    await strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' }).set({ value: { useWhitelist: true, enforceOIDC: false } });
+    await strapi
+      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
+      .set({ value: { useWhitelist: true, enforceOIDC: false } });
 
     // 1. Initiate login to get a valid state
-    const loginRes = await agent
-      .get('/strapi-plugin-oidc/oidc')
-      .redirects(0);
-      
+    const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+
     const locationUrl = new URL(loginRes.headers.location);
     const state = locationUrl.searchParams.get('state');
 
@@ -99,7 +101,7 @@ describe('OIDC E2E Tests', () => {
 
     // The plugin should return a 200 OK with an HTML page showing the error
     expect(callbackRes.status).toBe(200);
-    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('Not present in whitelist');
   });
 
@@ -109,7 +111,7 @@ describe('OIDC E2E Tests', () => {
       .redirects(0);
 
     expect(callbackRes.status).toBe(200);
-    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('code Not Found');
   });
 
@@ -119,7 +121,7 @@ describe('OIDC E2E Tests', () => {
       .redirects(0);
 
     expect(callbackRes.status).toBe(200);
-    expect(callbackRes.text).toContain('Authentication failed');
+    expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('Invalid state');
   });
 });

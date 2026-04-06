@@ -1,7 +1,11 @@
 export default function whitelistService({ strapi }) {
   return {
     async getSettings() {
-      const pluginStore = strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc' });
+      const pluginStore = strapi.store({
+        environment: '',
+        type: 'plugin',
+        name: 'strapi-plugin-oidc',
+      });
       let settings = await pluginStore.get({ key: 'settings' });
       if (!settings) {
         settings = { useWhitelist: true, enforceOIDC: false };
@@ -10,7 +14,11 @@ export default function whitelistService({ strapi }) {
       return settings;
     },
     async setSettings(settings) {
-      const pluginStore = strapi.store({ type: 'plugin', name: 'strapi-plugin-oidc' });
+      const pluginStore = strapi.store({
+        environment: '',
+        type: 'plugin',
+        name: 'strapi-plugin-oidc',
+      });
       await pluginStore.set({ key: 'settings', value: settings });
     },
     async getUsers() {

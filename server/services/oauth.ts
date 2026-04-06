@@ -2,6 +2,122 @@ import strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
 
+const renderHtmlTemplate = (title: string, content: string) => `
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+  <style>
+    :root {
+      --bg-color: #f6f6f9;
+      --card-bg: #ffffff;
+      --text-color: #32324d;
+      --text-muted: #666687;
+      --btn-bg: #4945ff;
+      --btn-hover: #271fe0;
+      --btn-text: #ffffff;
+      --icon-bg: #fcecea;
+      --icon-color: #d02b20;
+      --success-bg: #eafbe7;
+      --success-color: #328048;
+      --shadow: 0 1px 4px rgba(33, 33, 52, 0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #181826;
+        --card-bg: #212134;
+        --text-color: #ffffff;
+        --text-muted: #a5a5ba;
+        --btn-bg: #4945ff;
+        --btn-hover: #7b79ff;
+        --btn-text: #ffffff;
+        --icon-bg: #4a2123;
+        --icon-color: #f23628;
+        --success-bg: #1c3523;
+        --success-color: #55ca76;
+        --shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      }
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: var(--bg-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-color);
+    }
+    .card {
+      background: var(--card-bg);
+      padding: 32px 40px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      background-color: var(--icon-bg);
+      color: var(--icon-color);
+      border-radius: 50%;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .icon.success {
+      background-color: var(--success-bg);
+      color: var(--success-color);
+    }
+    .icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    h1 {
+      margin: 0 0 12px 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    p {
+      margin: 0 0 32px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    .btn {
+      display: inline-block;
+      background-color: var(--btn-bg);
+      color: var(--btn-text);
+      padding: 10px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .btn:hover {
+      background-color: var(--btn-hover);
+    }
+  </style>
+</head>
+<body>
+  ${content}
+</body>
+</html>`;
+
 export default function oauthService({ strapi }) {
   return {
     async createUser(email, lastname, firstname, locale, roles = []) {
@@ -87,40 +203,48 @@ export default function oauthService({ strapi }) {
       const REMEMBER_ME = config['REMEMBER_ME'];
       const isRememberMe = !!REMEMBER_ME;
 
-      return `
-<!doctype html>
-<html>
-<head>
-<noscript>
-<h3>JavaScript must be enabled for authentication</h3>
-</noscript>
-<script nonce="${nonce}">
- window.addEventListener('load', function() {
-  if(${isRememberMe}){
-    localStorage.setItem('jwtToken', '"${jwtToken}"');
-  }else{
-    document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/';
-  }
-  localStorage.setItem('isLoggedIn', 'true');
-  location.href = '${strapi.config.admin.url}'
- })
-</script>
-</head>
-<body>
-</body>
-</html>`;
+      const content = `
+    <noscript>
+      <div class="card">
+        <div class="icon success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </div>
+        <h1>JavaScript Required</h1>
+        <p>JavaScript must be enabled for authentication to complete.</p>
+      </div>
+    </noscript>
+    <script nonce="${nonce}">
+     window.addEventListener('load', function() {
+      if(${isRememberMe}){
+        localStorage.setItem('jwtToken', '"${jwtToken}"');
+      }else{
+        document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/';
+      }
+      localStorage.setItem('isLoggedIn', 'true');
+      location.href = '${strapi.config.admin.url}'
+     })
+    </script>`;
+
+      return renderHtmlTemplate('Authenticating...', content);
     },
     // Sign In Error
     renderSignUpError(message) {
-      return `
-<!doctype html>
-<html>
-<head></head>
-<body>
-<h3>Authentication failed</h3>
-<p>${message}</p>
-</body>
-</html>`;
+      const content = `
+  <div class="card">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+        <path d="M12 9v4"/>
+        <path d="M12 17h.01"/>
+      </svg>
+    </div>
+    <h1>Authentication Failed</h1>
+    <p>${message}</p>
+    <a href="${strapi.config.admin.url}" class="btn">Return to Login</a>
+  </div>`;
+      return renderHtmlTemplate('Authentication Failed', content);
     },
     async generateToken(user, ctx) {
       const sessionManager = strapi.sessionManager;
