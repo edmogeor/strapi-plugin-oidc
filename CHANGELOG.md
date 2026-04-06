@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-04-06
+
+### Security
+
+- Mitigated Reflected XSS vulnerability in the authentication error screen by escaping error messages.
+- Fixed a logic bypass in the email whitelist where case-sensitive comparisons could block legitimate users or allow bypasses by normalizing all emails to lowercase.
+- Added a secure, sliding-window rate limiter to OIDC authentication endpoints to prevent brute-force and DoS attacks.
+
+### Changed
+
+- Enhanced authentication UI with styled light/dark mode success and error screens.
+- Fixed whitelist settings persistence across server restarts.
+- Enforce OIDC is now automatically disabled if the whitelist becomes empty, preventing accidental lockouts.
+
 ## [1.0.5] - 2026-04-05
 
 ### Changed
