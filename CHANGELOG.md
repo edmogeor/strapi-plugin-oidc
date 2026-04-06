@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.16] - 2026-04-06
+
+### Changed
+
+- Standardized the check for production environments. The OIDC callback controller now uses Strapi's internal `strapi.config.get('environment')` instead of relying directly on `process.env.NODE_ENV`, perfectly aligning it with Strapi's own core session manager.
+
 ## [1.0.15] - 2026-04-06
 
 ### Fixed

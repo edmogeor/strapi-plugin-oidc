@@ -34,7 +34,7 @@ async function oidcSignIn(ctx: any) {
     state = randomBytes(32).toString('base64url');
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = strapi.config.get('environment') === 'production';
 
   // Store the code verifier and state in cookies
   // We use `secure: isProduction && ctx.request.secure` to align with Strapi's own session management.
