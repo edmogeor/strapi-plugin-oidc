@@ -287,7 +287,7 @@ export default function oauthService({ strapi }) {
 
       const cookieOptions: any = {
         httpOnly: true,
-        secure: isProduction,
+        secure: isProduction && ctx.request.secure,
         overwrite: true,
         domain,
         path,
