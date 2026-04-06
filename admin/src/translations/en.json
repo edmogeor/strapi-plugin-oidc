@@ -9,6 +9,7 @@
   "page.cancel": "Cancel",
   "page.ok": "OK",
   "roles.title": "Default Role(s)",
+  "roles.placeholder": "Select default role(s)",
   "whitelist.title": "Whitelist",
   "whitelist.error.unique": "Already registered email address.",
   "whitelist.enabled": "Whitelist is currently enabled.",
