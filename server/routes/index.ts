@@ -53,7 +53,7 @@ export default [
     handler: 'oidc.oidcSignIn',
     config: {
       auth: false,
-      middlewares: [rateLimitMiddleware],
+      middlewares: [rateLimitMiddleware, 'strapi::session'],
     },
   },
   {
@@ -62,7 +62,7 @@ export default [
     handler: 'oidc.oidcSignInCallback',
     config: {
       auth: false,
-      middlewares: [rateLimitMiddleware],
+      middlewares: [rateLimitMiddleware, 'strapi::session'],
     },
   },
   {
