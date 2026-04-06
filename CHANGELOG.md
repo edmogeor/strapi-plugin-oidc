@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-04-06
+
+### Security
+
+- Plugged OIDC enforcement bypass vectors by adding a strict server-side middleware that blocks Strapi's local `/admin/login` API route when OIDC enforcement is enabled.
+- Fixed a client-side routing bug where query parameters or hash segments in the URL could bypass the OIDC login screen redirect.
+
 ## [1.0.8] - 2026-04-06
 
 ### Security
