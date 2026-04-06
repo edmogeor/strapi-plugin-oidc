@@ -83,6 +83,10 @@ describe('OIDC E2E Tests', () => {
     // It should not be a 403 Forbidden Error from our middleware
     expect(localLoginAllowed.status).not.toBe(403);
 
+    // Ensure GET to /admin/auth/login doesn't redirect
+    const getLoginAllowed = await agent.get('/admin/auth/login').redirects(0);
+    expect(getLoginAllowed.status).not.toBe(302);
+
     // 2. Enable enforceOIDC in settings
     await setSettings(true, true);
 
@@ -99,6 +103,16 @@ describe('OIDC E2E Tests', () => {
     // It should be blocked by our middleware
     expect(localLoginBlocked.status).toBe(403);
     expect(localLoginBlocked.body.error.message).toContain('Local login is disabled');
+
+    // Ensure GET to /admin/auth/login redirects to OIDC
+    const getLoginBlocked = await agent.get('/admin/auth/login').redirects(0);
+    expect(getLoginBlocked.status).toBe(302);
+    expect(getLoginBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
+
+    // Ensure GET to /admin/auth/register redirects to OIDC
+    const getRegisterBlocked = await agent.get('/admin/auth/register').redirects(0);
+    expect(getRegisterBlocked.status).toBe(302);
+    expect(getRegisterBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {

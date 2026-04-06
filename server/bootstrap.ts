@@ -1,6 +1,8 @@
 export default async function bootstrap({ strapi }) {
   strapi.server.use(async (ctx, next) => {
-    if (ctx.request.path === '/admin/login' && ctx.request.method === 'POST') {
+    const adminUrl = strapi.config.get('admin.url', '/admin');
+
+    if (ctx.request.path === `${adminUrl}/login` && ctx.request.method === 'POST') {
       try {
         const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
         const settings = await whitelistService.getSettings();
@@ -21,6 +23,26 @@ export default async function bootstrap({ strapi }) {
         strapi.log.error('Error checking OIDC enforcement in middleware:', err);
       }
     }
+
+    if (
+      ctx.request.method === 'GET' &&
+      (ctx.request.path.startsWith(`${adminUrl}/auth/login`) ||
+        ctx.request.path.startsWith(`${adminUrl}/auth/register`) ||
+        ctx.request.path.startsWith(`${adminUrl}/auth/forgot-password`) ||
+        ctx.request.path.startsWith(`${adminUrl}/auth/reset-password`))
+    ) {
+      try {
+        const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+        const settings = await whitelistService.getSettings();
+        if (settings && settings.enforceOIDC) {
+          ctx.redirect('/strapi-plugin-oidc/oidc');
+          return;
+        }
+      } catch (err) {
+        strapi.log.error('Error checking OIDC enforcement in GET middleware:', err);
+      }
+    }
+
     await next();
   });
 

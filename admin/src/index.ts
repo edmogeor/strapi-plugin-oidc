@@ -36,6 +36,23 @@ export default {
   },
 
   bootstrap() {
+    let isLogoutInProgress = false;
+
+    const isAuthRoute = (path: string) => {
+      const match = path.match(/\/auth\/(login|register|forgot-password|reset-password)/);
+      return match !== null;
+    };
+
+    const initialPath = window.location.pathname;
+    let styleElem: HTMLStyleElement | null = null;
+    if (isAuthRoute(initialPath) && !isLogoutInProgress) {
+      styleElem = document.createElement('style');
+      styleElem.innerHTML = 'body { display: none !important; }';
+      document.head.appendChild(styleElem);
+    }
+
+    let willRedirect = false;
+
     const checkEnforceOIDC = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
@@ -43,8 +60,10 @@ export default {
           const data = await response.json();
           if (data.enforceOIDC) {
             const currentPath = window.location.pathname;
-            if (currentPath.endsWith('/auth/login')) {
+            if (isAuthRoute(currentPath) && !isLogoutInProgress) {
+              willRedirect = true;
               window.location.href = '/strapi-plugin-oidc/oidc';
+              return;
             }
 
             const interceptHistory = (originalMethod: any) => {
@@ -54,7 +73,7 @@ export default {
                 const url = args[2];
                 if (url && typeof url === 'string') {
                   const urlWithoutQuery = url.split('?')[0].split('#')[0];
-                  if (urlWithoutQuery.endsWith('/auth/login')) {
+                  if (isAuthRoute(urlWithoutQuery) && !isLogoutInProgress) {
                     window.location.href = '/strapi-plugin-oidc/oidc';
                     return;
                   }
@@ -69,6 +88,10 @@ export default {
         }
       } catch (error) {
         console.error('Failed to check OIDC enforcement setting:', error);
+      } finally {
+        if (!willRedirect && styleElem && styleElem.parentNode) {
+          styleElem.parentNode.removeChild(styleElem);
+        }
       }
     };
     checkEnforceOIDC();
@@ -79,10 +102,16 @@ export default {
       const isLogout =
         url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
 
+      if (isLogout) {
+        isLogoutInProgress = true;
+      }
+
       const response = await originalFetch(...args);
 
       if (isLogout && response.ok) {
         window.location.href = '/strapi-plugin-oidc/logout';
+      } else if (isLogout) {
+        isLogoutInProgress = false; // Reset if logout failed
       }
 
       return response;
