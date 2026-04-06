@@ -41,12 +41,8 @@ async function register(ctx) {
   }
 
   // Handle both comma-separated strings and arrays of emails
-  const emailList = Array.isArray(email)
-    ? email.map((e) => String(e).toLowerCase())
-    : email
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
+  const rawEmails = Array.isArray(email) ? email : email.split(',');
+  const emailList = rawEmails.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
 
   const existingUsers = await strapi.query('admin::user').findMany({
     where: { email: { $in: emailList } },

@@ -233,15 +233,12 @@ export default function oauthService({ strapi }) {
     },
     // Sign In Error
     renderSignUpError(message) {
-      const escapeHtml = (unsafe) => {
-        return String(unsafe)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      };
-      const safeMessage = escapeHtml(message);
+      const safeMessage = String(message)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
       const content = `
   <div class="card">
     <div class="icon">

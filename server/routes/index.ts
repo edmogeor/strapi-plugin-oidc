@@ -7,8 +7,7 @@ const rateLimitMiddleware = async (ctx: any, next: () => Promise<any>) => {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
-  let requestStamps = rateLimitMap.get(ip) || [];
-  requestStamps = requestStamps.filter((timestamp) => timestamp > windowStart);
+  const requestStamps = (rateLimitMap.get(ip) || []).filter((timestamp) => timestamp > windowStart);
 
   if (requestStamps.length >= MAX_REQUESTS) {
     ctx.status = 429;
