@@ -52,9 +52,12 @@ export default {
                 ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
               ) {
                 const url = args[2];
-                if (url && typeof url === 'string' && url.endsWith('/auth/login')) {
-                  window.location.href = '/strapi-plugin-oidc/oidc';
-                  return;
+                if (url && typeof url === 'string') {
+                  const urlWithoutQuery = url.split('?')[0].split('#')[0];
+                  if (urlWithoutQuery.endsWith('/auth/login')) {
+                    window.location.href = '/strapi-plugin-oidc/oidc';
+                    return;
+                  }
                 }
                 return originalMethod.apply(window.history, args);
               };

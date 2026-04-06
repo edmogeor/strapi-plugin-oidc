@@ -1,4 +1,29 @@
 export default async function bootstrap({ strapi }) {
+  strapi.server.use(async (ctx, next) => {
+    if (ctx.request.path === '/admin/login' && ctx.request.method === 'POST') {
+      try {
+        const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+        const settings = await whitelistService.getSettings();
+        if (settings && settings.enforceOIDC) {
+          ctx.status = 403;
+          ctx.body = {
+            data: null,
+            error: {
+              status: 403,
+              name: 'ForbiddenError',
+              message: 'Local login is disabled. Please use OIDC.',
+              details: {},
+            },
+          };
+          return;
+        }
+      } catch (err) {
+        strapi.log.error('Error checking OIDC enforcement in middleware:', err);
+      }
+    }
+    await next();
+  });
+
   const actions = [
     {
       section: 'plugins',
@@ -13,25 +38,25 @@ export default async function bootstrap({ strapi }) {
       pluginName: 'strapi-plugin-oidc',
     },
   ];
-  
+
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
 
   try {
     const oidcRoleCount = await strapi.query('plugin::strapi-plugin-oidc.roles').count({
-      where: { oauth_type: '4' }
+      where: { oauth_type: '4' },
     });
 
     if (oidcRoleCount === 0) {
       const editorRole = await strapi.query('admin::role').findOne({
-        where: { code: 'strapi-editor' }
+        where: { code: 'strapi-editor' },
       });
 
       if (editorRole) {
         await strapi.query('plugin::strapi-plugin-oidc.roles').create({
           data: {
             oauth_type: '4',
-            roles: [editorRole.id.toString()]
-          }
+            roles: [editorRole.id.toString()],
+          },
         });
       }
     }
@@ -51,16 +76,16 @@ export default async function bootstrap({ strapi }) {
 
       const userWithRoles = await strapi.query('admin::user').findOne({
         where: { id: result.id },
-        populate: ['roles']
+        populate: ['roles'],
       });
 
       if (userWithRoles?.roles) {
-        const roleIds = userWithRoles.roles.map(r => r.id.toString());
+        const roleIds = userWithRoles.roles.map((r) => r.id.toString());
         await query.update({
           where: { id: whitelistEntry.id },
-          data: { roles: roleIds }
+          data: { roles: roleIds },
         });
       }
-    }
+    },
   });
 }

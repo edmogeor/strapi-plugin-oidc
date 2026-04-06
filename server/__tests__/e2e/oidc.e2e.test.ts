@@ -75,6 +75,14 @@ describe('OIDC E2E Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(false);
 
+    // Ensure normal local login is allowed
+    const localLoginAllowed = await agent.post('/admin/login').send({
+      email: 'test@test.com',
+      password: 'password',
+    });
+    // It should not be a 403 Forbidden Error from our middleware
+    expect(localLoginAllowed.status).not.toBe(403);
+
     // 2. Enable enforceOIDC in settings
     await setSettings(true, true);
 
@@ -82,6 +90,15 @@ describe('OIDC E2E Tests', () => {
     res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(true);
+
+    // Ensure normal local login is blocked
+    const localLoginBlocked = await agent.post('/admin/login').send({
+      email: 'test@test.com',
+      password: 'password',
+    });
+    // It should be blocked by our middleware
+    expect(localLoginBlocked.status).toBe(403);
+    expect(localLoginBlocked.body.error.message).toContain('Local login is disabled');
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
