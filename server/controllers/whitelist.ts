@@ -11,8 +11,16 @@ async function info(ctx) {
 }
 
 async function updateSettings(ctx) {
-  const { useWhitelist, enforceOIDC } = ctx.request.body;
+  let { useWhitelist, enforceOIDC } = ctx.request.body;
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+
+  if (useWhitelist && enforceOIDC) {
+    const users = await whitelistService.getUsers();
+    if (users.length === 0) {
+      enforceOIDC = false;
+    }
+  }
+
   await whitelistService.setSettings({ useWhitelist, enforceOIDC });
   ctx.body = { useWhitelist, enforceOIDC };
 }

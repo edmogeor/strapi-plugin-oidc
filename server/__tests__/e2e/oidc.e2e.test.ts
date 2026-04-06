@@ -5,6 +5,12 @@ describe('OIDC E2E Tests', () => {
   let strapi: any;
   let agent: any;
 
+  const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
+    await strapi
+      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
+      .set({ value: { useWhitelist, enforceOIDC } });
+  };
+
   beforeAll(async () => {
     strapi = (global as any).strapiInstance;
     agent = request.agent(strapi.server.httpServer);
@@ -27,9 +33,7 @@ describe('OIDC E2E Tests', () => {
     });
 
     // Disable whitelist for tests
-    await strapi
-      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
-      .set({ value: { useWhitelist: false, enforceOIDC: false } });
+    await setSettings(false, false);
   });
 
   afterAll(async () => {
@@ -72,9 +76,7 @@ describe('OIDC E2E Tests', () => {
     expect(res.body.enforceOIDC).toBe(false);
 
     // 2. Enable enforceOIDC in settings
-    await strapi
-      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
-      .set({ value: { useWhitelist: true, enforceOIDC: true } });
+    await setSettings(true, true);
 
     // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
@@ -84,9 +86,7 @@ describe('OIDC E2E Tests', () => {
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
     // Ensure whitelist is active and no one is in it
-    await strapi
-      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
-      .set({ value: { useWhitelist: true, enforceOIDC: false } });
+    await setSettings(true, false);
 
     // 1. Initiate login to get a valid state
     const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);

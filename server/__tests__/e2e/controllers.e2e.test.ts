@@ -16,16 +16,16 @@ describe('Controllers E2E', () => {
   describe('Whitelist Controller', () => {
     afterAll(async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
-        where: { email: { $in: ['sync1@test.com', 'sync2@test.com', 'sync3@test.com'] } }
+        where: { email: { $in: ['sync1@test.com', 'sync2@test.com', 'sync3@test.com'] } },
       });
     });
 
     it('should get and update settings via controller', async () => {
       const ctxUpdate = {
         request: {
-          body: { useWhitelist: false, enforceOIDC: true }
+          body: { useWhitelist: false, enforceOIDC: true },
         },
-        body: null
+        body: null,
       };
 
       await whitelistController.updateSettings(ctxUpdate);
@@ -33,13 +33,36 @@ describe('Controllers E2E', () => {
 
       const ctxInfo = { body: null };
       await whitelistController.info(ctxInfo);
-      
+
       expect(ctxInfo.body).toMatchObject({
         useWhitelist: false,
         enforceOIDC: true,
       });
       // @ts-ignore
       expect(Array.isArray(ctxInfo.body.whitelistUsers)).toBe(true);
+    });
+
+    it('should force enforceOIDC to false if whitelist is enabled but empty', async () => {
+      // Ensure the whitelist is empty
+      await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
+
+      const ctxUpdate = {
+        request: {
+          body: { useWhitelist: true, enforceOIDC: true },
+        },
+        body: null as any,
+      };
+
+      await whitelistController.updateSettings(ctxUpdate);
+
+      // enforceOIDC should be forced to false
+      expect(ctxUpdate.body).toEqual({ useWhitelist: true, enforceOIDC: false });
+
+      // Restore settings for the next test
+      await whitelistController.updateSettings({
+        request: { body: { useWhitelist: false, enforceOIDC: true } },
+        body: null as any,
+      });
     });
 
     it('should return public settings', async () => {
@@ -51,9 +74,9 @@ describe('Controllers E2E', () => {
     it('should register and remove whitelist users via controller', async () => {
       const ctxRegister = {
         request: {
-          body: { email: 'controller-test@whitelist.com', roles: [1] }
+          body: { email: 'controller-test@whitelist.com', roles: [1] },
         },
-        body: null as any
+        body: null as any,
       };
 
       await whitelistController.register(ctxRegister);
@@ -62,9 +85,9 @@ describe('Controllers E2E', () => {
       // Verify it fails without an email
       const ctxRegisterFail = {
         request: {
-          body: { email: '', roles: [1] }
+          body: { email: '', roles: [1] },
         },
-        body: null as any
+        body: null as any,
       };
       await whitelistController.register(ctxRegisterFail);
       expect(ctxRegisterFail.body.message).toBe('Please enter a valid email address');
@@ -72,36 +95,43 @@ describe('Controllers E2E', () => {
       // Verify it's added
       const ctxInfo = { body: null as any };
       await whitelistController.info(ctxInfo);
-      const addedUser = ctxInfo.body.whitelistUsers.find((u: any) => u.email === 'controller-test@whitelist.com');
+      const addedUser = ctxInfo.body.whitelistUsers.find(
+        (u: any) => u.email === 'controller-test@whitelist.com',
+      );
       expect(addedUser).toBeDefined();
 
       // Remove it
       const ctxRemove = {
         params: { id: addedUser.id },
-        body: null
+        body: null,
       };
       await whitelistController.removeEmail(ctxRemove);
 
       // Verify it's removed
       await whitelistController.info(ctxInfo);
-      const removedUser = ctxInfo.body.whitelistUsers.find((u: any) => u.email === 'controller-test@whitelist.com');
+      const removedUser = ctxInfo.body.whitelistUsers.find(
+        (u: any) => u.email === 'controller-test@whitelist.com',
+      );
       expect(removedUser).toBeUndefined();
     });
 
     it('should sync users successfully', async () => {
       // Create some initial users
-      await strapi.plugin('strapi-plugin-oidc').service('whitelist').registerUser('sync1@test.com', [1]);
-      
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .registerUser('sync1@test.com', [1]);
+
       const ctxSync = {
         request: {
           body: {
             users: [
               { email: 'sync2@test.com', roles: [2] },
-              { email: 'sync3@test.com', roles: [1, 2] }
-            ]
-          }
+              { email: 'sync3@test.com', roles: [1, 2] },
+            ],
+          },
         },
-        body: null as any
+        body: null as any,
       };
 
       await whitelistController.syncUsers(ctxSync);
@@ -110,7 +140,7 @@ describe('Controllers E2E', () => {
       // sync1 should be deleted, sync2 and sync3 should be added
       const ctxInfo = { body: null as any };
       await whitelistController.info(ctxInfo);
-      
+
       const userEmails = ctxInfo.body.whitelistUsers.map((u: any) => u.email);
       expect(userEmails).not.toContain('sync1@test.com');
       expect(userEmails).toContain('sync2@test.com');
@@ -120,52 +150,99 @@ describe('Controllers E2E', () => {
 
   describe('Role Controller', () => {
     it('should find roles', async () => {
-      const ctxFind = { body: null as any, send: function(data: any) { this.body = data; } };
+      const ctxFind = {
+        body: null as any,
+        send: function (data: any) {
+          this.body = data;
+        },
+      };
       await roleController.find(ctxFind);
-      
+
       expect(Array.isArray(ctxFind.body)).toBe(true);
       expect(ctxFind.body.length).toBeGreaterThan(0);
     });
 
     it('should update roles', async () => {
+      // 1. Fetch original roles to restore later
+      const ctxFindOriginal = {
+        body: null as any,
+        send: function (data: any) {
+          this.body = data;
+        },
+      };
+      await roleController.find(ctxFindOriginal);
+      const originalRoles = ctxFindOriginal.body;
+      const originalRole4 = originalRoles.find((r: any) => r.oauth_type === '4')?.role || [];
+
       const ctxUpdate = {
         request: {
           body: {
-            roles: [{ oauth_type: '4', role: [1, 2] }]
-          }
+            roles: [{ oauth_type: '4', role: [1, 2] }],
+          },
         },
         body: null,
-        send: function(data: any, status: number) { this.body = { data, status }; }
+        send: function (data: any, status: number) {
+          this.body = { data, status };
+        },
       };
 
       await roleController.update(ctxUpdate);
       expect(ctxUpdate.body).toMatchObject({ data: {}, status: 204 });
 
-      const ctxFind = { body: null as any, send: function(data: any) { this.body = data; } };
+      const ctxFind = {
+        body: null as any,
+        send: function (data: any) {
+          this.body = data;
+        },
+      };
       await roleController.find(ctxFind);
-      
+
       const updatedRole = ctxFind.body.find((r: any) => r.oauth_type === '4');
       expect(updatedRole.role).toEqual(expect.arrayContaining([1, 2]));
+
+      // Restore the original roles
+      const ctxRestore = {
+        request: {
+          body: {
+            roles: [{ oauth_type: '4', role: originalRole4 }],
+          },
+        },
+        body: null,
+        send: function (data: any, status: number) {
+          this.body = { data, status };
+        },
+      };
+      await roleController.update(ctxRestore);
     });
   });
 
   describe('OIDC Controller (Logout)', () => {
     it('should redirect to OIDC provider logout URL if configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout' });
-      
-      const ctxLogout = { redirect: (url: string) => { (ctxLogout as any).redirectedTo = url; } };
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+      });
+
+      const ctxLogout = {
+        redirect: (url: string) => {
+          (ctxLogout as any).redirectedTo = url;
+        },
+      };
       await oidcController.logout(ctxLogout);
-      
+
       expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: undefined });
       strapi.config.set('admin.url', '/custom-admin');
-      
-      const ctxLogout = { redirect: (url: string) => { (ctxLogout as any).redirectedTo = url; } };
+
+      const ctxLogout = {
+        redirect: (url: string) => {
+          (ctxLogout as any).redirectedTo = url;
+        },
+      };
       await oidcController.logout(ctxLogout);
-      
+
       expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');
     });
   });

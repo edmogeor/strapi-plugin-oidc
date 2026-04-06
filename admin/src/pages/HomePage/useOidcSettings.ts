@@ -55,11 +55,19 @@ export function useOidcSettings() {
   };
 
   const onDeleteWhitelist = async (email: string) => {
-    setUsers(users.filter((u) => u.email !== email));
+    const updatedUsers = users.filter((u) => u.email !== email);
+    setUsers(updatedUsers);
+    if (useWhitelist && updatedUsers.length === 0) {
+      setEnforceOIDC(false);
+    }
   };
 
   const onToggleWhitelist = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUseWhitelist(e.target.checked);
+    const checked = e.target.checked;
+    setUseWhitelist(checked);
+    if (checked && users.length === 0) {
+      setEnforceOIDC(false);
+    }
   };
 
   const onToggleEnforce = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,12 +89,12 @@ export function useOidcSettings() {
           role: role.role,
         })),
       });
+      const syncResponse = await put('/strapi-plugin-oidc/whitelist/sync', {
+        users: users.map((u) => ({ email: u.email, roles: u.roles })),
+      });
       await put('/strapi-plugin-oidc/whitelist/settings', {
         useWhitelist,
         enforceOIDC,
-      });
-      const syncResponse = await put('/strapi-plugin-oidc/whitelist/sync', {
-        users: users.map((u) => ({ email: u.email, roles: u.roles })),
       });
 
       setInitialOIDCRoles(JSON.parse(JSON.stringify(oidcRoles)));

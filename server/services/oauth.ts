@@ -2,7 +2,8 @@ import strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
 
-const renderHtmlTemplate = (title: string, content: string) => `
+function renderHtmlTemplate(title: string, content: string): string {
+  return `
 <!doctype html>
 <html lang="en">
 <head>
@@ -117,6 +118,7 @@ const renderHtmlTemplate = (title: string, content: string) => `
   ${content}
 </body>
 </html>`;
+}
 
 export default function oauthService({ strapi }) {
   return {
