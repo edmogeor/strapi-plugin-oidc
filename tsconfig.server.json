@@ -4,16 +4,10 @@
     "outDir": "dist/server",
     "rootDir": "server",
     "moduleResolution": "node16",
-    "module": "node16"
+    "module": "node16",
+    "sourceMap": false,
+    "inlineSourceMap": false
   },
-  "include": [
-    "server"
-  ],
-  "exclude": [
-    "node_modules/",
-    "build/",
-    "dist/",
-    ".yalc",
-    "**/*.test.ts"
-  ]
+  "include": ["server"],
+  "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]
 }

@@ -6,17 +6,10 @@
     "target": "esnext",
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "strict": false
+    "strict": false,
+    "sourceMap": false,
+    "inlineSourceMap": false
   },
-  "include": [
-    "./server",
-    "./admin/src"
-  ],
-  "exclude": [
-    "node_modules/",
-    "build/",
-    "dist/",
-    ".yalc",
-    "**/*.test.ts"
-  ]
+  "include": ["./server", "./admin/src"],
+  "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]
 }

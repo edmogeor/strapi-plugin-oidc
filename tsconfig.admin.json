@@ -2,16 +2,10 @@
   "extends": "@strapi/typescript-utils/tsconfigs/admin",
   "compilerOptions": {
     "outDir": "dist/admin",
-    "rootDir": "admin/src"
+    "rootDir": "admin/src",
+    "sourceMap": false,
+    "inlineSourceMap": false
   },
-  "include": [
-    "admin/src"
-  ],
-  "exclude": [
-    "node_modules/",
-    "build/",
-    "dist/",
-    ".yalc",
-    "**/*.test.ts"
-  ]
+  "include": ["admin/src"],
+  "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]
 }
