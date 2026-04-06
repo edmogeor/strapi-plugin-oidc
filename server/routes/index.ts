@@ -1,3 +1,27 @@
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS = 20;
+
+const rateLimitMiddleware = async (ctx: any, next: () => Promise<any>) => {
+  const ip = ctx.request.ip;
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW;
+
+  let requestStamps = rateLimitMap.get(ip) || [];
+  requestStamps = requestStamps.filter((timestamp) => timestamp > windowStart);
+
+  if (requestStamps.length >= MAX_REQUESTS) {
+    ctx.status = 429;
+    ctx.body = 'Too Many Requests';
+    return;
+  }
+
+  requestStamps.push(now);
+  rateLimitMap.set(ip, requestStamps);
+
+  await next();
+};
+
 export default [
   {
     method: 'GET',
@@ -17,7 +41,10 @@ export default [
     config: {
       policies: [
         'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
+        },
       ],
     },
   },
@@ -27,6 +54,7 @@ export default [
     handler: 'oidc.oidcSignIn',
     config: {
       auth: false,
+      middlewares: [rateLimitMiddleware],
     },
   },
   {
@@ -35,6 +63,7 @@ export default [
     handler: 'oidc.oidcSignInCallback',
     config: {
       auth: false,
+      middlewares: [rateLimitMiddleware],
     },
   },
   {
@@ -63,7 +92,10 @@ export default [
     config: {
       policies: [
         'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
+        },
       ],
     },
   },
@@ -82,7 +114,10 @@ export default [
     config: {
       policies: [
         'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
+        },
       ],
     },
   },
@@ -93,7 +128,10 @@ export default [
     config: {
       policies: [
         'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
+        },
       ],
     },
   },
@@ -104,8 +142,11 @@ export default [
     config: {
       policies: [
         'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.update'] } },
+        {
+          name: 'admin::hasPermissions',
+          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
+        },
       ],
     },
-  }
+  },
 ];

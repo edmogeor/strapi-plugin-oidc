@@ -233,6 +233,15 @@ export default function oauthService({ strapi }) {
     },
     // Sign In Error
     renderSignUpError(message) {
+      const escapeHtml = (unsafe) => {
+        return String(unsafe)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+      const safeMessage = escapeHtml(message);
       const content = `
   <div class="card">
     <div class="icon">
@@ -243,7 +252,7 @@ export default function oauthService({ strapi }) {
       </svg>
     </div>
     <h1>Authentication Failed</h1>
-    <p>${message}</p>
+    <p>${safeMessage}</p>
     <a href="${strapi.config.admin.url}" class="btn">Return to Login</a>
   </div>`;
       return renderHtmlTemplate('Authentication Failed', content);

@@ -42,10 +42,10 @@ async function register(ctx) {
 
   // Handle both comma-separated strings and arrays of emails
   const emailList = Array.isArray(email)
-    ? email
+    ? email.map((e) => String(e).toLowerCase())
     : email
         .split(',')
-        .map((e) => e.trim())
+        .map((e) => e.trim().toLowerCase())
         .filter(Boolean);
 
   const existingUsers = await strapi.query('admin::user').findMany({
@@ -86,7 +86,11 @@ async function removeEmail(ctx) {
 }
 
 async function syncUsers(ctx) {
-  const { users } = ctx.request.body;
+  let { users } = ctx.request.body;
+
+  // normalize emails
+  users = users.map((u) => ({ ...u, email: String(u.email).toLowerCase() }));
+
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
 
   const currentUsers = await whitelistService.getUsers();

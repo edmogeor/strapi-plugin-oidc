@@ -121,7 +121,7 @@ async function handleUserAuthentication(
   config: Record<string, string>,
   ctx: any,
 ) {
-  const email = userResponseData.email;
+  const email = String(userResponseData.email).toLowerCase();
 
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);
