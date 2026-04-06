@@ -222,7 +222,8 @@ export default function oauthService({ strapi }) {
       if(${isRememberMe}){
         localStorage.setItem('jwtToken', '"${jwtToken}"');
       }else{
-        document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/';
+        var secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/; SameSite=Lax' + secureFlag;
       }
       localStorage.setItem('isLoggedIn', 'true');
       location.href = '${strapi.config.admin.url}'
