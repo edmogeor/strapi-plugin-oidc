@@ -28,6 +28,8 @@ import getTrad from '../../utils/getTrad';
 import { useIntl } from 'react-intl';
 import { OIDCRole, RoleDef } from '../Role';
 
+import { useNotification } from '@strapi/strapi/admin';
+
 const CustomTable = styled(Table)`
   th,
   td,
@@ -77,6 +79,7 @@ export default function Whitelist({
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const { formatMessage } = useIntl();
+  const { toggleNotification } = useNotification();
   const PAGE_SIZE = 10;
 
   const pageCount = Math.ceil(users.length / PAGE_SIZE) || 1;
@@ -85,13 +88,16 @@ export default function Whitelist({
   const onSaveEmail = useCallback(async () => {
     const emailText = email.trim();
     if (users.some((user) => user.email === emailText)) {
-      alert(formatMessage(getTrad('whitelist.error.unique')));
+      toggleNotification({
+        type: 'warning',
+        message: formatMessage(getTrad('whitelist.error.unique')),
+      });
     } else {
       await onSave(emailText, selectedRoles);
       setEmail('');
       setSelectedRoles([]);
     }
-  }, [email, selectedRoles, users, onSave, formatMessage]);
+  }, [email, selectedRoles, users, onSave, formatMessage, toggleNotification]);
 
   const isValidEmail = useCallback(() => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
