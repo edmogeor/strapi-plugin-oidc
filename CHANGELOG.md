@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-04-06
+
+### Changed
+
+- Disabled source map generation explicitly in the TypeScript configuration files.
+- Re-architected plugin configurations and .env dependencies within the internal `test-app`.
+- Conditioned the Whitelist settings UI container to entirely hide its contents (email inputs, role assignments, and member tables) when the whitelist feature is toggled off.
+
+### Fixed
+
+- Added missing translation placeholder for roles (`roles.placeholder`).
+- Fixed a UI translation bug where internal translation string IDs were leaking onto the save modal components.
+
 ## [1.0.6] - 2026-04-06
 
 ### Security
