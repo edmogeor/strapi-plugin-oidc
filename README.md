@@ -101,5 +101,5 @@ This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.
 - Migrated the testing framework to Vitest and added comprehensive test coverage for controllers and services.
 - Cleaned up dead code and unused dependencies to improve maintainability.
 - Upgraded to use newer versions of Node.js.
-- Added styled success and error pages that seamlessly adapt to light and dark modes.
+- Added styled success and error pages.
 - Added misc. quality of life improvements and bug fixes.
