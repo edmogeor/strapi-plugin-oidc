@@ -9,42 +9,41 @@ export default async function bootstrap({ strapi }) {
       `${adminUrl}/reset-password`,
     ];
 
-    if (authRoutes.includes(ctx.request.path) && ctx.request.method === 'POST') {
-      try {
-        const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
-        const settings = await whitelistService.getSettings();
-        if (settings && settings.enforceOIDC) {
-          ctx.status = 403;
-          ctx.body = {
-            data: null,
-            error: {
-              status: 403,
-              name: 'ForbiddenError',
-              message: 'Local login is disabled. Please use OIDC.',
-              details: {},
-            },
-          };
-          return;
-        }
-      } catch (err) {
-        strapi.log.error('Error checking OIDC enforcement in middleware:', err);
-      }
-    }
-
+    const isPostAuth = authRoutes.includes(ctx.request.path) && ctx.request.method === 'POST';
     const isHtmlRequest = ctx.request.accepts('html') && !ctx.request.path.match(/\.[a-zA-Z0-9]+$/);
-    if (ctx.request.method === 'GET' && ctx.request.path.startsWith(adminUrl) && isHtmlRequest) {
+    const isGetAdminHtml =
+      ctx.request.method === 'GET' && ctx.request.path.startsWith(adminUrl) && isHtmlRequest;
+
+    if (isPostAuth || isGetAdminHtml) {
       try {
         const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
         const settings = await whitelistService.getSettings();
-        if (settings && settings.enforceOIDC) {
-          const hasRefreshCookie = ctx.cookies.get('strapi_admin_refresh');
-          if (!hasRefreshCookie) {
-            ctx.redirect('/strapi-plugin-oidc/oidc');
+
+        if (settings?.enforceOIDC) {
+          if (isPostAuth) {
+            ctx.status = 403;
+            ctx.body = {
+              data: null,
+              error: {
+                status: 403,
+                name: 'ForbiddenError',
+                message: 'Local login is disabled. Please use OIDC.',
+                details: {},
+              },
+            };
             return;
+          }
+
+          if (isGetAdminHtml) {
+            const hasRefreshCookie = ctx.cookies.get('strapi_admin_refresh');
+            if (!hasRefreshCookie) {
+              ctx.redirect('/strapi-plugin-oidc/oidc');
+              return;
+            }
           }
         }
       } catch (err) {
-        strapi.log.error('Error checking OIDC enforcement in GET middleware:', err);
+        strapi.log.error('Error checking OIDC enforcement in middleware:', err);
       }
     }
 

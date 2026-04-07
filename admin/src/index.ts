@@ -37,12 +37,9 @@ export default {
 
   bootstrap() {
     let isLogoutInProgress = false;
-    let enforceOIDC = false;
 
-    const isAuthRoute = (path: string) => {
-      const match = path.match(/\/auth\/(login|register|forgot-password|reset-password)/);
-      return match !== null;
-    };
+    const isAuthRoute = (path: string) =>
+      /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
     // Asynchronously fetch enforceOIDC so we can intercept client-side navigations
     // (Server-side Koa middleware already handles initial load 302 redirects)
@@ -52,8 +49,6 @@ export default {
         if (response.ok) {
           const data = await response.json();
           if (data.enforceOIDC) {
-            enforceOIDC = true;
-
             const interceptHistory = (originalMethod: any) => {
               return function (
                 ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
