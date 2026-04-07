@@ -56,9 +56,9 @@ module.exports = ({ env }) => ({
       // When configured, your provider can notify Strapi when a user logs out elsewhere
       // (e.g. from another app or directly from the provider UI), revoking their Strapi session.
       // Set the logout URI in your provider to: https://your-strapi.com/strapi-plugin-oidc/logout
-      // Find OIDC_JWKS_URI and OIDC_ISSUER in your provider's /.well-known/openid-configuration.
-      OIDC_ISSUER: env('OIDC_ISSUER', ''), // validates the iss claim in logout tokens
-      OIDC_JWKS_URI: env('OIDC_JWKS_URI', ''), // required to enable backchannel logout
+      // Both values are required together — find them in your provider's /.well-known/openid-configuration.
+      OIDC_ISSUER: env('OIDC_ISSUER', ''), // validates the iss claim; required for backchannel logout
+      OIDC_JWKS_URI: env('OIDC_JWKS_URI', ''), // verifies logout token signatures; required for backchannel logout
     },
   },
 });

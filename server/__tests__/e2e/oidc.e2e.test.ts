@@ -582,6 +582,28 @@ describe('OIDC E2E Tests', () => {
         .setJti(crypto.randomUUID())
         .sign(privateKey);
 
+    it('returns 501 when OIDC_ISSUER is not configured', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: 'https://mock-oidc.com/jwks',
+        OIDC_ISSUER: '',
+      });
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: 'any' });
+
+      expect(res.status).toBe(501);
+
+      // Restore for subsequent tests
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_ISSUER: 'https://mock-oidc.com',
+        OIDC_JWKS_URI: 'https://mock-oidc.com/jwks',
+      });
+    });
+
     it('returns 400 when logout_token is missing', async () => {
       const res = await request(strapi.server.httpServer)
         .post('/strapi-plugin-oidc/logout')

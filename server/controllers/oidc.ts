@@ -321,18 +321,21 @@ async function backchannelLogout(ctx: StrapiContext) {
     return;
   }
 
-  if (!config.OIDC_JWKS_URI) {
+  if (!config.OIDC_JWKS_URI || !config.OIDC_ISSUER) {
     ctx.status = 501;
-    ctx.body = { error: 'OIDC_JWKS_URI not configured' };
+    ctx.body = {
+      error: 'OIDC_JWKS_URI and OIDC_ISSUER must both be configured to enable backchannel logout',
+    };
     return;
   }
 
   try {
     const JWKS = getJWKS(config.OIDC_JWKS_URI);
 
-    const verifyOptions: Parameters<typeof jwtVerify>[2] = {};
-    if (config.OIDC_ISSUER) verifyOptions.issuer = config.OIDC_ISSUER;
-    if (config.OIDC_CLIENT_ID) verifyOptions.audience = config.OIDC_CLIENT_ID;
+    const verifyOptions: Parameters<typeof jwtVerify>[2] = {
+      issuer: config.OIDC_ISSUER,
+      ...(config.OIDC_CLIENT_ID ? { audience: config.OIDC_CLIENT_ID } : {}),
+    };
 
     const { payload } = await jwtVerify(logoutToken, JWKS, verifyOptions);
 
