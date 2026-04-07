@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { Box, Flex, Typography, Button } from '@strapi/design-system';
+import { useBlocker } from 'react-router-dom';
+import { Box, Flex, Typography, Button, Dialog } from '@strapi/design-system';
 import { WarningCircle, Information } from '@strapi/icons';
 import { Page, Layouts } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
@@ -17,6 +18,7 @@ import { useOidcSettings } from './useOidcSettings';
 function HomePage() {
   const { formatMessage } = useIntl();
   const { state, actions } = useOidcSettings();
+  const blocker = useBlocker(state.isDirty);
 
   return (
     <Page.Protect permissions={[{ action: 'plugin::strapi-plugin-oidc.read', subject: null }]}>
@@ -66,6 +68,9 @@ function HomePage() {
               useWhitelist={state.useWhitelist}
               onSave={actions.onRegisterWhitelist}
               onDelete={actions.onDeleteWhitelist}
+              onDeleteAll={actions.onDeleteAll}
+              onImport={actions.onImport}
+              onExport={actions.onExport}
             />
           </Box>
           <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
@@ -131,6 +136,24 @@ function HomePage() {
           </Flex>
         </Flex>
       </Layouts.Content>
+      <Dialog.Root open={blocker.state === 'blocked'}>
+        <Dialog.Content>
+          <Dialog.Header>{formatMessage(getTrad('unsaved.title'))}</Dialog.Header>
+          <Dialog.Body>{formatMessage(getTrad('unsaved.description'))}</Dialog.Body>
+          <Dialog.Footer>
+            <Dialog.Cancel>
+              <Button variant="tertiary" onClick={() => blocker.reset?.()}>
+                {formatMessage(getTrad('unsaved.cancel'))}
+              </Button>
+            </Dialog.Cancel>
+            <Dialog.Action>
+              <Button variant="danger" onClick={() => blocker.proceed?.()}>
+                {formatMessage(getTrad('unsaved.confirm'))}
+              </Button>
+            </Dialog.Action>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Root>
     </Page.Protect>
   );
 }

@@ -86,6 +86,66 @@ async function removeEmail(ctx) {
   ctx.body = {};
 }
 
+async function deleteAll(ctx) {
+  await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
+  ctx.body = {};
+}
+
+async function importUsers(ctx) {
+  const { users } = ctx.request.body;
+  if (!Array.isArray(users)) {
+    ctx.status = 400;
+    ctx.body = { error: 'Expected { users: [{email, roles}] }' };
+    return;
+  }
+
+  // Build a name→id map so the JSON can use human-readable role names.
+  // Falls back to treating the value as an ID if no matching name is found,
+  // which preserves backwards compatibility with ID-based exports.
+  const allRoles = await strapi.query('admin::role').findMany({});
+  const roleNameToId = new Map(allRoles.map((r) => [r.name, String(r.id)]));
+  const resolveRole = (nameOrId: string) => roleNameToId.get(nameOrId) ?? nameOrId;
+
+  const normalized = users
+    .filter((u) => u?.email)
+    .map((u) => ({
+      email: String(u.email).trim().toLowerCase(),
+      roles: (Array.isArray(u.roles) ? u.roles : []).map(resolveRole),
+    }));
+
+  // Deduplicate within the import payload itself
+  const seen = new Set<string>();
+  const deduped = normalized.filter((u) => {
+    if (seen.has(u.email)) return false;
+    seen.add(u.email);
+    return true;
+  });
+
+  // If a Strapi admin user already exists, use their current roles (same behaviour as register)
+  const strapiUsers = await strapi.query('admin::user').findMany({
+    where: { email: { $in: deduped.map((u) => u.email) } },
+    populate: ['roles'],
+  });
+  const strapiUserMap = new Map(strapiUsers.map((u) => [u.email, u]));
+
+  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+  const existing = await whitelistService.getUsers();
+  const existingEmails = new Set(existing.map((u) => u.email));
+
+  let importedCount = 0;
+  for (const user of deduped) {
+    if (existingEmails.has(user.email)) continue;
+    const strapiUser = strapiUserMap.get(user.email);
+    const finalRoles = strapiUser?.roles?.length
+      ? strapiUser.roles.map((r) => String(r.id))
+      : user.roles;
+    await whitelistService.registerUser(user.email, finalRoles);
+    importedCount++;
+  }
+
+  ctx.body = { importedCount };
+}
+
 async function syncUsers(ctx) {
   let { users } = ctx.request.body;
 
@@ -138,5 +198,7 @@ export default {
   publicSettings,
   register,
   removeEmail,
+  deleteAll,
   syncUsers,
+  importUsers,
 };

@@ -21,8 +21,8 @@ import {
   PageLink,
 } from '@strapi/design-system';
 import styled from 'styled-components';
-import { useCallback, useState } from 'react';
-import { Check, Plus, Trash, WarningCircle } from '@strapi/icons';
+import { useCallback, useRef, useState } from 'react';
+import { Check, Download, Plus, Trash, Upload, WarningCircle } from '@strapi/icons';
 import { Dialog } from '@strapi/design-system';
 import getTrad from '../../utils/getTrad';
 import { useIntl } from 'react-intl';
@@ -64,6 +64,9 @@ interface WhitelistProps {
   loading: boolean;
   onSave: (email: string, roles: string[]) => Promise<void>;
   onDelete: (email: string) => Promise<void>;
+  onDeleteAll: () => void;
+  onImport: (entries: { email: string; roles: string[] }[]) => Promise<number>;
+  onExport: () => void;
 }
 
 export default function Whitelist({
@@ -74,12 +77,16 @@ export default function Whitelist({
   loading,
   onSave,
   onDelete,
+  onDeleteAll,
+  onImport,
+  onExport,
 }: WhitelistProps) {
   const [email, setEmail] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const { formatMessage } = useIntl();
   const { toggleNotification } = useNotification();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const PAGE_SIZE = 10;
 
   const pageCount = Math.ceil(users.length / PAGE_SIZE) || 1;
@@ -104,6 +111,44 @@ export default function Whitelist({
     return emailRegex.test(email);
   }, [email]);
 
+  const handleImport = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!fileInputRef.current) return;
+      fileInputRef.current.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) throw new Error();
+        const entries = parsed
+          .filter((item: any) => item?.email)
+          .map((item: any) => ({
+            email: String(item.email),
+            roles: Array.isArray(item.roles) ? item.roles : [],
+          }));
+        const count = await onImport(entries);
+        if (count === 0) {
+          toggleNotification({
+            type: 'info',
+            message: formatMessage(getTrad('whitelist.import.none')),
+          });
+        } else {
+          toggleNotification({
+            type: 'success',
+            message: formatMessage(getTrad('whitelist.import.success'), { count }),
+          });
+        }
+      } catch {
+        toggleNotification({
+          type: 'warning',
+          message: formatMessage(getTrad('whitelist.import.error')),
+        });
+      }
+    },
+    [onImport, formatMessage, toggleNotification],
+  );
+
   return (
     <Box>
       <Typography tag="p" variant="omega" textColor="neutral600" marginBottom={4}>
@@ -112,6 +157,72 @@ export default function Whitelist({
 
       {useWhitelist && (
         <>
+          <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
+            <Typography variant="pi" textColor="neutral600">
+              {formatMessage(getTrad('whitelist.count'), { count: users.length })}
+            </Typography>
+            <Flex gap={2}>
+              <Button
+                size="S"
+                variant="tertiary"
+                startIcon={<Download />}
+                onClick={onExport}
+                disabled={users.length === 0}
+              >
+                {formatMessage(getTrad('whitelist.export'))}
+              </Button>
+              <Button
+                size="S"
+                variant="tertiary"
+                startIcon={<Upload />}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {formatMessage(getTrad('whitelist.import'))}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
+              {users.length > 0 && (
+                <Dialog.Root>
+                  <Dialog.Trigger>
+                    <Button size="S" variant="danger-light" startIcon={<Trash />}>
+                      {formatMessage(getTrad('whitelist.delete.all.label'))}
+                    </Button>
+                  </Dialog.Trigger>
+                  <Dialog.Content>
+                    <Dialog.Header>
+                      {formatMessage(getTrad('whitelist.delete.all.title'))}
+                    </Dialog.Header>
+                    <Dialog.Body icon={<WarningCircle fill="danger600" />}>
+                      <Flex justifyContent="center">
+                        <Typography textColor="neutral800" textAlign="center">
+                          {formatMessage(getTrad('whitelist.delete.all.description'), {
+                            count: users.length,
+                          })}
+                        </Typography>
+                      </Flex>
+                    </Dialog.Body>
+                    <Dialog.Footer>
+                      <Dialog.Cancel>
+                        <Button fullWidth variant="tertiary">
+                          {formatMessage(getTrad('page.cancel'))}
+                        </Button>
+                      </Dialog.Cancel>
+                      <Dialog.Action>
+                        <Button fullWidth variant="danger" onClick={onDeleteAll}>
+                          {formatMessage(getTrad('whitelist.delete.all.label'))}
+                        </Button>
+                      </Dialog.Action>
+                    </Dialog.Footer>
+                  </Dialog.Content>
+                </Dialog.Root>
+              )}
+            </Flex>
+          </Flex>
           <Flex gap={4} marginTop={5} marginBottom={5} alignItems="flex-start">
             <Box style={{ flex: 1 }}>
               <Field.Root>
@@ -189,6 +300,7 @@ export default function Whitelist({
                       .join(', ');
 
                   let userRolesNames = getRoleNames(user.roles || []);
+                  let isDefault = false;
 
                   if (!userRolesNames) {
                     const defaultRolesIds = oidcRoles.reduce<string[]>((acc, oidc) => {
@@ -196,13 +308,27 @@ export default function Whitelist({
                       return acc;
                     }, []);
                     userRolesNames = getRoleNames(defaultRolesIds);
+                    isDefault = Boolean(userRolesNames);
                   }
 
                   return (
                     <Tr key={user.email}>
                       <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
                       <Td>{user.email}</Td>
-                      <Td>{userRolesNames || '-'}</Td>
+                      <Td>
+                        {userRolesNames ? (
+                          <Flex gap={2} alignItems="center">
+                            <span>{userRolesNames}</span>
+                            {isDefault && (
+                              <Typography variant="pi" textColor="neutral500">
+                                (Default)
+                              </Typography>
+                            )}
+                          </Flex>
+                        ) : (
+                          '-'
+                        )}
+                      </Td>
                       <Td>
                         <LocalizedDate date={user.createdAt} />
                       </Td>

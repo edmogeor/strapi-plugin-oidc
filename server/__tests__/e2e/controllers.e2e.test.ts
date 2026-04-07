@@ -1,4 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const whitelistFixture: { email: string; roles: string[] }[] = JSON.parse(
+  readFileSync(join(__dirname, 'fixtures/whitelist-import.json'), 'utf-8'),
+);
 
 describe('Controllers E2E', () => {
   let strapi: any;
@@ -124,6 +130,67 @@ describe('Controllers E2E', () => {
       expect(removedUser).toBeUndefined();
     });
 
+    describe('importUsers', () => {
+      const fixtureEmails = whitelistFixture.map((u) => u.email);
+
+      afterAll(async () => {
+        await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
+          where: { email: { $in: fixtureEmails } },
+        });
+      });
+
+      it('should import all fixture entries and skip duplicates', async () => {
+        // Pre-insert one fixture entry so it counts as a duplicate
+        const [duplicate] = whitelistFixture;
+        await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').create({
+          data: { email: duplicate.email, roles: [] },
+        });
+
+        const ctx = {
+          request: { body: { users: whitelistFixture } },
+          status: 200,
+          body: null as any,
+        };
+
+        await whitelistController.importUsers(ctx);
+
+        // All fixture entries minus the one pre-inserted duplicate
+        expect(ctx.body.importedCount).toBe(whitelistFixture.length - 1);
+      });
+
+      it('should return 400 for non-array body', async () => {
+        const ctx = {
+          request: { body: { users: 'not-an-array' } },
+          status: 200,
+          body: null as any,
+        };
+
+        await whitelistController.importUsers(ctx);
+
+        expect(ctx.status).toBe(400);
+      });
+
+      it('should skip entries without an email field', async () => {
+        const ctx = {
+          request: {
+            body: {
+              users: [
+                { email: '', roles: [] },
+                { roles: [] }, // no email
+                { email: null, roles: [] },
+              ],
+            },
+          },
+          status: 200,
+          body: null as any,
+        };
+
+        await whitelistController.importUsers(ctx);
+
+        expect(ctx.body.importedCount).toBe(0);
+      });
+    });
+
     it('should sync users successfully', async () => {
       // Create some initial users
       await strapi
@@ -154,6 +221,26 @@ describe('Controllers E2E', () => {
       expect(userEmails).not.toContain('sync1@test.com');
       expect(userEmails).toContain('sync2@test.com');
       expect(userEmails).toContain('sync3@test.com');
+    });
+
+    it('should delete all whitelist entries', async () => {
+      // Seed a couple of entries
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .registerUser('deleteall1@test.com', []);
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .registerUser('deleteall2@test.com', []);
+
+      const ctxDeleteAll = { body: null as any };
+      await whitelistController.deleteAll(ctxDeleteAll);
+      expect(ctxDeleteAll.body).toEqual({});
+
+      const ctxInfo = { body: null as any };
+      await whitelistController.info(ctxInfo);
+      expect(ctxInfo.body.whitelistUsers).toHaveLength(0);
     });
   });
 

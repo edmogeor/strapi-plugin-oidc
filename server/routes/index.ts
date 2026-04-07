@@ -21,131 +21,132 @@ const rateLimitMiddleware = async (ctx: any, next: () => Promise<any>) => {
   await next();
 };
 
-export default [
-  {
-    method: 'GET',
-    path: '/oidc-roles',
-    handler: 'role.find',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.read'] } },
-      ],
+const adminPolicies = (action: 'read' | 'update') => ({
+  policies: [
+    'admin::isAuthenticatedAdmin',
+    {
+      name: 'admin::hasPermissions',
+      config: { actions: [`plugin::strapi-plugin-oidc.${action}`] },
     },
+  ],
+});
+
+export default {
+  admin: {
+    type: 'admin',
+    routes: [
+      {
+        method: 'GET',
+        path: '/oidc-roles',
+        handler: 'role.find',
+        config: adminPolicies('read'),
+      },
+      {
+        method: 'PUT',
+        path: '/oidc-roles',
+        handler: 'role.update',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'GET',
+        path: '/oidc',
+        handler: 'oidc.oidcSignIn',
+        config: { auth: false, middlewares: [rateLimitMiddleware] },
+      },
+      {
+        method: 'GET',
+        path: '/oidc/callback',
+        handler: 'oidc.oidcSignInCallback',
+        config: { auth: false, middlewares: [rateLimitMiddleware] },
+      },
+      {
+        method: 'GET',
+        path: '/logout',
+        handler: 'oidc.logout',
+        config: { auth: false },
+      },
+      {
+        method: 'GET',
+        path: '/whitelist',
+        handler: 'whitelist.info',
+        config: adminPolicies('read'),
+      },
+      {
+        method: 'PUT',
+        path: '/whitelist/settings',
+        handler: 'whitelist.updateSettings',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'GET',
+        path: '/settings/public',
+        handler: 'whitelist.publicSettings',
+        config: { auth: false },
+      },
+      {
+        method: 'PUT',
+        path: '/whitelist/sync',
+        handler: 'whitelist.syncUsers',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'POST',
+        path: '/whitelist/import',
+        handler: 'whitelist.importUsers',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'POST',
+        path: '/whitelist',
+        handler: 'whitelist.register',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'DELETE',
+        path: '/whitelist/:id',
+        handler: 'whitelist.removeEmail',
+        config: adminPolicies('update'),
+      },
+      {
+        method: 'DELETE',
+        path: '/whitelist',
+        handler: 'whitelist.deleteAll',
+        config: adminPolicies('update'),
+      },
+    ],
   },
-  {
-    method: 'PUT',
-    path: '/oidc-roles',
-    handler: 'role.update',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        {
-          name: 'admin::hasPermissions',
-          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
-        },
-      ],
-    },
+
+  // API-token-authenticated routes for programmatic whitelist management.
+  // Accessible at /strapi-plugin-oidc/... using a Strapi API token
+  // (full-access or custom) in the Authorization: Bearer <token> header.
+  'content-api': {
+    type: 'content-api',
+    routes: [
+      {
+        method: 'GET',
+        path: '/whitelist',
+        handler: 'whitelist.info',
+      },
+      {
+        method: 'POST',
+        path: '/whitelist',
+        handler: 'whitelist.register',
+      },
+      {
+        method: 'POST',
+        path: '/whitelist/import',
+        handler: 'whitelist.importUsers',
+      },
+      {
+        method: 'DELETE',
+        path: '/whitelist/:id',
+        handler: 'whitelist.removeEmail',
+      },
+      {
+        method: 'DELETE',
+        path: '/whitelist',
+        handler: 'whitelist.deleteAll',
+      },
+    ],
   },
-  {
-    method: 'GET',
-    path: '/oidc',
-    handler: 'oidc.oidcSignIn',
-    config: {
-      auth: false,
-      middlewares: [rateLimitMiddleware],
-    },
-  },
-  {
-    method: 'GET',
-    path: '/oidc/callback',
-    handler: 'oidc.oidcSignInCallback',
-    config: {
-      auth: false,
-      middlewares: [rateLimitMiddleware],
-    },
-  },
-  {
-    method: 'GET',
-    path: '/logout',
-    handler: 'oidc.logout',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'GET',
-    path: '/whitelist',
-    handler: 'whitelist.info',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        { name: 'admin::hasPermissions', config: { actions: ['plugin::strapi-plugin-oidc.read'] } },
-      ],
-    },
-  },
-  {
-    method: 'PUT',
-    path: '/whitelist/settings',
-    handler: 'whitelist.updateSettings',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        {
-          name: 'admin::hasPermissions',
-          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
-        },
-      ],
-    },
-  },
-  {
-    method: 'GET',
-    path: '/settings/public',
-    handler: 'whitelist.publicSettings',
-    config: {
-      auth: false,
-    },
-  },
-  {
-    method: 'PUT',
-    path: '/whitelist/sync',
-    handler: 'whitelist.syncUsers',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        {
-          name: 'admin::hasPermissions',
-          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
-        },
-      ],
-    },
-  },
-  {
-    method: 'POST',
-    path: '/whitelist',
-    handler: 'whitelist.register',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        {
-          name: 'admin::hasPermissions',
-          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
-        },
-      ],
-    },
-  },
-  {
-    method: 'DELETE',
-    path: '/whitelist/:id',
-    handler: 'whitelist.removeEmail',
-    config: {
-      policies: [
-        'admin::isAuthenticatedAdmin',
-        {
-          name: 'admin::hasPermissions',
-          config: { actions: ['plugin::strapi-plugin-oidc.update'] },
-        },
-      ],
-    },
-  },
-];
+};

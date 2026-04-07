@@ -4,7 +4,7 @@ import { OIDCRole, RoleDef } from '../../components/Role';
 import { WhitelistUser } from '../../components/Whitelist';
 
 export function useOidcSettings() {
-  const { get, put } = useFetchClient();
+  const { get, put, post } = useFetchClient();
 
   const [loading, setLoading] = useState(false);
   const [showSuccess, setSuccess] = useState(false);
@@ -62,6 +62,35 @@ export function useOidcSettings() {
     if (useWhitelist && updatedUsers.length === 0) {
       setEnforceOIDC(false);
     }
+  };
+
+  const onDeleteAll = () => {
+    setUsers([]);
+    if (useWhitelist) setEnforceOIDC(false);
+  };
+
+  const onImport = async (entries: { email: string; roles: string[] }[]): Promise<number> => {
+    const response = await post('/strapi-plugin-oidc/whitelist/import', { users: entries });
+    // Refresh from server
+    const refreshed = await get('/strapi-plugin-oidc/whitelist');
+    setUsers(refreshed.data.whitelistUsers);
+    setInitialUsers(JSON.parse(JSON.stringify(refreshed.data.whitelistUsers)));
+    return response.data.importedCount as number;
+  };
+
+  const onExport = () => {
+    const roleMap = new Map(roles.map((r) => [String(r.id), r.name]));
+    const data = users.map(({ email, roles: userRoles }) => ({
+      email,
+      roles: (userRoles || []).map((id) => roleMap.get(String(id)) ?? id),
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'whitelist.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const onToggleWhitelist = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,6 +175,9 @@ export function useOidcSettings() {
       onChangeRole,
       onRegisterWhitelist,
       onDeleteWhitelist,
+      onDeleteAll,
+      onImport,
+      onExport,
       onToggleWhitelist,
       onToggleEnforce,
       onSaveAll,

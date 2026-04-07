@@ -1,0 +1,17 @@
+[
+  { "email": "alice@example.com", "roles": ["Editor"] },
+  { "email": "bob@example.com", "roles": ["Author"] },
+  { "email": "carol@example.com", "roles": ["Editor", "Author"] },
+  { "email": "dave@example.com", "roles": ["Editor"] },
+  { "email": "eve@example.com", "roles": ["Author"] },
+  { "email": "frank@example.com" },
+  { "email": "grace@example.com", "roles": ["Editor"] },
+  { "email": "henry@example.com", "roles": ["Author"] },
+  { "email": "iris@example.com", "roles": ["Editor", "Author"] },
+  { "email": "jack@example.com" },
+  { "email": "karen@example.com", "roles": ["Editor"] },
+  { "email": "liam@example.com", "roles": ["Author"] },
+  { "email": "mia@example.com", "roles": ["Editor", "Author"] },
+  { "email": "noah@example.com" },
+  { "email": "olivia@example.com", "roles": ["Editor"] }
+]

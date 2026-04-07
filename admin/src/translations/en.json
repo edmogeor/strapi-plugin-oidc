@@ -41,5 +41,18 @@
   "enforce.warning": "Make sure OIDC is setup correctly before saving changes, you won't be able to login normally.",
   "enforce.config.info": "Enforcement is controlled by the OIDC_ENFORCE config variable and cannot be changed here.",
   "login.settings.title": "Login Settings",
-  "login.sso": "Login via SSO"
+  "login.sso": "Login via SSO",
+  "whitelist.count": "{count, plural, one {# entry} other {# entries}}",
+  "whitelist.import": "Import",
+  "whitelist.export": "Export",
+  "whitelist.delete.all.label": "Delete All",
+  "whitelist.delete.all.title": "Delete All Entries",
+  "whitelist.delete.all.description": "This will permanently remove all {count, plural, one {# entry} other {# entries}} from the whitelist. Unsaved changes will be lost.",
+  "whitelist.import.error": "Invalid file — expected a JSON array of objects with an email field.",
+  "whitelist.import.success": "Imported {count, plural, one {# new entry} other {# new entries}}.",
+  "whitelist.import.none": "No new entries — all emails are already in the whitelist.",
+  "unsaved.title": "Unsaved Changes",
+  "unsaved.description": "You have unsaved changes that will be lost if you leave. Do you want to continue?",
+  "unsaved.confirm": "Leave",
+  "unsaved.cancel": "Stay"
 }
