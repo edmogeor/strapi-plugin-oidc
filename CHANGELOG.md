@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-07
+
+### Changed
+
+- `REMEMBER_ME` now uses Strapi's own refresh token duration and idle lifespan (`admin.auth.sessions.idleRefreshTokenLifespan`, default 14 days) rather than a custom `REMEMBER_ME_DAYS` config value. Cookie expiry is set to the minimum of the idle window and the token's absolute expiry, matching Strapi's built-in behaviour exactly.
+
+### Removed
+
+- `REMEMBER_ME_DAYS` config option — session duration is now governed by Strapi's session config (`admin.auth.sessions.*`).
+
 ## [1.3.0] - 2026-04-07
 
 ### Added

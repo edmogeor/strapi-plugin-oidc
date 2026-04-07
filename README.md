@@ -56,8 +56,7 @@ module.exports = ({ env }) => ({
       OIDC_LOGOUT_URL: '', // OIDC provider logout URL; omit to return to Strapi login instead
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO', // Text on the SSO button injected into the login page
       OIDC_ENFORCE: null, // null = use Admin UI setting; true/false = override it in config
-      REMEMBER_ME: false, // true = persist session in localStorage across browser restarts
-      REMEMBER_ME_DAYS: 30, // Session duration in days when REMEMBER_ME is true
+      REMEMBER_ME: false, // true = persist session across browser restarts, using Strapi's built-in refresh token duration
     },
   },
   // ...
@@ -93,7 +92,7 @@ This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.
 - Redesigned the Whitelist and Role management UI (switched to native Strapi cards, added pagination, etc.).
 - Added an OIDC logout redirect URL.
 - Added an option to "Enforce OIDC login" with an admin toggle (automatically disabled if the whitelist is empty).
-- Added configurable "Remember Me" duration for sessions (`REMEMBER_ME_DAYS`).
+- Added "Remember Me" support for OIDC sessions, using Strapi's built-in refresh token duration and idle lifespan.
 - Migrated the testing framework to Vitest and added comprehensive test coverage for controllers and services.
 - Cleaned up dead code and unused dependencies to improve maintainability.
 - Upgraded to use newer versions of Node.js.

@@ -269,16 +269,12 @@ export default function oauthService({ strapi }) {
       const REMEMBER_ME = config['REMEMBER_ME'];
       const rememberMe = !!REMEMBER_ME;
 
-      const { token: refreshToken } = await sessionManager('admin').generateRefreshToken(
-        userId,
-        deviceId,
-        {
-          type: rememberMe ? 'refresh' : 'session',
-        },
-      );
+      const { token: refreshToken, absoluteExpiresAt } = await sessionManager(
+        'admin',
+      ).generateRefreshToken(userId, deviceId, {
+        type: rememberMe ? 'refresh' : 'session',
+      });
 
-      // TODO: reference the Configuration   values
-      // https://github.com/strapi/strapi/pull/24346/files#diff-c27336b21ee5785523f7fc802899a5d405da67d12c837c498c4766cb04a50b9aR64
       const isProduction = strapi.config.get('environment') === 'production';
       const domain =
         strapi.config.get('admin.auth.cookie.domain') || strapi.config.get('admin.auth.domain');
@@ -295,10 +291,16 @@ export default function oauthService({ strapi }) {
       };
 
       if (rememberMe) {
-        const REMEMBER_ME_DAYS = config['REMEMBER_ME_DAYS'] || 30;
-        const durationInMs = REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000;
-        cookieOptions.maxAge = durationInMs;
-        cookieOptions.expires = new Date(Date.now() + durationInMs);
+        // Mirror Strapi's own cookie expiry: min(idle lifespan, token absolute expiry)
+        const idleLifespanSec = strapi.config.get(
+          'admin.auth.sessions.idleRefreshTokenLifespan',
+          1_209_600, // 14 days — Strapi default
+        );
+        const idleMs = idleLifespanSec * 1000;
+        const absoluteMs = new Date(absoluteExpiresAt).getTime() - Date.now();
+        const ms = Math.min(idleMs, absoluteMs);
+        cookieOptions.maxAge = ms;
+        cookieOptions.expires = new Date(Date.now() + ms);
       }
 
       ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);
