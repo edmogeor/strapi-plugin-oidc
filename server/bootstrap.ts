@@ -1,3 +1,5 @@
+import { resolveEnforceOIDC } from './utils/enforceOIDC';
+
 export default async function bootstrap({ strapi }) {
   const enforceOidcMiddleware = async (ctx, next) => {
     const adminUrl = strapi.config.get('admin.url', '/admin');
@@ -18,20 +20,7 @@ export default async function bootstrap({ strapi }) {
         const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
         const settings = await whitelistService.getSettings();
 
-        const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
-        const oidcEnforceVal = config.OIDC_ENFORCE;
-        const enforceOIDCConfig =
-          oidcEnforceVal === null || oidcEnforceVal === undefined
-            ? null
-            : typeof oidcEnforceVal === 'boolean'
-              ? oidcEnforceVal
-              : oidcEnforceVal === 'true'
-                ? true
-                : oidcEnforceVal === 'false'
-                  ? false
-                  : null;
-        const enforceOIDC =
-          enforceOIDCConfig !== null ? enforceOIDCConfig : (settings?.enforceOIDC ?? false);
+        const enforceOIDC = resolveEnforceOIDC(strapi, settings?.enforceOIDC);
 
         if (enforceOIDC) {
           if (isPostAuth) {

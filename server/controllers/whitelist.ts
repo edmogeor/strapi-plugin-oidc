@@ -1,23 +1,14 @@
-function getEnforceOIDCConfig(): boolean | null {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
-  const val = config.OIDC_ENFORCE;
-  if (val === null || val === undefined) return null;
-  if (typeof val === 'boolean') return val;
-  if (val === 'true') return true;
-  if (val === 'false') return false;
-  return null;
-}
+import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 
 async function info(ctx) {
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
   const settings = await whitelistService.getSettings();
   const whitelistUsers = await whitelistService.getUsers();
-  const enforceOIDCConfig = getEnforceOIDCConfig();
 
   ctx.body = {
     useWhitelist: settings.useWhitelist,
-    enforceOIDC: enforceOIDCConfig !== null ? enforceOIDCConfig : settings.enforceOIDC || false,
-    enforceOIDCConfig,
+    enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
+    enforceOIDCConfig: getEnforceOIDCConfig(strapi),
     whitelistUsers,
   };
 }
@@ -41,9 +32,8 @@ async function publicSettings(ctx) {
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
   const settings = await whitelistService.getSettings();
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
-  const enforceOIDCConfig = getEnforceOIDCConfig();
   ctx.body = {
-    enforceOIDC: enforceOIDCConfig !== null ? enforceOIDCConfig : settings.enforceOIDC || false,
+    enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
   };
 }

@@ -1,4 +1,4 @@
-export function getExpiredCookieOptions(strapi: any, ctx: any) {
+function getExpiredCookieOptions(strapi: any, ctx: any) {
   const isProduction = strapi.config.get('environment') === 'production';
   return {
     httpOnly: true,

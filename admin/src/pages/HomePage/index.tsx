@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Box, Flex, Typography, Button } from '@strapi/design-system';
 import { WarningCircle, Information } from '@strapi/icons';
 import { Page, Layouts } from '@strapi/strapi/admin';

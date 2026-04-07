@@ -21,7 +21,7 @@ import {
   PageLink,
 } from '@strapi/design-system';
 import styled from 'styled-components';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Check, Plus, Trash, WarningCircle } from '@strapi/icons';
 import { Dialog } from '@strapi/design-system';
 import getTrad from '../../utils/getTrad';
@@ -105,214 +105,212 @@ export default function Whitelist({
   }, [email]);
 
   return (
-    <>
-      <Box>
-        <Typography tag="p" variant="omega" textColor="neutral600" marginBottom={4}>
-          {formatMessage(getTrad('whitelist.description'))}
-        </Typography>
+    <Box>
+      <Typography tag="p" variant="omega" textColor="neutral600" marginBottom={4}>
+        {formatMessage(getTrad('whitelist.description'))}
+      </Typography>
 
-        {useWhitelist && (
-          <>
-            <Flex gap={4} marginTop={5} marginBottom={5} alignItems="flex-start">
-              <Box style={{ flex: 1 }}>
-                <Field.Root>
-                  <Field.Input
-                    type={'text'}
-                    disabled={loading}
-                    value={email}
-                    hasError={Boolean(email && !isValidEmail())}
-                    onChange={(e) => setEmail(e.currentTarget.value)}
-                    placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
-                  />
-                </Field.Root>
-              </Box>
-              <Box style={{ flex: 1 }}>
-                <Field.Root>
-                  <MultiSelect
-                    withTags
-                    placeholder={formatMessage(getTrad('whitelist.roles.placeholder'))}
-                    value={selectedRoles}
-                    onChange={(value) => {
-                      setSelectedRoles(value || []);
+      {useWhitelist && (
+        <>
+          <Flex gap={4} marginTop={5} marginBottom={5} alignItems="flex-start">
+            <Box style={{ flex: 1 }}>
+              <Field.Root>
+                <Field.Input
+                  type={'text'}
+                  disabled={loading}
+                  value={email}
+                  hasError={Boolean(email && !isValidEmail())}
+                  onChange={(e) => setEmail(e.currentTarget.value)}
+                  placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
+                />
+              </Field.Root>
+            </Box>
+            <Box style={{ flex: 1 }}>
+              <Field.Root>
+                <MultiSelect
+                  withTags
+                  placeholder={formatMessage(getTrad('whitelist.roles.placeholder'))}
+                  value={selectedRoles}
+                  onChange={(value) => {
+                    setSelectedRoles(value || []);
+                  }}
+                >
+                  {roles.map((role) => (
+                    <MultiSelectOption key={role.id} value={role.id.toString()}>
+                      {role.name}
+                    </MultiSelectOption>
+                  ))}
+                </MultiSelect>
+              </Field.Root>
+            </Box>
+            <Box>
+              <Button
+                size="L"
+                startIcon={<Plus />}
+                disabled={loading || email.trim() === '' || !isValidEmail()}
+                loading={loading}
+                onClick={onSaveEmail}
+              >
+                {formatMessage(getTrad('page.add'))}
+              </Button>
+            </Box>
+          </Flex>
+
+          <Divider />
+          <CustomTable colCount={5} rowCount={users.length}>
+            <Thead>
+              <Tr>
+                <Th>{formatMessage(getTrad('whitelist.table.no'))}</Th>
+                <Th>{formatMessage(getTrad('whitelist.table.email'))}</Th>
+                <Th>{formatMessage(getTrad('whitelist.table.roles'))}</Th>
+                <Th>{formatMessage(getTrad('whitelist.table.created'))}</Th>
+                <Th style={{ paddingRight: 0 }}>&nbsp;</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {users.length === 0 ? (
+                <Tr>
+                  <Td colSpan={5}>
+                    <Flex justifyContent="center" padding={4}>
+                      <Typography textColor="neutral600">
+                        {formatMessage(getTrad('whitelist.table.empty'))}
+                      </Typography>
+                    </Flex>
+                  </Td>
+                </Tr>
+              ) : (
+                paginatedUsers.map((user, index) => {
+                  const getRoleNames = (roleIds: string[]) =>
+                    roleIds
+                      .map((roleId) => {
+                        const r = roles.find((ro) => String(ro.id) === String(roleId));
+                        return r ? r.name : roleId;
+                      })
+                      .join(', ');
+
+                  let userRolesNames = getRoleNames(user.roles || []);
+
+                  if (!userRolesNames) {
+                    const defaultRolesIds = oidcRoles.reduce<string[]>((acc, oidc) => {
+                      if (oidc.role) acc.push(...oidc.role);
+                      return acc;
+                    }, []);
+                    userRolesNames = getRoleNames(defaultRolesIds);
+                  }
+
+                  return (
+                    <Tr key={user.email}>
+                      <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
+                      <Td>{user.email}</Td>
+                      <Td>{userRolesNames || '-'}</Td>
+                      <Td>
+                        <LocalizedDate date={user.createdAt} />
+                      </Td>
+                      <Td style={{ paddingRight: 0 }}>
+                        <Flex
+                          justifyContent="flex-end"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ width: '100%' }}
+                        >
+                          <Dialog.Root>
+                            <Dialog.Trigger>
+                              <IconButton
+                                label={formatMessage(getTrad('whitelist.delete.label'))}
+                                withTooltip={false}
+                              >
+                                <Trash />
+                              </IconButton>
+                            </Dialog.Trigger>
+                            <Dialog.Content>
+                              <Dialog.Header>
+                                {formatMessage(getTrad('whitelist.delete.title'))}
+                              </Dialog.Header>
+                              <Dialog.Body icon={<WarningCircle fill="danger600" />}>
+                                <Flex direction="column" alignItems="center" gap={2}>
+                                  <Flex justifyContent="center">
+                                    <Typography id="confirm-description">
+                                      {formatMessage(getTrad('whitelist.delete.description'))}
+                                    </Typography>
+                                  </Flex>
+                                  <Flex justifyContent="center">
+                                    <Typography variant="omega" fontWeight="bold">
+                                      {user.email}
+                                    </Typography>
+                                  </Flex>
+                                  <Flex justifyContent="center" marginTop={2}>
+                                    <Typography variant="pi" textColor="neutral600">
+                                      {formatMessage(getTrad('whitelist.delete.note'))}
+                                    </Typography>
+                                  </Flex>
+                                </Flex>
+                              </Dialog.Body>
+                              <Dialog.Footer>
+                                <Dialog.Cancel>
+                                  <Button fullWidth variant="tertiary">
+                                    {formatMessage(getTrad('page.cancel'))}
+                                  </Button>
+                                </Dialog.Cancel>
+                                <Dialog.Action>
+                                  <Button
+                                    fullWidth
+                                    variant="danger-light"
+                                    onClick={() => onDelete(user.email)}
+                                  >
+                                    {formatMessage(getTrad('page.ok'))}
+                                  </Button>
+                                </Dialog.Action>
+                              </Dialog.Footer>
+                            </Dialog.Content>
+                          </Dialog.Root>
+                        </Flex>
+                      </Td>
+                    </Tr>
+                  );
+                })
+              )}
+            </Tbody>
+          </CustomTable>
+          {pageCount > 1 && (
+            <Box paddingTop={4}>
+              <Flex justifyContent="flex-end">
+                <Pagination activePage={page} pageCount={pageCount}>
+                  <PreviousLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.max(1, p - 1));
                     }}
                   >
-                    {roles.map((role) => (
-                      <MultiSelectOption key={role.id} value={role.id.toString()}>
-                        {role.name}
-                      </MultiSelectOption>
-                    ))}
-                  </MultiSelect>
-                </Field.Root>
-              </Box>
-              <Box>
-                <Button
-                  size="L"
-                  startIcon={<Plus />}
-                  disabled={loading || email.trim() === '' || !isValidEmail()}
-                  loading={loading}
-                  onClick={onSaveEmail}
-                >
-                  {formatMessage(getTrad('page.add'))}
-                </Button>
-              </Box>
-            </Flex>
-
-            <Divider />
-            <CustomTable colCount={5} rowCount={users.length}>
-              <Thead>
-                <Tr>
-                  <Th>{formatMessage(getTrad('whitelist.table.no'))}</Th>
-                  <Th>{formatMessage(getTrad('whitelist.table.email'))}</Th>
-                  <Th>{formatMessage(getTrad('whitelist.table.roles'))}</Th>
-                  <Th>{formatMessage(getTrad('whitelist.table.created'))}</Th>
-                  <Th style={{ paddingRight: 0 }}>&nbsp;</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {users.length === 0 ? (
-                  <Tr>
-                    <Td colSpan={5}>
-                      <Flex justifyContent="center" padding={4}>
-                        <Typography textColor="neutral600">
-                          {formatMessage(getTrad('whitelist.table.empty'))}
-                        </Typography>
-                      </Flex>
-                    </Td>
-                  </Tr>
-                ) : (
-                  paginatedUsers.map((user, index) => {
-                    const getRoleNames = (roleIds: string[]) =>
-                      roleIds
-                        .map((roleId) => {
-                          const r = roles.find((ro) => String(ro.id) === String(roleId));
-                          return r ? r.name : roleId;
-                        })
-                        .join(', ');
-
-                    let userRolesNames = getRoleNames(user.roles || []);
-
-                    if (!userRolesNames) {
-                      const defaultRolesIds = oidcRoles.reduce<string[]>((acc, oidc) => {
-                        if (oidc.role) acc.push(...oidc.role);
-                        return acc;
-                      }, []);
-                      userRolesNames = getRoleNames(defaultRolesIds);
-                    }
-
-                    return (
-                      <Tr key={user.email}>
-                        <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
-                        <Td>{user.email}</Td>
-                        <Td>{userRolesNames || '-'}</Td>
-                        <Td>
-                          <LocalizedDate date={user.createdAt} />
-                        </Td>
-                        <Td style={{ paddingRight: 0 }}>
-                          <Flex
-                            justifyContent="flex-end"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ width: '100%' }}
-                          >
-                            <Dialog.Root>
-                              <Dialog.Trigger>
-                                <IconButton
-                                  label={formatMessage(getTrad('whitelist.delete.label'))}
-                                  withTooltip={false}
-                                >
-                                  <Trash />
-                                </IconButton>
-                              </Dialog.Trigger>
-                              <Dialog.Content>
-                                <Dialog.Header>
-                                  {formatMessage(getTrad('whitelist.delete.title'))}
-                                </Dialog.Header>
-                                <Dialog.Body icon={<WarningCircle fill="danger600" />}>
-                                  <Flex direction="column" alignItems="center" gap={2}>
-                                    <Flex justifyContent="center">
-                                      <Typography id="confirm-description">
-                                        {formatMessage(getTrad('whitelist.delete.description'))}
-                                      </Typography>
-                                    </Flex>
-                                    <Flex justifyContent="center">
-                                      <Typography variant="omega" fontWeight="bold">
-                                        {user.email}
-                                      </Typography>
-                                    </Flex>
-                                    <Flex justifyContent="center" marginTop={2}>
-                                      <Typography variant="pi" textColor="neutral600">
-                                        {formatMessage(getTrad('whitelist.delete.note'))}
-                                      </Typography>
-                                    </Flex>
-                                  </Flex>
-                                </Dialog.Body>
-                                <Dialog.Footer>
-                                  <Dialog.Cancel>
-                                    <Button fullWidth variant="tertiary">
-                                      {formatMessage(getTrad('page.cancel'))}
-                                    </Button>
-                                  </Dialog.Cancel>
-                                  <Dialog.Action>
-                                    <Button
-                                      fullWidth
-                                      variant="danger-light"
-                                      onClick={() => onDelete(user.email)}
-                                    >
-                                      {formatMessage(getTrad('page.ok'))}
-                                    </Button>
-                                  </Dialog.Action>
-                                </Dialog.Footer>
-                              </Dialog.Content>
-                            </Dialog.Root>
-                          </Flex>
-                        </Td>
-                      </Tr>
-                    );
-                  })
-                )}
-              </Tbody>
-            </CustomTable>
-            {pageCount > 1 && (
-              <Box paddingTop={4}>
-                <Flex justifyContent="flex-end">
-                  <Pagination activePage={page} pageCount={pageCount}>
-                    <PreviousLink
+                    {formatMessage(getTrad('pagination.previous'))}
+                  </PreviousLink>
+                  {Array.from({ length: pageCount }).map((_, i) => (
+                    <PageLink
+                      key={i + 1}
+                      number={i + 1}
                       href="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        setPage((p) => Math.max(1, p - 1));
+                        setPage(i + 1);
                       }}
                     >
-                      {formatMessage(getTrad('pagination.previous'))}
-                    </PreviousLink>
-                    {Array.from({ length: pageCount }).map((_, i) => (
-                      <PageLink
-                        key={i + 1}
-                        number={i + 1}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(i + 1);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                      </PageLink>
-                    ))}
-                    <NextLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPage((p) => Math.min(pageCount, p + 1));
-                      }}
-                    >
-                      {formatMessage(getTrad('pagination.next'))}
-                    </NextLink>
-                  </Pagination>
-                </Flex>
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
-    </>
+                      {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
+                    </PageLink>
+                  ))}
+                  <NextLink
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.min(pageCount, p + 1));
+                    }}
+                  >
+                    {formatMessage(getTrad('pagination.next'))}
+                  </NextLink>
+                </Pagination>
+              </Flex>
+            </Box>
+          )}
+        </>
+      )}
+    </Box>
   );
 }

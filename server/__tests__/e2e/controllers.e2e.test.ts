@@ -14,6 +14,14 @@ describe('Controllers E2E', () => {
   });
 
   describe('Whitelist Controller', () => {
+    beforeAll(() => {
+      // Ensure OIDC_ENFORCE config override is absent so DB values are used
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...strapi.config.get('plugin::strapi-plugin-oidc'),
+        OIDC_ENFORCE: null,
+      });
+    });
+
     afterAll(async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
         where: { email: { $in: ['sync1@test.com', 'sync2@test.com', 'sync3@test.com'] } },
@@ -218,6 +226,9 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
+    const expectCookieCleared = (ctx: any, name: string) =>
+      expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
+
     const makeLogoutCtx = (initialCookies: Record<string, string> = {}) => {
       const cookieCalls: Array<{ name: string; value: string; opts?: any }> = [];
       return {
@@ -246,16 +257,8 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
-      expect(
-        ctxLogout.cookies.calls.some(
-          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
-        ),
-      ).toBe(true);
-      expect(
-        ctxLogout.cookies.calls.some(
-          (c) => c.name === 'oidc_authenticated' && c.opts?.maxAge === 0,
-        ),
-      ).toBe(true);
+      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
+      expectCookieCleared(ctxLogout, 'oidc_authenticated');
     });
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
@@ -268,11 +271,7 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('/admin/auth/login');
-      expect(
-        ctxLogout.cookies.calls.some(
-          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
-        ),
-      ).toBe(true);
+      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
@@ -283,16 +282,8 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');
-      expect(
-        ctxLogout.cookies.calls.some(
-          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
-        ),
-      ).toBe(true);
-      expect(
-        ctxLogout.cookies.calls.some(
-          (c) => c.name === 'oidc_authenticated' && c.opts?.maxAge === 0,
-        ),
-      ).toBe(true);
+      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
+      expectCookieCleared(ctxLogout, 'oidc_authenticated');
     });
   });
 });
