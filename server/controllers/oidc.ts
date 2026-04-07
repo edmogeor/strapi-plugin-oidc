@@ -81,7 +81,7 @@ async function exchangeTokenAndFetchUserInfo(
   config: Record<string, string>,
   params: URLSearchParams,
   expectedNonce: string,
-): Promise<OidcUserInfo> {
+): Promise<{ userInfo: OidcUserInfo; accessToken: string }> {
   const response = await fetch(config.OIDC_TOKEN_ENDPOINT, {
     method: 'POST',
     body: params,
@@ -126,7 +126,8 @@ async function exchangeTokenAndFetchUserInfo(
     throw new Error('Failed to fetch user info');
   }
 
-  return userResponse.json() as Promise<OidcUserInfo>;
+  const userInfo = (await userResponse.json()) as OidcUserInfo;
+  return { userInfo, accessToken: tokenData.access_token };
 }
 
 async function registerNewUser(
@@ -231,14 +232,26 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   params.append('code_verifier', codeVerifier ?? '');
 
   try {
-    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce ?? '');
+    const { userInfo, accessToken } = await exchangeTokenAndFetchUserInfo(
+      config,
+      params,
+      oidcNonce ?? '',
+    );
+
+    const isProduction = strapi.config.get('environment') === 'production';
+    ctx.cookies.set('oidc_access_token', accessToken, {
+      httpOnly: true,
+      maxAge: 300000, // 5 minutes — matches typical provider access token lifetime
+      secure: isProduction && ctx.request.secure,
+      sameSite: 'lax' as const,
+    });
 
     const { activateUser, jwtToken } = await handleUserAuthentication(
       userService,
       oauthService,
       roleService,
       whitelistService,
-      userResponseData,
+      userInfo,
       config,
       ctx,
     );
@@ -257,20 +270,36 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 async function logout(ctx: StrapiContext) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
+  const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
 
-  // Read before clearing — the cookie is gone after clearAuthCookies.
+  // Read before clearing — cookies are gone after clearAuthCookies.
   const isOidcSession = !!ctx.cookies.get('oidc_authenticated');
+  const accessToken = ctx.cookies.get('oidc_access_token');
 
-  // Clear both session cookies so the enforceOIDC middleware correctly redirects
-  // to OIDC on the next request rather than passing through a stale session.
   clearAuthCookies(strapi, ctx);
 
-  if (logoutUrl && isOidcSession) {
-    ctx.redirect(logoutUrl);
-  } else {
-    const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
-    ctx.redirect(`${adminPanelUrl}/auth/login`);
+  if (logoutUrl && isOidcSession && accessToken) {
+    // Check if the provider session is still active before redirecting to end-session.
+    // If the access token is expired, skip Authentik and go straight to Strapi login
+    // to avoid the bare "Logout successful" page with no redirect.
+    try {
+      const response = await fetch(config.OIDC_USERINFO_ENDPOINT, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (response.ok) {
+        return ctx.redirect(logoutUrl);
+      }
+    } catch {
+      // Network error — fall through to Strapi login
+    }
+    return ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
+
+  if (logoutUrl && isOidcSession) {
+    return ctx.redirect(logoutUrl);
+  }
+
+  ctx.redirect(`${adminPanelUrl}/auth/login`);
 }
 
 export default {

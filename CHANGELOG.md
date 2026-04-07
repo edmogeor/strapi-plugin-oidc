@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-04-07
+
+### Changed
+
+- Logout now checks the provider session before redirecting to the end-session endpoint. If the access token is expired (provider returns non-2xx), the user is redirected directly to the Strapi login page instead of hitting the provider's bare "Logout successful" page with no redirect.
+
 ## [1.5.2] - 2026-04-07
 
 ### Changed

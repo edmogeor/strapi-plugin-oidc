@@ -348,6 +348,7 @@ describe('Controllers E2E', () => {
     it('should redirect to OIDC provider logout URL for OIDC sessions', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
         OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
       });
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
@@ -356,6 +357,38 @@ describe('Controllers E2E', () => {
       expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
       expectCookieCleared(ctxLogout, 'oidc_authenticated');
+    });
+
+    it('should redirect to OIDC end-session when access token is valid', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
+      });
+
+      const ctxLogout = makeLogoutCtx({
+        oidc_authenticated: '1',
+        oidc_access_token: 'valid-token',
+      });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
+    });
+
+    it('should redirect to Strapi login when provider session has expired', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        // .invalid TLD is reserved and guaranteed to fail DNS — triggers the catch block
+        OIDC_USERINFO_ENDPOINT: 'https://provider.invalid/userinfo',
+      });
+      strapi.config.set('admin.url', '/admin');
+
+      const ctxLogout = makeLogoutCtx({
+        oidc_authenticated: '1',
+        oidc_access_token: 'expired-token',
+      });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
     });
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
