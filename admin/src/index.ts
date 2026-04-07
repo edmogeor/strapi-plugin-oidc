@@ -88,6 +88,18 @@ export default {
       const response = await originalFetch(...args);
 
       if (isLogout && response.ok) {
+        // Manually clear Strapi's local tokens since we are halting the normal logout flow
+        window.localStorage.removeItem('jwtToken');
+        window.localStorage.removeItem('isLoggedIn');
+        window.sessionStorage.removeItem('jwtToken');
+        window.sessionStorage.removeItem('isLoggedIn');
+
+        // Strapi v5 uses cookies, so clear those as well
+        document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+        document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
+        document.cookie = 'strapi_admin_refresh=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+        document.cookie = 'strapi_admin_refresh=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
+
         window.location.href = '/strapi-plugin-oidc/logout';
         // Return a pending promise to prevent Strapi from completing the logout redirect
         return new Promise(() => {});
