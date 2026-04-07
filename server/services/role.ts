@@ -1,4 +1,6 @@
-export default function roleService({ strapi }) {
+import type { Core } from '@strapi/types';
+
+export default function roleService({ strapi }: { strapi: Core.Strapi }) {
   return {
     OIDC_TYPE: '4',
     getOidcRoles() {

@@ -2,7 +2,10 @@ const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS = 20;
 
-const rateLimitMiddleware = async (ctx: any, next: () => Promise<any>) => {
+import type { Next } from 'koa';
+import type { StrapiContext } from '../types';
+
+const rateLimitMiddleware = async (ctx: StrapiContext, next: Next) => {
   const ip = ctx.request.ip;
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;

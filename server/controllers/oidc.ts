@@ -1,6 +1,15 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
+import type {
+  StrapiContext,
+  OidcUserInfo,
+  WhitelistEntry,
+  OAuthService,
+  RoleService,
+  WhitelistService,
+  AdminUserService,
+} from '../types';
 
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_CLIENT_ID',
@@ -26,7 +35,7 @@ function configValidation(): Record<string, string> {
   );
 }
 
-async function oidcSignIn(ctx: any) {
+async function oidcSignIn(ctx: StrapiContext) {
   const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPES, OIDC_AUTHORIZATION_ENDPOINT } =
     configValidation();
 
@@ -72,7 +81,7 @@ async function exchangeTokenAndFetchUserInfo(
   config: Record<string, string>,
   params: URLSearchParams,
   expectedNonce: string,
-) {
+): Promise<OidcUserInfo> {
   const response = await fetch(config.OIDC_TOKEN_ENDPOINT, {
     method: 'POST',
     body: params,
@@ -85,19 +94,24 @@ async function exchangeTokenAndFetchUserInfo(
     throw new Error('Token exchange failed');
   }
 
-  const tokenData = await response.json();
+  const tokenData = (await response.json()) as {
+    access_token: string;
+    id_token?: string;
+  };
 
   // Validate the nonce in the ID token if the provider returned one.
   // The ID token is a JWT; the payload is the second base64url segment.
   if (tokenData.id_token) {
     try {
       const payloadB64 = tokenData.id_token.split('.')[1];
-      const idTokenPayload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+      const idTokenPayload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as {
+        nonce?: string;
+      };
       if (idTokenPayload.nonce !== expectedNonce) {
         throw new Error('Nonce mismatch');
       }
     } catch (e) {
-      if (e.message === 'Nonce mismatch') throw e;
+      if ((e as Error).message === 'Nonce mismatch') throw e;
       throw new Error('Failed to parse ID token');
     }
   }
@@ -112,20 +126,20 @@ async function exchangeTokenAndFetchUserInfo(
     throw new Error('Failed to fetch user info');
   }
 
-  return userResponse.json();
+  return userResponse.json() as Promise<OidcUserInfo>;
 }
 
 async function registerNewUser(
-  userService: any,
-  oauthService: any,
-  roleService: any,
+  userService: AdminUserService,
+  oauthService: OAuthService,
+  roleService: RoleService,
   email: string,
-  userResponseData: any,
-  whitelistUser: any,
+  userResponseData: OidcUserInfo,
+  whitelistUser: WhitelistEntry | null,
   config: Record<string, string>,
-  ctx: any,
+  ctx: StrapiContext,
 ) {
-  let roles = [];
+  let roles: string[] = [];
   if (whitelistUser?.roles?.length > 0) {
     roles = whitelistUser.roles;
   } else {
@@ -133,11 +147,13 @@ async function registerNewUser(
     roles = oidcRoles?.roles || [];
   }
 
-  const defaultLocale = oauthService.localeFindByHeader(ctx.request.headers);
+  const defaultLocale = oauthService.localeFindByHeader(
+    ctx.request.headers as Record<string, string>,
+  );
   const activateUser = await oauthService.createUser(
     email,
-    userResponseData[config.OIDC_FAMILY_NAME_FIELD],
-    userResponseData[config.OIDC_GIVEN_NAME_FIELD],
+    userResponseData[config.OIDC_FAMILY_NAME_FIELD] as string,
+    userResponseData[config.OIDC_GIVEN_NAME_FIELD] as string,
     defaultLocale,
     roles,
   );
@@ -148,13 +164,13 @@ async function registerNewUser(
 }
 
 async function handleUserAuthentication(
-  userService: any,
-  oauthService: any,
-  roleService: any,
-  whitelistService: any,
-  userResponseData: any,
+  userService: AdminUserService,
+  oauthService: OAuthService,
+  roleService: RoleService,
+  whitelistService: WhitelistService,
+  userResponseData: OidcUserInfo,
   config: Record<string, string>,
-  ctx: any,
+  ctx: StrapiContext,
 ) {
   const email = String(userResponseData.email).toLowerCase();
 
@@ -180,12 +196,14 @@ async function handleUserAuthentication(
   return { activateUser, jwtToken };
 }
 
-async function oidcSignInCallback(ctx: any) {
+async function oidcSignInCallback(ctx: StrapiContext) {
   const config = configValidation();
-  const userService = strapi.service('admin::user');
-  const oauthService = strapi.plugin('strapi-plugin-oidc').service('oauth');
-  const roleService = strapi.plugin('strapi-plugin-oidc').service('role');
-  const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+  const userService = strapi.service('admin::user') as AdminUserService;
+  const oauthService = strapi.plugin('strapi-plugin-oidc').service('oauth') as OAuthService;
+  const roleService = strapi.plugin('strapi-plugin-oidc').service('role') as RoleService;
+  const whitelistService = strapi
+    .plugin('strapi-plugin-oidc')
+    .service('whitelist') as WhitelistService;
 
   if (!ctx.query.code) {
     return ctx.send(oauthService.renderSignUpError('code Not Found'));
@@ -205,15 +223,15 @@ async function oidcSignInCallback(ctx: any) {
   }
 
   const params = new URLSearchParams();
-  params.append('code', ctx.query.code);
+  params.append('code', ctx.query.code as string);
   params.append('client_id', config.OIDC_CLIENT_ID);
   params.append('client_secret', config.OIDC_CLIENT_SECRET);
   params.append('redirect_uri', config.OIDC_REDIRECT_URI);
   params.append('grant_type', config.OIDC_GRANT_TYPE);
-  params.append('code_verifier', codeVerifier);
+  params.append('code_verifier', codeVerifier ?? '');
 
   try {
-    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce);
+    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce ?? '');
 
     const { activateUser, jwtToken } = await handleUserAuthentication(
       userService,
@@ -236,7 +254,7 @@ async function oidcSignInCallback(ctx: any) {
   }
 }
 
-async function logout(ctx: any) {
+async function logout(ctx: StrapiContext) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
   const logoutUrl = config.OIDC_LOGOUT_URL;
 
@@ -250,7 +268,7 @@ async function logout(ctx: any) {
   if (logoutUrl && isOidcSession) {
     ctx.redirect(logoutUrl);
   } else {
-    const adminPanelUrl = strapi.config.get('admin.url', '/admin');
+    const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
     ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
 }

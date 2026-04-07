@@ -1,6 +1,8 @@
 import strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
+import type { Core } from '@strapi/types';
+import type { StrapiContext } from '../types';
 
 function renderHtmlTemplate(title: string, content: string): string {
   return `
@@ -276,7 +278,7 @@ export default function oauthService({ strapi }) {
       const path = strapi.config.get('admin.auth.cookie.path', '/admin');
       const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax');
 
-      const cookieOptions: any = {
+      const cookieOptions: Parameters<StrapiContext['cookies']['set']>[2] = {
         httpOnly: true,
         secure: isProduction && ctx.request.secure,
         overwrite: true,
