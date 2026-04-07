@@ -35,5 +35,6 @@
   "enforce.title": "Enforce OIDC Login",
   "enforce.toggle.enabled": "Enabled",
   "enforce.toggle.disabled": "Disabled",
-  "enforce.warning": "Make sure OIDC is setup correctly before saving changes, you won't be able to login normally."
+  "enforce.warning": "Make sure OIDC is setup correctly before saving changes, you won't be able to login normally.",
+  "login.sso": "Login via SSO"
 }

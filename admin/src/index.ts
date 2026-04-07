@@ -2,6 +2,7 @@ import { getTranslation } from './utils/getTranslation';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 import Initializer from './components/Initializer';
+import en from './translations/en.json';
 
 const name = pluginPkg.strapi.displayName;
 
@@ -79,6 +80,56 @@ export default {
       }
     };
 
+    // --- SSO button injection (shown on login page when enforceOIDC is false) ---
+    let ssoButtonInjected = false;
+    let ssoObserver: MutationObserver | null = null;
+
+    const injectSSOButton = () => {
+      if (ssoButtonInjected) return;
+      if (!isAuthRoute(window.location.pathname)) return;
+      if (document.getElementById('strapi-oidc-sso-btn')) return;
+
+      const submitButton = document.querySelector('form button[type="submit"]');
+      if (!submitButton?.parentNode) return;
+
+      const btn = document.createElement('button');
+      btn.id = 'strapi-oidc-sso-btn';
+      btn.type = 'button';
+      // Copy styled-components classes from the submit button so appearance is identical
+      btn.className = submitButton.className;
+      btn.style.marginTop = '8px';
+      btn.onclick = () => {
+        window.location.href = '/strapi-plugin-oidc/oidc';
+      };
+
+      // Match the inner <span> structure of the submit button
+      const innerSpan = submitButton.querySelector('span');
+      const span = document.createElement('span');
+      if (innerSpan) span.className = innerSpan.className;
+      span.textContent = en['login.sso'];
+      btn.appendChild(span);
+
+      submitButton.parentNode.insertBefore(btn, submitButton.nextSibling);
+      ssoButtonInjected = true;
+    };
+
+    const startSSOButtonObserver = () => {
+      if (ssoObserver) return;
+      injectSSOButton(); // try immediately in case form is already rendered
+      ssoObserver = new MutationObserver(() => {
+        if (isAuthRoute(window.location.pathname)) injectSSOButton();
+      });
+      ssoObserver.observe(document.body, { childList: true, subtree: true });
+    };
+
+    const stopSSOButtonObserver = () => {
+      ssoObserver?.disconnect();
+      ssoObserver = null;
+      document.getElementById('strapi-oidc-sso-btn')?.remove();
+      ssoButtonInjected = false;
+    };
+    // --- end SSO button injection ---
+
     // Synchronously patch history from the cached value so there is zero window
     // where React Router can render the login page on return visits.
     if (localStorage.getItem(ENFORCE_CACHE_KEY) === '1') {
@@ -93,9 +144,11 @@ export default {
           const data = await response.json();
           if (data.enforceOIDC) {
             localStorage.setItem(ENFORCE_CACHE_KEY, '1');
+            stopSSOButtonObserver();
             patchHistory(); // no-op if already patched from cache
           } else {
             localStorage.removeItem(ENFORCE_CACHE_KEY);
+            startSSOButtonObserver();
           }
         }
       } catch (error) {
@@ -123,12 +176,13 @@ export default {
         window.sessionStorage.removeItem('jwtToken');
         window.sessionStorage.removeItem('isLoggedIn');
 
-        // Strapi v5 uses cookies, so clear those as well
+        // Clear the jwtToken cookie (not httpOnly, so JS can remove it)
+        // strapi_admin_refresh and oidc_authenticated are httpOnly — cleared server-side
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
-        document.cookie = 'strapi_admin_refresh=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-        document.cookie = 'strapi_admin_refresh=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
 
+        // Always route through the plugin logout endpoint — the server decides whether
+        // to redirect to the OIDC provider based on the oidc_authenticated cookie.
         window.location.href = '/strapi-plugin-oidc/logout';
         // Return a pending promise to prevent Strapi from completing the logout redirect
         return new Promise(() => {});

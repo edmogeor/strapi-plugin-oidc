@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-07
+
+### Added
+
+- "Login via SSO" button injected on the Strapi login page when `enforceOIDC` is disabled, giving users the option to authenticate via OIDC alongside normal login. The button matches the existing Login button's appearance and text is localisation-ready.
+- Pre-commit hook to automatically strip OIDC credentials from `test-app/.env` before committing, keeping the file tracked in git without exposing secrets. Working copy is preserved untouched.
+
+### Fixed
+
+- Logout now only redirects to the OIDC provider's logout URL (`OIDC_LOGOUT_URL`) for sessions established via OIDC, identified server-side by the `oidc_authenticated` cookie. Local admin users are redirected directly to the Strapi login page.
+
+### Changed
+
+- All logout requests are routed through `/strapi-plugin-oidc/logout`, with the server as the single source of truth for the redirect destination. Eliminates edge cases where stale client-side state could cause the wrong user to be redirected to the OIDC provider.
+- Removed ineffective client-side clearing of `httpOnly` cookies (`strapi_admin_refresh`, `oidc_authenticated`); these are correctly cleared server-side only.
+
 ## [1.1.2] - 2026-04-07
 
 ### Fixed

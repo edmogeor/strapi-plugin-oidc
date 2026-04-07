@@ -217,11 +217,14 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
-    const makeLogoutCtx = () => {
+    const makeLogoutCtx = (initialCookies: Record<string, string> = {}) => {
       const cookieCalls: Array<{ name: string; value: string; opts?: any }> = [];
       return {
         request: { secure: false },
         cookies: {
+          get(name: string) {
+            return initialCookies[name];
+          },
           set(name: string, value: string, opts?: any) {
             cookieCalls.push({ name, value, opts });
           },
@@ -233,12 +236,12 @@ describe('Controllers E2E', () => {
       };
     };
 
-    it('should redirect to OIDC provider logout URL if configured', async () => {
+    it('should redirect to OIDC provider logout URL for OIDC sessions', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
         OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
       });
 
-      const ctxLogout = makeLogoutCtx();
+      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
@@ -254,11 +257,28 @@ describe('Controllers E2E', () => {
       ).toBe(true);
     });
 
+    it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+      });
+      strapi.config.set('admin.url', '/admin');
+
+      const ctxLogout = makeLogoutCtx(); // no oidc_authenticated cookie
+      await oidcController.logout(ctxLogout);
+
+      expect((ctxLogout as any).redirectedTo).toBe('/admin/auth/login');
+      expect(
+        ctxLogout.cookies.calls.some(
+          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
+        ),
+      ).toBe(true);
+    });
+
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: undefined });
       strapi.config.set('admin.url', '/custom-admin');
 
-      const ctxLogout = makeLogoutCtx();
+      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');

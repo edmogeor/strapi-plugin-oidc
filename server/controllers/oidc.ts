@@ -239,11 +239,14 @@ async function logout(ctx: any) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
   const logoutUrl = config.OIDC_LOGOUT_URL;
 
+  // Read before clearing — the cookie is gone after clearAuthCookies.
+  const isOidcSession = !!ctx.cookies.get('oidc_authenticated');
+
   // Clear both session cookies so the enforceOIDC middleware correctly redirects
   // to OIDC on the next request rather than passing through a stale session.
   clearAuthCookies(strapi, ctx);
 
-  if (logoutUrl) {
+  if (logoutUrl && isOidcSession) {
     ctx.redirect(logoutUrl);
   } else {
     const adminPanelUrl = strapi.config.get('admin.url', '/admin');

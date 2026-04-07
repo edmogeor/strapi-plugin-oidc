@@ -369,6 +369,7 @@ describe('OIDC E2E Tests', () => {
       it('clears oidc_authenticated cookie on logout', async () => {
         const res = await request(strapi.server.httpServer)
           .get('/strapi-plugin-oidc/logout')
+          .set('Cookie', 'oidc_authenticated=1')
           .redirects(0);
 
         expect(res.status).toBe(302);
@@ -376,6 +377,42 @@ describe('OIDC E2E Tests', () => {
         const cookies = parseCookies(res);
         expect(isCookieExpired(cookies, 'oidc_authenticated')).toBe(true);
         expect(isCookieExpired(cookies, 'strapi_admin_refresh')).toBe(true);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // Selective OIDC logout redirect
+    // -------------------------------------------------------------------------
+    describe('Selective OIDC logout redirect', () => {
+      it('redirects to OIDC logout URL when oidc_authenticated cookie is present', async () => {
+        strapi.config.set('plugin::strapi-plugin-oidc', {
+          ...strapi.config.get('plugin::strapi-plugin-oidc'),
+          OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        });
+
+        const res = await request(strapi.server.httpServer)
+          .get('/strapi-plugin-oidc/logout')
+          .set('Cookie', 'oidc_authenticated=1')
+          .redirects(0);
+
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe('https://mock-oidc.com/logout');
+      });
+
+      it('redirects to admin login when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
+        strapi.config.set('plugin::strapi-plugin-oidc', {
+          ...strapi.config.get('plugin::strapi-plugin-oidc'),
+          OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        });
+        strapi.config.set('admin.url', '/admin');
+
+        const res = await request(strapi.server.httpServer)
+          .get('/strapi-plugin-oidc/logout')
+          .redirects(0); // no oidc_authenticated cookie
+
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe('/admin/auth/login');
+        expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
     });
   });

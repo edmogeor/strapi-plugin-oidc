@@ -1,1 +1,12 @@
+# Sanitize test-app/.env — strip OIDC credentials from the staged version only.
+# The working copy is untouched so local dev credentials are preserved.
+ENV_FILE="test-app/.env"
+if git diff --cached --name-only | grep -qF "$ENV_FILE"; then
+  TEMP=$(mktemp)
+  git show ":$ENV_FILE" | grep -Ev '^(OIDC_|# OIDC)' > "$TEMP"
+  BLOB=$(git hash-object -w "$TEMP")
+  git update-index --cacheinfo 100644,"$BLOB","$ENV_FILE"
+  rm "$TEMP"
+fi
+
 npx lint-staged
