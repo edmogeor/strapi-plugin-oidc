@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-04-07
+
+### Added
+
+- In-memory denylist for instant JWT revocation after backchannel logout. When a valid backchannel logout token is received, the user's ID is added to a module-level denylist. A Koa middleware rejects any subsequent request bearing a JWT issued before the logout time with `401 Session revoked`, without waiting for the JWT to expire.
+
 ## [1.5.0] - 2026-04-07
 
 ### Added
