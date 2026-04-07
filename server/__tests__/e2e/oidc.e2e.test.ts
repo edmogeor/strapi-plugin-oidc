@@ -1,5 +1,7 @@
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { oidcServer } from './setup';
 
 const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
@@ -169,6 +171,95 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.text).toContain('Invalid state');
   });
 
+  // ---------------------------------------------------------------------------
+  // OIDC callback error handling
+  // ---------------------------------------------------------------------------
+  describe('OIDC callback error handling', () => {
+    // Helper: initiate login and return the callback URL with valid state+cookies
+    const initiateLogin = async () => {
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+      return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`;
+    };
+
+    it('shows generic error when token exchange fails', async () => {
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
+      );
+
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+      expect(res.text).not.toContain('mock-oidc.com');
+    });
+
+    it('shows generic error when userinfo fetch fails', async () => {
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
+      );
+
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+      expect(res.text).not.toContain('mock-oidc.com');
+    });
+
+    it('rejects a mismatched nonce in the ID token', async () => {
+      // Build a minimal JWT with a wrong nonce in the payload
+      const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
+        'base64url',
+      );
+      const fakeIdToken = `${header}.${payload}.fakesig`;
+
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: fakeIdToken }),
+        ),
+      );
+
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+    });
+
+    it('rejects a malformed ID token', async () => {
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
+        ),
+      );
+
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+    });
+
+    it('does not reflect user-supplied values in error responses', async () => {
+      // The state value is never echoed back — the response must only contain
+      // the static 'Invalid state' message with no reflection of the input.
+      const res = await agent
+        .get('/strapi-plugin-oidc/oidc/callback?code=mock-code&state=<script>alert(1)</script>')
+        .redirects(0);
+
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('<script>');
+      expect(res.text).toContain('Invalid state');
+    });
+  });
+
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
     const parseCookies = (res: any): string[] =>
@@ -257,14 +348,12 @@ describe('OIDC E2E Tests', () => {
       });
 
       it('blocks POST /admin/register-admin directly', async () => {
-        const res = await request(strapi.server.httpServer)
-          .post('/admin/register-admin')
-          .send({
-            firstname: 'Test',
-            lastname: 'User',
-            email: 'test@test.com',
-            password: 'Password1!',
-          });
+        const res = await request(strapi.server.httpServer).post('/admin/register-admin').send({
+          firstname: 'Test',
+          lastname: 'User',
+          email: 'test@test.com',
+          password: 'Password1!',
+        });
 
         expect(res.status).toBe(403);
       });
