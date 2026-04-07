@@ -39,13 +39,26 @@ module.exports = ({ env }) => ({
       // Optional — defaults shown
       OIDC_SCOPE: 'openid profile email',
       OIDC_GRANT_TYPE: 'authorization_code',
-      OIDC_FAMILY_NAME_FIELD: 'family_name',
-      OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session endpoint; if set, Strapi redirects here on logout for OIDC sessions
-      OIDC_POST_LOGOUT_REDIRECT_URI: '', // Where to redirect after the provider logs the user out (RP-Initiated Logout)
+      OIDC_FAMILY_NAME_FIELD: 'family_name', // claim name for the user's last name
+      OIDC_GIVEN_NAME_FIELD: 'given_name', // claim name for the user's first name
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
+
+      // Optional — RP-Initiated Logout (GET /strapi-plugin-oidc/logout)
+      // Set OIDC_END_SESSION_ENDPOINT to redirect OIDC sessions to your provider's
+      // end-session page on logout. Without it, logout only clears the local session.
+      // Find this URL in your provider's /.well-known/openid-configuration as end_session_endpoint.
+      OIDC_END_SESSION_ENDPOINT: env('OIDC_END_SESSION_ENDPOINT', ''),
+      OIDC_POST_LOGOUT_REDIRECT_URI: env('OIDC_POST_LOGOUT_REDIRECT_URI', ''), // where to land after the provider logs the user out
+
+      // Optional — Backchannel Logout (POST /strapi-plugin-oidc/logout)
+      // When configured, your provider can notify Strapi when a user logs out elsewhere
+      // (e.g. from another app or directly from the provider UI), revoking their Strapi session.
+      // Set the logout URI in your provider to: https://your-strapi.com/strapi-plugin-oidc/logout
+      // Find OIDC_JWKS_URI and OIDC_ISSUER in your provider's /.well-known/openid-configuration.
+      OIDC_ISSUER: env('OIDC_ISSUER', ''), // validates the iss claim in logout tokens
+      OIDC_JWKS_URI: env('OIDC_JWKS_URI', ''), // required to enable backchannel logout
     },
   },
 });
