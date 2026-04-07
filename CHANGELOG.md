@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.17] - 2026-04-06
+## [1.1.0] - 2026-04-07
+
+### Added
+
+- Complete enforcement of OIDC login by intercepting server-side requests using Strapi's built-in session cookie (`strapi_admin_refresh`), eliminating any UI flash.
+
+### Security
+
+- Blocked all local authentication API routes (`POST /admin/login`, `/admin/register`, `/admin/forgot-password`, `/admin/reset-password`) when OIDC enforcement is enabled.
+- Intercepts successful logout requests and redirects to the OIDC provider's logout URL to prevent Strapi from rendering the local login screen.
+
+### Changed
+
+- Moved frontend React libraries (`react`, `react-dom`, `react-router-dom`, `styled-components`) to `peerDependencies` and `devDependencies` to prevent bundle bloat and version conflicts in consuming Strapi applications.
+- Refactored server-side middleware for improved performance and reduced complexity.
+- Cleaned up project dependencies and unused code using the Fallow analyzer.
+
+## [1.0.18] - 2026-04-06
 
 ### Changed
 
