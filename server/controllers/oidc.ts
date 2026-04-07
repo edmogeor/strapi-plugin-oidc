@@ -2,6 +2,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
+import { revokeUser } from '../utils/denylist';
 import type {
   StrapiContext,
   OidcUserInfo,
@@ -372,6 +373,7 @@ async function backchannelLogout(ctx: StrapiContext) {
       const user = await userService.findOneByEmail(payload.sub);
 
       if (user) {
+        revokeUser(String(user.id));
         const sessionManager = strapi.sessionManager;
         if (sessionManager) {
           await sessionManager('admin').invalidateRefreshToken(String(user.id));

@@ -24,6 +24,7 @@ const MOCK_OIDC_CONFIG = {
 describe('OIDC E2E Tests', () => {
   let strapi: Core.Strapi;
   let agent: ReturnType<typeof request.agent>;
+  let capturedJwt: string | undefined;
 
   const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
     await strapi
@@ -73,6 +74,10 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('jwtToken'); // Check if the HTML contains the generated token logic
     expect(callbackRes.text).toContain('localStorage.setItem');
+
+    // Capture the JWT for reuse in later tests (e.g. denylist middleware)
+    const jwtMatch = callbackRes.text.match(/localStorage\.setItem\('jwtToken',\s*'"([^"]+)"'\)/);
+    capturedJwt = jwtMatch?.[1];
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
@@ -521,6 +526,81 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).toBe('/admin/auth/login');
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Denylist middleware — instant revocation after backchannel logout
+  // ---------------------------------------------------------------------------
+  describe('Denylist middleware', () => {
+    let privateKey: CryptoKey;
+    let jwksHandler: ReturnType<typeof http.get>;
+
+    // Use a distinct JWKS URI so the module-level jwksCache in oidc.ts does not
+    // share a cached RemoteJWKSet with the Backchannel logout describe (which uses
+    // a different key pair at the same mock-oidc.com/jwks URI).
+    const DENYLIST_JWKS_URI = 'https://mock-oidc-denylist.com/jwks';
+
+    beforeAll(async () => {
+      let publicKey: CryptoKey;
+      ({ privateKey, publicKey } = await generateKeyPair('RS256'));
+      const jwk = await exportJWK(publicKey);
+      jwk.kid = 'test-key-denylist';
+      jwk.use = 'sig';
+      jwksHandler = http.get(DENYLIST_JWKS_URI, () => HttpResponse.json({ keys: [jwk] }));
+
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_ISSUER: 'https://mock-oidc.com',
+        OIDC_JWKS_URI: DENYLIST_JWKS_URI,
+      });
+    });
+
+    beforeEach(() => {
+      oidcServer.use(jwksHandler);
+    });
+
+    const signLogoutToken = (payload: Record<string, unknown>) =>
+      new SignJWT(payload)
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-denylist' })
+        .setIssuer('https://mock-oidc.com')
+        .setAudience('mock-client-id')
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(privateKey);
+
+    it('immediately rejects an existing JWT after backchannel logout for that user', async () => {
+      // Reuse the JWT captured during the full OIDC login flow test — avoids
+      // triggering the rate limiter with an additional login attempt.
+      // This describe runs before the Backchannel logout describe so the user
+      // has not yet been revoked by any other test.
+      const jwt = capturedJwt;
+      expect(jwt).toBeDefined();
+
+      // 1. Confirm the JWT works before revocation
+      const before = await request(strapi.server.httpServer)
+        .get('/admin/users/me')
+        .set('Authorization', `Bearer ${jwt}`);
+      expect(before.status).toBe(200);
+
+      // 2. Trigger backchannel logout for the user
+      const logoutToken = await signLogoutToken({
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+        sub: 'test@company.com',
+      });
+      const logoutRes = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: logoutToken });
+      expect(logoutRes.status).toBe(200);
+
+      // 3. The same JWT should now be immediately rejected.
+      // The denylist middleware blocks it before route handlers run; Strapi's own
+      // session invalidation (invalidateRefreshToken) provides a second layer.
+      const after = await request(strapi.server.httpServer)
+        .get('/admin/users/me')
+        .set('Authorization', `Bearer ${jwt}`);
+      expect(after.status).toBe(401);
     });
   });
 

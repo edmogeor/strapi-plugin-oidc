@@ -1,4 +1,5 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
+import { isUserRevoked } from './utils/denylist';
 
 export default async function bootstrap({ strapi }) {
   const enforceOidcMiddleware = async (ctx, next) => {
@@ -62,9 +63,38 @@ export default async function bootstrap({ strapi }) {
     await next();
   };
 
+  const denylistMiddleware = async (ctx, next) => {
+    const auth = ctx.request.headers.authorization as string | undefined;
+    if (auth?.startsWith('Bearer ')) {
+      try {
+        const payload = JSON.parse(
+          Buffer.from(auth.slice(7).split('.')[1], 'base64url').toString(),
+        ) as { id?: unknown; iat?: number };
+        if (payload.id && isUserRevoked(String(payload.id), payload.iat ?? 0)) {
+          ctx.status = 401;
+          ctx.body = {
+            data: null,
+            error: {
+              status: 401,
+              name: 'UnauthorizedError',
+              message: 'Session revoked',
+              details: {},
+            },
+          };
+          return;
+        }
+      } catch {
+        // malformed token — let Strapi's own auth handle it
+      }
+    }
+    await next();
+  };
+
   if (strapi.server.app && Array.isArray(strapi.server.app.middleware)) {
     strapi.server.app.middleware.unshift(enforceOidcMiddleware);
+    strapi.server.app.middleware.unshift(denylistMiddleware);
   } else {
+    strapi.server.use(denylistMiddleware);
     strapi.server.use(enforceOidcMiddleware);
   }
 
