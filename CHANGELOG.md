@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-07
+
 ### Added
 
-- RP-Initiated Logout (OpenID Connect RP-Initiated Logout 1.0): `GET /strapi-plugin-oidc/logout` now appends `id_token_hint` (stored as an httpOnly cookie after login) and `post_logout_redirect_uri` to the provider's end-session URL when available.
-- New config option `OIDC_POST_LOGOUT_REDIRECT_URI`: where the provider should redirect the user after completing logout.
+- **RP-Initiated Logout** (OpenID Connect RP-Initiated Logout 1.0): `GET /strapi-plugin-oidc/logout` now sends `id_token_hint` (stored as an httpOnly cookie after login) and `post_logout_redirect_uri` to the provider's end-session endpoint, allowing the provider to cleanly terminate the SSO session and redirect the user back to Strapi.
+- **Backchannel Logout** (OIDC Back-Channel Logout 1.0): `POST /strapi-plugin-oidc/logout` accepts a signed `logout_token` from the provider, validates it (signature, issuer, audience, nonce-absence, events claim), and revokes the corresponding Strapi admin session. Configure the logout URI in your provider to `https://your-strapi.com/strapi-plugin-oidc/logout`.
+- New config option `OIDC_POST_LOGOUT_REDIRECT_URI`: where the provider should redirect the user after completing RP-initiated logout.
+- New config option `OIDC_ISSUER`: the provider's issuer URL, required for backchannel logout token validation. Found in `/.well-known/openid-configuration` as `issuer`.
+- New config option `OIDC_JWKS_URI`: the provider's JWKS endpoint for verifying backchannel logout token signatures. Found in `/.well-known/openid-configuration` as `jwks_uri`.
 
 ### Changed
 
