@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-07
+
+### Security
+
+- OIDC `state` parameter is now always generated server-side; user-supplied values are ignored, preventing CSRF parameter injection.
+- Access token is always sent to the userinfo endpoint via `Authorization: Bearer` header (RFC 6750 §2.1). The deprecated query-parameter method has been removed along with the `OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER` config option.
+- OIDC nonce is now included in the authorization request and validated against the ID token on callback, preventing ID token replay attacks.
+- OIDC callback errors now return a generic message instead of raw internal error details.
+- Fixed Gmail alias regex (was a no-op string literal instead of a regular expression).
+
+### Changed
+
+- Whitelist export filename now includes a `YYYYMMDD_HHMMSS` timestamp (e.g. `strapi-oidc-whitelist-20260407_123000.json`).
+
 ## [1.4.0] - 2026-04-07
 
 ### Added
