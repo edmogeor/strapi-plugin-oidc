@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-04-07
+
+### Changed
+
+- Replaced all `any` types in e2e test files with proper TypeScript types (`Core.Strapi`, `WhitelistEntry`, `OidcRole`, service and controller interfaces).
+- Added `AdminRole` interface and `getOidcRoles()`/`find()` to `RoleService` in shared types.
+- Replaced `(global as any).strapiInstance` with typed `globalThis.strapiInstance` throughout tests.
+
 ## [1.4.2] - 2026-04-07
 
 ### Security
