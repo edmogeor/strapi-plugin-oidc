@@ -15,9 +15,9 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_CLIENT_ID',
   'OIDC_CLIENT_SECRET',
   'OIDC_REDIRECT_URI',
-  'OIDC_SCOPES',
+  'OIDC_SCOPE',
   'OIDC_TOKEN_ENDPOINT',
-  'OIDC_USER_INFO_ENDPOINT',
+  'OIDC_USERINFO_ENDPOINT',
   'OIDC_GRANT_TYPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
@@ -36,7 +36,7 @@ function configValidation(): Record<string, string> {
 }
 
 async function oidcSignIn(ctx: StrapiContext) {
-  const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPES, OIDC_AUTHORIZATION_ENDPOINT } =
+  const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } =
     configValidation();
 
   const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
@@ -66,7 +66,7 @@ async function oidcSignIn(ctx: StrapiContext) {
   params.append('response_type', 'code');
   params.append('client_id', OIDC_CLIENT_ID);
   params.append('redirect_uri', OIDC_REDIRECT_URI);
-  params.append('scope', OIDC_SCOPES);
+  params.append('scope', OIDC_SCOPE);
   params.append('code_challenge', codeChallenge);
   params.append('code_challenge_method', 'S256');
   params.append('state', state);
@@ -118,7 +118,7 @@ async function exchangeTokenAndFetchUserInfo(
 
   // Always use the Authorization header (RFC 6750 §2.1). Sending the token as a
   // URL query parameter (§2.3) is deprecated because it leaks into server/proxy logs.
-  const userResponse = await fetch(config.OIDC_USER_INFO_ENDPOINT, {
+  const userResponse = await fetch(config.OIDC_USERINFO_ENDPOINT, {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   });
 
@@ -256,7 +256,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 
 async function logout(ctx: StrapiContext) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
-  const logoutUrl = config.OIDC_LOGOUT_URL;
+  const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
 
   // Read before clearing — the cookie is gone after clearAuthCookies.
   const isOidcSession = !!ctx.cookies.get('oidc_authenticated');

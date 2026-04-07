@@ -34,14 +34,14 @@ module.exports = ({ env }) => ({
       OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
       OIDC_AUTHORIZATION_ENDPOINT: env('OIDC_AUTHORIZATION_ENDPOINT'),
       OIDC_TOKEN_ENDPOINT: env('OIDC_TOKEN_ENDPOINT'),
-      OIDC_USER_INFO_ENDPOINT: env('OIDC_USER_INFO_ENDPOINT'),
+      OIDC_USERINFO_ENDPOINT: env('OIDC_USERINFO_ENDPOINT'),
 
       // Optional — defaults shown
-      OIDC_SCOPES: 'openid profile email',
+      OIDC_SCOPE: 'openid profile email',
       OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_LOGOUT_URL: '', // Provider logout URL; omit to redirect to Strapi login
+      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL; omit to redirect to Strapi login
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts

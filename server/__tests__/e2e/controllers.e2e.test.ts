@@ -347,7 +347,7 @@ describe('Controllers E2E', () => {
 
     it('should redirect to OIDC provider logout URL for OIDC sessions', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
       });
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
@@ -360,7 +360,7 @@ describe('Controllers E2E', () => {
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
       });
       strapi.config.set('admin.url', '/admin');
 
@@ -372,7 +372,7 @@ describe('Controllers E2E', () => {
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: undefined });
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_END_SESSION_ENDPOINT: undefined });
       strapi.config.set('admin.url', '/custom-admin');
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-04-07
+
+### Changed
+
+- Renamed config variables to match OIDC discovery document field names: `OIDC_SCOPES` → `OIDC_SCOPE`, `OIDC_USER_INFO_ENDPOINT` → `OIDC_USERINFO_ENDPOINT`, `OIDC_LOGOUT_URL` → `OIDC_END_SESSION_ENDPOINT`.
+
 ## [1.4.3] - 2026-04-07
 
 ### Changed
@@ -121,7 +127,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Logout now only redirects to the OIDC provider's logout URL (`OIDC_LOGOUT_URL`) for sessions established via OIDC, identified server-side by the `oidc_authenticated` cookie. Local admin users are redirected directly to the Strapi login page.
+- Logout now only redirects to the OIDC provider's logout URL (`OIDC_END_SESSION_ENDPOINT`) for sessions established via OIDC, identified server-side by the `oidc_authenticated` cookie. Local admin users are redirected directly to the Strapi login page.
 
 ### Changed
 
