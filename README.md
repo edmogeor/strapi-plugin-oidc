@@ -148,7 +148,6 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 
 - Removed alternative SSO methods to simplify the plugin.
 - Redesigned the Whitelist and Role management UI (switched to native Strapi cards, added pagination, etc.).
-- Added an OIDC logout redirect URL.
 - Added an option to "Enforce OIDC login" with an admin toggle (automatically disabled if the whitelist is empty).
 - Migrated the testing framework to Vitest and added comprehensive test coverage for controllers and services.
 - Cleaned up dead code and unused dependencies to improve maintainability.
@@ -160,4 +159,8 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
   - Bulk delete all entries with a confirmation dialog.
   - Unsaved changes confirmation when navigating away from the settings page.
   - Programmatic API for managing the whitelist via Strapi API tokens (list, register, import, delete, delete all).
+- **RP-Initiated Logout** (OpenID Connect RP-Initiated Logout 1.0): on logout, Strapi redirects the browser to the provider's end-session endpoint with `id_token_hint` and `post_logout_redirect_uri`, cleanly terminating the SSO session. Configured via `OIDC_END_SESSION_ENDPOINT` and `OIDC_POST_LOGOUT_REDIRECT_URI`.
+- **Backchannel Logout** (OIDC Back-Channel Logout 1.0): `POST /strapi-plugin-oidc/logout` accepts a signed logout token from the provider, validates it, and revokes the user's Strapi admin session — keeping Strapi in sync when a user logs out elsewhere. Configured via `OIDC_ISSUER` and `OIDC_JWKS_URI`.
+- Renamed config keys to match OIDC discovery document field names: `OIDC_LOGOUT_URL` → `OIDC_END_SESSION_ENDPOINT`, `OIDC_USER_INFO_ENDPOINT` → `OIDC_USERINFO_ENDPOINT`, `OIDC_SCOPES` → `OIDC_SCOPE`.
+- Security hardening: PKCE (`S256`), server-side `state` generation (CSRF protection), nonce validation (ID token replay prevention), `Authorization: Bearer` header for userinfo requests, generic error messages on callback failure.
 - Added misc. quality of life improvements and bug fixes.
