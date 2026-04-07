@@ -11,92 +11,85 @@
   </p>
 </div>
 
-A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.
-
-This plugin allows your administrators to log in to the Strapi administration interface using external OIDC identity providers such as Zitadel, Keycloak, Auth0, AWS Cognito, and others.
+A Strapi plugin that provides OpenID Connect (OIDC) authentication for the Strapi Admin Panel. Supports Zitadel, Keycloak, Auth0, AWS Cognito, and any other OpenID Connect provider.
 
 ## Installation
 
-You can install the plugin via `npm` or `yarn`:
-
 ```bash
-# Using npm
 npm install strapi-plugin-oidc
-
-# Using yarn
-yarn add strapi-plugin-oidc
 ```
 
 ## Configuration
 
-To enable and configure the plugin, update your `config/plugins.js` (or `config/plugins.ts`) file with your OIDC provider's settings.
+Add the plugin to `config/plugins.js` (or `.ts`):
 
 ```javascript
 module.exports = ({ env }) => ({
-  // ...
   'strapi-plugin-oidc': {
     enabled: true,
     config: {
-      // --- Required ---
-      OIDC_CLIENT_ID: '[Client ID from OpenID Provider]',
-      OIDC_CLIENT_SECRET: '[Client Secret from OpenID Provider]',
-      OIDC_REDIRECT_URI: '[Your Strapi URL]/strapi-plugin-oidc/oidc/callback',
-      OIDC_AUTHORIZATION_ENDPOINT: '[Authorization Endpoint]',
-      OIDC_TOKEN_ENDPOINT: '[Token Endpoint]',
-      OIDC_USER_INFO_ENDPOINT: '[User Info Endpoint]',
+      // Required
+      OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
+      OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
+      OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
+      OIDC_AUTHORIZATION_ENDPOINT: env('OIDC_AUTHORIZATION_ENDPOINT'),
+      OIDC_TOKEN_ENDPOINT: env('OIDC_TOKEN_ENDPOINT'),
+      OIDC_USER_INFO_ENDPOINT: env('OIDC_USER_INFO_ENDPOINT'),
 
-      // --- Defaults provided — only set if your provider differs ---
+      // Optional — defaults shown
       OIDC_SCOPES: 'openid profile email',
       OIDC_GRANT_TYPE: 'authorization_code',
-      OIDC_FAMILY_NAME_FIELD: 'family_name', // OIDC claim for the user's surname
-      OIDC_GIVEN_NAME_FIELD: 'given_name', // OIDC claim for the user's first name
-
-      // --- Optional ---
-      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false, // true = Bearer token header, false = query param
-      OIDC_LOGOUT_URL: '', // OIDC provider logout URL; omit to return to Strapi login instead
-      OIDC_SSO_BUTTON_TEXT: 'Login via SSO', // Text on the SSO button injected into the login page
-      OIDC_ENFORCE: null, // null = use Admin UI setting; true/false = override it in config
-      REMEMBER_ME: false, // true = persist session across browser restarts, using Strapi's built-in refresh token duration
+      OIDC_FAMILY_NAME_FIELD: 'family_name',
+      OIDC_GIVEN_NAME_FIELD: 'given_name',
+      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false, // true = Bearer header, false = query param
+      OIDC_LOGOUT_URL: '', // Provider logout URL; omit to redirect to Strapi login
+      OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
+      OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
+      REMEMBER_ME: false, // Persist session across browser restarts
     },
   },
-  // ...
 });
 ```
 
-## How to Login
+## Login
 
-Once configured, you can initiate the OIDC login flow by navigating to:
-`http://<your-strapi-domain>/strapi-plugin-oidc/oidc`
-
-(e.g., `http://localhost:1337/strapi-plugin-oidc/oidc` for local development).
-
-When the **Enforce OIDC Login** option is enabled in the Admin Settings, the standard login fields are removed from the login page and only the SSO button remains — click it to start the OIDC flow.
+Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button that is always injected into the Strapi login page.
 
 ## Admin Settings
 
-Once the plugin is installed and configured, you can manage the OIDC settings from the Strapi Admin Panel under **Settings** > **OIDC Plugin**.
+Manage the plugin under **Settings → OIDC Plugin**.
 
-- **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
-- **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
-- **SSO Login Button**: A "Login via SSO" button is always injected into the Strapi login page, allowing users to authenticate via OIDC. The button text is configurable via the `OIDC_SSO_BUTTON_TEXT` config option.
-- **Enforce OIDC Login**: When enabled, the standard email/password fields, remember me checkbox, login button, and forgot-password link are removed from the login page, leaving only the SSO button. All direct login API calls are also blocked server-side. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
-- **`OIDC_ENFORCE` config override**: Setting `OIDC_ENFORCE: true` or `OIDC_ENFORCE: false` in your plugin config takes priority over the Admin UI toggle and locks it. Set `OIDC_ENFORCE: false` in your config to regain access if you are ever locked out, then restart Strapi.
+**Default Roles** — Select which Strapi admin role(s) are assigned to new users on first login.
+
+**Whitelist** — Restrict access to specific email addresses. When the whitelist is enabled, only listed emails can log in. When empty, any successfully authenticated OIDC user gets an account. The whitelist supports:
+
+- Adding individual emails with optional role overrides
+- JSON import / export (see [format](#import-format) below)
+- Bulk delete with confirmation
+- Unsaved changes are held in the UI until **Save Changes** is clicked
+
+**Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
+
+- The toggle is grayed out and locked when `OIDC_ENFORCE` is set in config.
+- **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi. This writes through to the database so removing the variable afterwards keeps the setting.
 
 ## Whitelist API
 
-The whitelist can be managed programmatically using a Strapi **API token** (Settings → API Tokens). All endpoints require an `Authorization: Bearer <token>` header.
+The whitelist can be managed programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). All endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
 
-| Method   | Path                                       | Description                   |
-| -------- | ------------------------------------------ | ----------------------------- |
-| `GET`    | `/api/strapi-plugin-oidc/whitelist`        | List all whitelist entries    |
-| `POST`   | `/api/strapi-plugin-oidc/whitelist`        | Add one or more emails        |
-| `POST`   | `/api/strapi-plugin-oidc/whitelist/import` | Bulk import from a JSON array |
-| `DELETE` | `/api/strapi-plugin-oidc/whitelist/:id`    | Remove an entry by ID         |
-| `DELETE` | `/api/strapi-plugin-oidc/whitelist`        | Remove all entries            |
+| Method   | Path                                       | Description            |
+| -------- | ------------------------------------------ | ---------------------- |
+| `GET`    | `/api/strapi-plugin-oidc/whitelist`        | List all entries       |
+| `POST`   | `/api/strapi-plugin-oidc/whitelist`        | Add one or more emails |
+| `POST`   | `/api/strapi-plugin-oidc/whitelist/import` | Bulk import            |
+| `DELETE` | `/api/strapi-plugin-oidc/whitelist/:id`    | Remove by ID           |
+| `DELETE` | `/api/strapi-plugin-oidc/whitelist`        | Remove all entries     |
 
-### Import JSON format
+API calls write directly to the database — there is no unsaved state.
 
-The import endpoint (and the Admin UI import button) accept a JSON array of objects. Each entry requires an `email` field; `roles` is optional and accepts role **names** (recommended) or numeric IDs. Entries without `roles` will use the configured default role(s) when the user first logs in.
+### Import format
+
+Accepted by both the API import endpoint and the Admin UI import button. `roles` is optional and accepts role **names** (recommended) or numeric IDs. If the email already exists as a Strapi admin user, their current roles are used automatically.
 
 ```json
 [
@@ -106,52 +99,37 @@ The import endpoint (and the Admin UI import button) accept a JSON array of obje
 ]
 ```
 
+Duplicate emails within the payload and emails already in the whitelist are silently skipped.
+
 ### Examples
 
-**List entries**
-
 ```bash
+# List
 curl -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
-```
 
-**Add an email**
-
-```bash
-curl -X POST -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
+# Add
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "roles": ["Editor"]}' \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
-```
 
-**Bulk import** (roles can be names or IDs; duplicates are skipped)
-
-```bash
-curl -X POST -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
+# Bulk import
+curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"users": [{"email": "a@example.com", "roles": ["Editor"]}, {"email": "b@example.com"}]}' \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist/import
-```
 
-**Delete a single entry**
-
-```bash
+# Delete one
 curl -X DELETE -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist/42
-```
 
-**Delete all entries**
-
-```bash
+# Delete all
 curl -X DELETE -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 ```
-
-Use a **Full Access** token — all write operations will be rejected by a read-only token.
 
 ## Credits & Changes
 
-This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) created by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
+This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
 
 ### Changes made to the original codebase:
 
