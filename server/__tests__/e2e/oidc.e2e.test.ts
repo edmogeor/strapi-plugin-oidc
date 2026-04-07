@@ -185,17 +185,22 @@ describe('OIDC E2E Tests', () => {
       return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`;
     };
 
+    // Initiates login, hits the callback, and asserts the standard generic error response.
+    // Returns the response so callers can add extra assertions (e.g. no URL leak).
+    const assertCallbackError = async () => {
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+      return res;
+    };
+
     it('shows generic error when token exchange fails', async () => {
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
       );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      const res = await assertCallbackError();
       expect(res.text).not.toContain('mock-oidc.com');
     });
 
@@ -203,36 +208,24 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
       );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      const res = await assertCallbackError();
       expect(res.text).not.toContain('mock-oidc.com');
     });
 
     it('rejects a mismatched nonce in the ID token', async () => {
-      // Build a minimal JWT with a wrong nonce in the payload
       const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
       const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
         'base64url',
       );
-      const fakeIdToken = `${header}.${payload}.fakesig`;
-
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: fakeIdToken }),
+          HttpResponse.json({
+            access_token: 'fake-jwt-token',
+            id_token: `${header}.${payload}.fakesig`,
+          }),
         ),
       );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      await assertCallbackError();
     });
 
     it('rejects a malformed ID token', async () => {
@@ -241,13 +234,7 @@ describe('OIDC E2E Tests', () => {
           HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
         ),
       );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      await assertCallbackError();
     });
 
     it('does not reflect user-supplied values in error responses', async () => {
@@ -569,18 +556,27 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(jwksHandler);
     });
 
-    const makeLogoutToken = (overrides: Record<string, unknown> = {}) =>
-      new SignJWT({
-        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
-        sub: 'test@company.com',
-        ...overrides,
-      })
+    const signToken = (payload: Record<string, unknown>) =>
+      new SignJWT(payload)
         .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
         .setIssuer('https://mock-oidc.com')
         .setAudience('mock-client-id')
         .setIssuedAt()
         .setJti(crypto.randomUUID())
         .sign(privateKey);
+
+    const makeLogoutToken = (overrides: Record<string, unknown> = {}) =>
+      signToken({
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+        sub: 'test@company.com',
+        ...overrides,
+      });
+
+    const postLogoutToken = (token: string) =>
+      request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
 
     it('returns 501 when OIDC_ISSUER is not configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
@@ -622,86 +618,40 @@ describe('OIDC E2E Tests', () => {
     });
 
     it('returns 400 when nonce is present in the logout token', async () => {
-      const token = await makeLogoutToken({ nonce: 'must-not-be-here' });
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      const res = await postLogoutToken(await makeLogoutToken({ nonce: 'must-not-be-here' }));
       expect(res.status).toBe(400);
     });
 
     it('returns 400 when the backchannel-logout event is missing', async () => {
-      const token = await makeLogoutToken({ events: {} });
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      const res = await postLogoutToken(await makeLogoutToken({ events: {} }));
       expect(res.status).toBe(400);
     });
 
     it('returns 400 when neither sub nor sid is present', async () => {
-      const token = await new SignJWT({
+      const token = await signToken({
         events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
-      })
-        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
-        .setIssuer('https://mock-oidc.com')
-        .setAudience('mock-client-id')
-        .setIssuedAt()
-        .setJti(crypto.randomUUID())
-        .sign(privateKey);
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      });
+      const res = await postLogoutToken(token);
       expect(res.status).toBe(400);
     });
 
     it('returns 200 for a valid logout token (user not found — graceful degradation)', async () => {
-      const token = await makeLogoutToken({ sub: 'unknown-user@example.com' });
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      const res = await postLogoutToken(await makeLogoutToken({ sub: 'unknown-user@example.com' }));
       expect(res.status).toBe(200);
     });
 
     it('returns 200 and revokes the session for a known user', async () => {
       // Ensure the test user exists (created by the full OIDC login flow test)
-      const token = await makeLogoutToken({ sub: 'test@company.com' });
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      const res = await postLogoutToken(await makeLogoutToken({ sub: 'test@company.com' }));
       expect(res.status).toBe(200);
     });
 
     it('returns 200 when sub is absent but sid is present', async () => {
-      const token = await new SignJWT({
+      const token = await signToken({
         events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
         sid: 'some-session-id',
-      })
-        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
-        .setIssuer('https://mock-oidc.com')
-        .setAudience('mock-client-id')
-        .setIssuedAt()
-        .setJti(crypto.randomUUID())
-        .sign(privateKey);
-
-      const res = await request(strapi.server.httpServer)
-        .post('/strapi-plugin-oidc/logout')
-        .type('form')
-        .send({ logout_token: token });
-
+      });
+      const res = await postLogoutToken(token);
       expect(res.status).toBe(200);
     });
   });

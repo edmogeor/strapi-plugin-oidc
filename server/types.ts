@@ -19,7 +19,7 @@ export interface WhitelistEntry {
   roles: string[];
 }
 
-export interface StrapiAdminUser {
+interface StrapiAdminUser {
   id: number;
   email: string;
   firstname?: string;
