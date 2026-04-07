@@ -1,4 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "ignorePatterns": ["test-app/**", "test-app/**/*", "**/test-app/**"]
+  "ignorePatterns": ["test-app/**", "test-app/**/*", "**/test-app/**"],
+  "ignoreDependencies": ["better-sqlite3"]
 }
