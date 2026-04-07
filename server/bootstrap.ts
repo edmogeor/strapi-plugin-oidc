@@ -1,5 +1,5 @@
 export default async function bootstrap({ strapi }) {
-  strapi.server.use(async (ctx, next) => {
+  const enforceOidcMiddleware = async (ctx, next) => {
     const adminUrl = strapi.config.get('admin.url', '/admin');
 
     const authRoutes = [
@@ -10,7 +10,8 @@ export default async function bootstrap({ strapi }) {
     ];
 
     const isPostAuth = authRoutes.includes(ctx.request.path) && ctx.request.method === 'POST';
-    const isHtmlRequest = ctx.request.accepts('html') && !ctx.request.path.match(/\.[a-zA-Z0-9]+$/);
+    const isHtmlRequest =
+      ctx.request.accepts('html', 'json') === 'html' && !ctx.request.path.match(/\.[a-zA-Z0-9]+$/);
     const isGetAdminHtml =
       ctx.request.method === 'GET' && ctx.request.path.startsWith(adminUrl) && isHtmlRequest;
 
@@ -48,7 +49,13 @@ export default async function bootstrap({ strapi }) {
     }
 
     await next();
-  });
+  };
+
+  if (strapi.server.app && Array.isArray(strapi.server.app.middleware)) {
+    strapi.server.app.middleware.unshift(enforceOidcMiddleware);
+  } else {
+    strapi.server.use(enforceOidcMiddleware);
+  }
 
   const actions = [
     {
