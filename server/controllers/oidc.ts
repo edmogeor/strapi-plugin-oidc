@@ -288,12 +288,12 @@ async function logout(ctx: StrapiContext) {
     // Build an RP-Initiated Logout URL (OpenID Connect RP-Initiated Logout 1.0 §2).
     // id_token_hint lets the provider identify the session to end.
     // post_logout_redirect_uri tells the provider where to send the user afterwards.
-    const params = new URLSearchParams();
-    if (idToken) params.set('id_token_hint', idToken);
-    const postLogoutUri = config.OIDC_POST_LOGOUT_REDIRECT_URI;
-    if (postLogoutUri) params.set('post_logout_redirect_uri', postLogoutUri);
-    const fullLogoutUrl = params.size > 0 ? `${logoutUrl}?${params.toString()}` : logoutUrl;
-    ctx.redirect(fullLogoutUrl);
+    const url = new URL(logoutUrl);
+    if (idToken) url.searchParams.set('id_token_hint', idToken);
+    if (config.OIDC_POST_LOGOUT_REDIRECT_URI) {
+      url.searchParams.set('post_logout_redirect_uri', config.OIDC_POST_LOGOUT_REDIRECT_URI);
+    }
+    ctx.redirect(url.toString());
   } else {
     const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
     ctx.redirect(`${adminPanelUrl}/auth/login`);
@@ -304,10 +304,12 @@ async function logout(ctx: StrapiContext) {
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 function getJWKS(uri: string) {
-  if (!jwksCache.has(uri)) {
-    jwksCache.set(uri, createRemoteJWKSet(new URL(uri)));
-  }
-  return jwksCache.get(uri)!;
+  const cached = jwksCache.get(uri);
+  if (cached) return cached;
+
+  const jwks = createRemoteJWKSet(new URL(uri));
+  jwksCache.set(uri, jwks);
+  return jwks;
 }
 
 async function backchannelLogout(ctx: StrapiContext) {
@@ -334,7 +336,7 @@ async function backchannelLogout(ctx: StrapiContext) {
 
     const verifyOptions: Parameters<typeof jwtVerify>[2] = {
       issuer: config.OIDC_ISSUER,
-      ...(config.OIDC_CLIENT_ID ? { audience: config.OIDC_CLIENT_ID } : {}),
+      audience: config.OIDC_CLIENT_ID || undefined,
     };
 
     const { payload } = await jwtVerify(logoutToken, JWKS, verifyOptions);
@@ -355,8 +357,7 @@ async function backchannelLogout(ctx: StrapiContext) {
     }
 
     // sub or sid must be present
-    const sid = (payload as Record<string, unknown>).sid as string | undefined;
-    if (!payload.sub && !sid) {
+    if (!payload.sub && !('sid' in payload)) {
       ctx.status = 400;
       ctx.body = { error: 'logout_token must contain sub or sid' };
       return;
