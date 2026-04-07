@@ -6,12 +6,14 @@ async function info(ctx) {
   ctx.body = {
     useWhitelist: settings.useWhitelist,
     enforceOIDC: settings.enforceOIDC || false,
+    showSSOButton: settings.showSSOButton !== false,
+    ssoButtonText: settings.ssoButtonText || 'Login via SSO',
     whitelistUsers,
   };
 }
 
 async function updateSettings(ctx) {
-  let { useWhitelist, enforceOIDC } = ctx.request.body;
+  let { useWhitelist, enforceOIDC, showSSOButton, ssoButtonText } = ctx.request.body;
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
 
   if (useWhitelist && enforceOIDC) {
@@ -21,8 +23,8 @@ async function updateSettings(ctx) {
     }
   }
 
-  await whitelistService.setSettings({ useWhitelist, enforceOIDC });
-  ctx.body = { useWhitelist, enforceOIDC };
+  await whitelistService.setSettings({ useWhitelist, enforceOIDC, showSSOButton, ssoButtonText });
+  ctx.body = { useWhitelist, enforceOIDC, showSSOButton, ssoButtonText };
 }
 
 async function publicSettings(ctx) {
@@ -30,6 +32,8 @@ async function publicSettings(ctx) {
   const settings = await whitelistService.getSettings();
   ctx.body = {
     enforceOIDC: settings.enforceOIDC || false,
+    showSSOButton: settings.showSSOButton !== false,
+    ssoButtonText: settings.ssoButtonText || 'Login via SSO',
   };
 }
 

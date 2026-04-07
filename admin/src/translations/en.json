@@ -36,5 +36,8 @@
   "enforce.toggle.enabled": "Enabled",
   "enforce.toggle.disabled": "Disabled",
   "enforce.warning": "Make sure OIDC is setup correctly before saving changes, you won't be able to login normally.",
-  "login.sso": "Login via SSO"
+  "login.settings.title": "Login Settings",
+  "login.sso": "Login via SSO",
+  "login.sso.show": "Add button for OIDC on login screen",
+  "login.sso.button.text.label": "Login button text"
 }

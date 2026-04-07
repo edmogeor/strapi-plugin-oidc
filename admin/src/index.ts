@@ -63,6 +63,10 @@ export default {
                 // Block local navigation to login page to prevent UI flash during logout
                 return;
               }
+              if (sessionStorage.getItem('oidc_logout')) {
+                sessionStorage.removeItem('oidc_logout');
+                return originalMethod.apply(window.history, args);
+              }
               document.documentElement.style.visibility = 'hidden';
               window.location.href = '/strapi-plugin-oidc/oidc';
               return;
@@ -77,8 +81,13 @@ export default {
 
       // Redirect immediately if we're already on an auth route (e.g. hard refresh to /auth/login)
       if (isAuthRoute(window.location.pathname)) {
-        document.documentElement.style.visibility = 'hidden';
-        window.location.replace('/strapi-plugin-oidc/oidc');
+        if (sessionStorage.getItem('oidc_logout')) {
+          sessionStorage.removeItem('oidc_logout');
+          document.documentElement.style.visibility = '';
+        } else {
+          document.documentElement.style.visibility = 'hidden';
+          window.location.replace('/strapi-plugin-oidc/oidc');
+        }
       }
     };
 
@@ -133,15 +142,23 @@ export default {
     };
     // --- end SSO button injection ---
 
+    // Hide the page immediately if the user has no JWT — they will be redirected to
+    // OIDC (if enforced) or the login page will be revealed by the async check.
+    // This prevents both the loading spinner and the login form from ever painting.
+    // Skip if we just logged out — the user should land on the login page, not be
+    // looped back to OIDC.
+    if (!localStorage.getItem('jwtToken') && !sessionStorage.getItem('oidc_logout')) {
+      document.documentElement.style.visibility = 'hidden';
+    }
+
     // Synchronously patch history from the cached value so there is zero window
     // where React Router can render the login page on return visits.
     if (localStorage.getItem(ENFORCE_CACHE_KEY) === '1') {
       patchHistory();
     }
 
-    // If we land on an auth route (no cache yet, or hard refresh), hide the page
-    // immediately so the login form never paints while the async check is in flight.
-    // The async check will either redirect (enforced) or restore visibility (not enforced).
+    // If we land directly on an auth route (no cache yet, or hard refresh), hide the
+    // page so the login form never paints while the async check is in flight.
     if (isAuthRoute(window.location.pathname)) {
       document.documentElement.style.visibility = 'hidden';
     }
@@ -197,6 +214,11 @@ export default {
         // strapi_admin_refresh and oidc_authenticated are httpOnly — cleared server-side
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
+
+        // Mark that a logout just occurred so the enforcement redirect doesn't loop
+        // the user back into OIDC after the provider redirects them back to admin.
+        // sessionStorage persists across the full redirect chain within the same tab.
+        sessionStorage.setItem('oidc_logout', '1');
 
         // Always route through the plugin logout endpoint — the server decides whether
         // to redirect to the OIDC provider based on the oidc_authenticated cookie.

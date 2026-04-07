@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-04-07
+
+### Fixed
+
+- Eliminated loading spinner flash on fresh unauthenticated visits by hiding the page at bootstrap when no JWT is present, before React renders.
+- Fixed OIDC logout causing a login loop: a `sessionStorage` flag is now set before navigating to the logout endpoint and survives the full redirect chain (Strapi → OIDC provider → back to admin), preventing the enforcement redirect from immediately sending the user back to OIDC after logout.
+
 ## [1.2.3] - 2026-04-07
 
 ### Fixed

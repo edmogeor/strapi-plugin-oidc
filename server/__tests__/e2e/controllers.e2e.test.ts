@@ -68,7 +68,9 @@ describe('Controllers E2E', () => {
     it('should return public settings', async () => {
       const ctxPublic = { body: null };
       await whitelistController.publicSettings(ctxPublic);
-      expect(ctxPublic.body).toEqual({ enforceOIDC: true });
+      expect(ctxPublic.body).toMatchObject({ enforceOIDC: true });
+      expect(ctxPublic.body).toHaveProperty('showSSOButton');
+      expect(ctxPublic.body).toHaveProperty('ssoButtonText');
     });
 
     it('should register and remove whitelist users via controller', async () => {

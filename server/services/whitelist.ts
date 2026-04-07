@@ -21,7 +21,12 @@ export default function whitelistService({ strapi }) {
       }
       let settings = await getPluginStore().get({ key: 'settings' });
       if (!settings) {
-        settings = { useWhitelist: true, enforceOIDC: false };
+        settings = {
+          useWhitelist: true,
+          enforceOIDC: false,
+          showSSOButton: true,
+          ssoButtonText: 'Login via SSO',
+        };
         await getPluginStore().set({ key: 'settings', value: settings });
       }
       settingsCache = { value: settings, ts: now };
