@@ -70,7 +70,7 @@ Once configured, you can initiate the OIDC login flow by navigating to:
 
 (e.g., `http://localhost:1337/strapi-plugin-oidc/oidc` for local development).
 
-When the **Enforce OIDC Login** option is enabled in the Admin Settings, the standard Strapi admin login page will be automatically redirected to this URL.
+When the **Enforce OIDC Login** option is enabled in the Admin Settings, the standard login fields are removed from the login page and only the SSO button remains — click it to start the OIDC flow.
 
 ## Admin Settings
 
@@ -79,7 +79,7 @@ Once the plugin is installed and configured, you can manage the OIDC settings fr
 - **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. You can also whitelist entire email domains (e.g., `*@company.com`). If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
 - **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
 - **SSO Login Button**: A "Login via SSO" button is always injected into the Strapi login page, allowing users to authenticate via OIDC. The button text is configurable via the `OIDC_SSO_BUTTON_TEXT` config option.
-- **Enforce OIDC Login**: When enabled, the standard email/password fields, remember me checkbox, and login button are hidden on the login page, leaving only the SSO button. All direct login API calls are also blocked server-side. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
+- **Enforce OIDC Login**: When enabled, the standard email/password fields, remember me checkbox, login button, and forgot-password link are removed from the login page DOM, leaving only the SSO button. All direct login API calls are also blocked server-side. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
 - **`OIDC_ENFORCE` config override**: Setting `OIDC_ENFORCE: true` or `OIDC_ENFORCE: false` in your plugin config takes priority over the Admin UI toggle and locks it. Set `OIDC_ENFORCE: false` in your config to regain access if you are ever locked out, then restart Strapi.
 
 ## Credits & Changes
