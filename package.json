@@ -34,7 +34,9 @@
     "keycloak",
     "auth0",
     "okta",
-    "azure-ad"
+    "azure-ad",
+    "authentik",
+    "authelia"
   ],
   "peerDependencies": {
     "@strapi/strapi": "^5.24.1",
