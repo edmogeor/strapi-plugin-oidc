@@ -63,6 +63,7 @@ export default {
                 // Block local navigation to login page to prevent UI flash during logout
                 return;
               }
+              document.documentElement.style.visibility = 'hidden';
               window.location.href = '/strapi-plugin-oidc/oidc';
               return;
             }
@@ -76,6 +77,7 @@ export default {
 
       // Redirect immediately if we're already on an auth route (e.g. hard refresh to /auth/login)
       if (isAuthRoute(window.location.pathname)) {
+        document.documentElement.style.visibility = 'hidden';
         window.location.replace('/strapi-plugin-oidc/oidc');
       }
     };
@@ -83,6 +85,7 @@ export default {
     // --- SSO button injection (shown on login page when enforceOIDC is false) ---
     let ssoButtonInjected = false;
     let ssoObserver: MutationObserver | null = null;
+    let ssoButtonText = en['login.sso']; // overwritten by server settings
 
     const injectSSOButton = () => {
       if (ssoButtonInjected) return;
@@ -106,7 +109,7 @@ export default {
       const innerSpan = submitButton.querySelector('span');
       const span = document.createElement('span');
       if (innerSpan) span.className = innerSpan.className;
-      span.textContent = en['login.sso'];
+      span.textContent = ssoButtonText;
       btn.appendChild(span);
 
       submitButton.parentNode.insertBefore(btn, submitButton.nextSibling);
@@ -148,10 +151,17 @@ export default {
             patchHistory(); // no-op if already patched from cache
           } else {
             localStorage.removeItem(ENFORCE_CACHE_KEY);
-            startSSOButtonObserver();
+            document.documentElement.style.visibility = '';
+            if (data.showSSOButton !== false) {
+              ssoButtonText = data.ssoButtonText || en['login.sso'];
+              startSSOButtonObserver();
+            } else {
+              stopSSOButtonObserver();
+            }
           }
         }
       } catch (error) {
+        document.documentElement.style.visibility = '';
         console.error('Failed to check OIDC enforcement setting:', error);
       }
     };
