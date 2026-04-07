@@ -217,13 +217,21 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
-    const makeLogoutCtx = () => ({
-      request: { secure: false },
-      cookies: { set: () => {} },
-      redirect(url: string) {
-        (this as any).redirectedTo = url;
-      },
-    });
+    const makeLogoutCtx = () => {
+      const cookieCalls: Array<{ name: string; value: string; opts?: any }> = [];
+      return {
+        request: { secure: false },
+        cookies: {
+          set(name: string, value: string, opts?: any) {
+            cookieCalls.push({ name, value, opts });
+          },
+          calls: cookieCalls,
+        },
+        redirect(url: string) {
+          (this as any).redirectedTo = url;
+        },
+      };
+    };
 
     it('should redirect to OIDC provider logout URL if configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
@@ -234,6 +242,16 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
+      expect(
+        ctxLogout.cookies.calls.some(
+          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
+        ),
+      ).toBe(true);
+      expect(
+        ctxLogout.cookies.calls.some(
+          (c) => c.name === 'oidc_authenticated' && c.opts?.maxAge === 0,
+        ),
+      ).toBe(true);
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
@@ -244,6 +262,16 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');
+      expect(
+        ctxLogout.cookies.calls.some(
+          (c) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
+        ),
+      ).toBe(true);
+      expect(
+        ctxLogout.cookies.calls.some(
+          (c) => c.name === 'oidc_authenticated' && c.opts?.maxAge === 0,
+        ),
+      ).toBe(true);
     });
   });
 });

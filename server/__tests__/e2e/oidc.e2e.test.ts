@@ -7,8 +7,9 @@ describe('OIDC E2E Tests', () => {
 
   const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
     await strapi
-      .store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc', key: 'settings' })
-      .set({ value: { useWhitelist, enforceOIDC } });
+      .plugin('strapi-plugin-oidc')
+      .service('whitelist')
+      .setSettings({ useWhitelist, enforceOIDC });
   };
 
   beforeAll(async () => {

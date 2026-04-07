@@ -1,3 +1,5 @@
+import { clearAuthCookies } from './utils/cookies';
+
 export default async function bootstrap({ strapi }) {
   const enforceOidcMiddleware = async (ctx, next) => {
     const adminUrl = strapi.config.get('admin.url', '/admin');
@@ -62,23 +64,7 @@ export default async function bootstrap({ strapi }) {
             // Fix 1: pre-existing local session — has a refresh cookie but no OIDC marker.
             // Clear the stale cookie and redirect to OIDC so they must re-authenticate.
             if (hasRefreshCookie && !hasOidcSession) {
-              const isProduction = strapi.config.get('environment') === 'production';
-              const cookiePath = strapi.config.get('admin.auth.cookie.path', '/admin');
-              const domain =
-                strapi.config.get('admin.auth.cookie.domain') ||
-                strapi.config.get('admin.auth.domain');
-              const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax');
-              const expiredOptions = {
-                httpOnly: true,
-                secure: isProduction && ctx.request.secure,
-                path: cookiePath,
-                domain,
-                sameSite,
-                maxAge: 0,
-                expires: new Date(0),
-              };
-              ctx.cookies.set('strapi_admin_refresh', '', expiredOptions);
-              ctx.cookies.set('oidc_authenticated', '', expiredOptions);
+              clearAuthCookies(strapi, ctx);
               ctx.redirect('/strapi-plugin-oidc/oidc');
               return;
             }
