@@ -69,4 +69,5 @@ export interface RoleController {
 
 export interface OidcController {
   logout(ctx: MockCtx): Promise<void>;
+  backchannelLogout(ctx: MockCtx): Promise<void>;
 }

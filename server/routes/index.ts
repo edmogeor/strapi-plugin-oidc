@@ -69,6 +69,12 @@ export default {
         config: { auth: false },
       },
       {
+        method: 'POST',
+        path: '/logout',
+        handler: 'oidc.backchannelLogout',
+        config: { auth: false },
+      },
+      {
         method: 'GET',
         path: '/whitelist',
         handler: 'whitelist.info',

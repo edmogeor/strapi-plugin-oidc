@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Response } from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
+import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import { oidcServer } from './setup';
 import type { Core } from './test-types';
 
@@ -10,14 +11,14 @@ const MOCK_OIDC_CONFIG = {
   OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
   OIDC_CLIENT_ID: 'mock-client-id',
   OIDC_CLIENT_SECRET: 'mock-client-secret',
-  OIDC_SCOPES: 'openid profile email',
+  OIDC_SCOPE: 'openid profile email',
   OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
   OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-  OIDC_USER_INFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
+  OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
   OIDC_GRANT_TYPE: 'authorization_code',
   OIDC_FAMILY_NAME_FIELD: 'family_name',
   OIDC_GIVEN_NAME_FIELD: 'given_name',
-  OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+  OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
 };
 
 describe('OIDC E2E Tests', () => {
@@ -446,17 +447,80 @@ describe('OIDC E2E Tests', () => {
         expect(isCookieExpired(cookies, 'oidc_authenticated')).toBe(true);
         expect(isCookieExpired(cookies, 'strapi_admin_refresh')).toBe(true);
       });
+
+      it('clears oidc_id_token cookie on logout', async () => {
+        const res = await logoutWithOidcSession();
+
+        expect(res.status).toBe(302);
+
+        const cookies = parseCookies(res);
+        expect(isCookieExpired(cookies, 'oidc_id_token')).toBe(true);
+      });
     });
 
     // -------------------------------------------------------------------------
     // Selective OIDC logout redirect
     // -------------------------------------------------------------------------
     describe('Selective OIDC logout redirect', () => {
-      it('redirects to OIDC logout URL when oidc_authenticated cookie is present', async () => {
+      it('redirects to OIDC logout URL when oidc_authenticated cookie is present (no id_token_hint)', async () => {
         const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe('https://mock-oidc.com/logout');
+      });
+
+      it('appends id_token_hint when oidc_id_token cookie is set after login', async () => {
+        await setSettings(false, false);
+
+        // Build a minimal ID token with the correct nonce so it passes validation
+        const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+        const nonce = new URL(loginRes.headers.location).searchParams.get('nonce')!;
+        const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
+        const payload = Buffer.from(JSON.stringify({ nonce, sub: '1' })).toString('base64url');
+        const idToken = `${header}.${payload}.fakesig`;
+
+        oidcServer.use(
+          http.post('https://mock-oidc.com/token', () =>
+            HttpResponse.json({ access_token: 'fake-jwt-token', id_token: idToken }),
+          ),
+        );
+
+        const state = new URL(loginRes.headers.location).searchParams.get('state');
+        await agent
+          .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+          .redirects(0);
+
+        // Now logout — agent carries the oidc_id_token cookie set during callback
+        strapi.config.set('plugin::strapi-plugin-oidc', {
+          ...MOCK_OIDC_CONFIG,
+          OIDC_POST_LOGOUT_REDIRECT_URI: '',
+        });
+        const logoutRes = await agent
+          .get('/strapi-plugin-oidc/logout')
+          .set('Cookie', 'oidc_authenticated=1')
+          .redirects(0);
+
+        expect(logoutRes.status).toBe(302);
+        const location = new URL(logoutRes.headers.location);
+        expect(location.origin + location.pathname).toBe('https://mock-oidc.com/logout');
+        expect(location.searchParams.get('id_token_hint')).toBe(idToken);
+        expect(location.searchParams.get('post_logout_redirect_uri')).toBeNull();
+      });
+
+      it('appends post_logout_redirect_uri when OIDC_POST_LOGOUT_REDIRECT_URI is configured', async () => {
+        strapi.config.set('plugin::strapi-plugin-oidc', {
+          ...MOCK_OIDC_CONFIG,
+          OIDC_POST_LOGOUT_REDIRECT_URI: 'https://myapp.com/logged-out',
+        });
+
+        const res = await logoutWithOidcSession();
+
+        expect(res.status).toBe(302);
+        const location = new URL(res.headers.location);
+        expect(location.origin + location.pathname).toBe('https://mock-oidc.com/logout');
+        expect(location.searchParams.get('post_logout_redirect_uri')).toBe(
+          'https://myapp.com/logged-out',
+        );
       });
 
       it('redirects to admin login when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
@@ -470,6 +534,153 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).toBe('/admin/auth/login');
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Backchannel logout (POST /logout)
+  // ---------------------------------------------------------------------------
+  describe('Backchannel logout', () => {
+    let privateKey: CryptoKey;
+    let jwksHandler: ReturnType<typeof http.get>;
+
+    beforeAll(async () => {
+      // Generate a test RSA key pair for signing logout tokens
+      let publicKey: CryptoKey;
+      ({ privateKey, publicKey } = await generateKeyPair('RS256'));
+
+      const jwk = await exportJWK(publicKey);
+      jwk.kid = 'test-key-1';
+      jwk.use = 'sig';
+      jwksHandler = http.get('https://mock-oidc.com/jwks', () =>
+        HttpResponse.json({ keys: [jwk] }),
+      );
+
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_ISSUER: 'https://mock-oidc.com',
+        OIDC_JWKS_URI: 'https://mock-oidc.com/jwks',
+      });
+    });
+
+    // resetHandlers() in the global afterEach clears runtime handlers after every test,
+    // so we re-register the JWKS handler before each test in this suite.
+    beforeEach(() => {
+      oidcServer.use(jwksHandler);
+    });
+
+    const makeLogoutToken = (overrides: Record<string, unknown> = {}) =>
+      new SignJWT({
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+        sub: 'test@company.com',
+        ...overrides,
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
+        .setIssuer('https://mock-oidc.com')
+        .setAudience('mock-client-id')
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(privateKey);
+
+    it('returns 400 when logout_token is missing', async () => {
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for a token with an invalid signature', async () => {
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: 'header.payload.badsig' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when nonce is present in the logout token', async () => {
+      const token = await makeLogoutToken({ nonce: 'must-not-be-here' });
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when the backchannel-logout event is missing', async () => {
+      const token = await makeLogoutToken({ events: {} });
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when neither sub nor sid is present', async () => {
+      const token = await new SignJWT({
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
+        .setIssuer('https://mock-oidc.com')
+        .setAudience('mock-client-id')
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(privateKey);
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 200 for a valid logout token (user not found — graceful degradation)', async () => {
+      const token = await makeLogoutToken({ sub: 'unknown-user@example.com' });
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('returns 200 and revokes the session for a known user', async () => {
+      // Ensure the test user exists (created by the full OIDC login flow test)
+      const token = await makeLogoutToken({ sub: 'test@company.com' });
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('returns 200 when sub is absent but sid is present', async () => {
+      const token = await new SignJWT({
+        events: { 'http://schemas.openid.net/event/backchannel-logout': {} },
+        sid: 'some-session-id',
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-key-1' })
+        .setIssuer('https://mock-oidc.com')
+        .setAudience('mock-client-id')
+        .setIssuedAt()
+        .setJti(crypto.randomUUID())
+        .sign(privateKey);
+
+      const res = await request(strapi.server.httpServer)
+        .post('/strapi-plugin-oidc/logout')
+        .type('form')
+        .send({ logout_token: token });
+
+      expect(res.status).toBe(200);
     });
   });
 });

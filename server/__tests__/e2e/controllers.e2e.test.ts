@@ -345,9 +345,10 @@ describe('Controllers E2E', () => {
       };
     };
 
-    it('should redirect to OIDC provider logout URL for OIDC sessions', async () => {
+    it('should redirect to OIDC provider logout URL for OIDC sessions (no params)', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_POST_LOGOUT_REDIRECT_URI: '',
       });
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
@@ -356,11 +357,57 @@ describe('Controllers E2E', () => {
       expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
       expectCookieCleared(ctxLogout, 'oidc_authenticated');
+      expectCookieCleared(ctxLogout, 'oidc_id_token');
+    });
+
+    it('should append id_token_hint when oidc_id_token cookie is present', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_POST_LOGOUT_REDIRECT_URI: '',
+      });
+
+      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1', oidc_id_token: 'fake.id.token' });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toBe(
+        'https://mock-oidc.com/logout?id_token_hint=fake.id.token',
+      );
+    });
+
+    it('should append post_logout_redirect_uri when configured', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_POST_LOGOUT_REDIRECT_URI: 'https://myapp.com/logged-out',
+      });
+
+      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toBe(
+        'https://mock-oidc.com/logout?post_logout_redirect_uri=https%3A%2F%2Fmyapp.com%2Flogged-out',
+      );
+    });
+
+    it('should append both id_token_hint and post_logout_redirect_uri when both are present', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        OIDC_POST_LOGOUT_REDIRECT_URI: 'https://myapp.com/logged-out',
+      });
+
+      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1', oidc_id_token: 'fake.id.token' });
+      await oidcController.logout(ctxLogout);
+
+      const redirectUrl = new URL(ctxLogout.redirectedTo!);
+      expect(redirectUrl.origin + redirectUrl.pathname).toBe('https://mock-oidc.com/logout');
+      expect(redirectUrl.searchParams.get('id_token_hint')).toBe('fake.id.token');
+      expect(redirectUrl.searchParams.get('post_logout_redirect_uri')).toBe(
+        'https://myapp.com/logged-out',
+      );
     });
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
       });
       strapi.config.set('admin.url', '/admin');
 
@@ -372,7 +419,7 @@ describe('Controllers E2E', () => {
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: undefined });
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_END_SESSION_ENDPOINT: undefined });
       strapi.config.set('admin.url', '/custom-admin');
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });

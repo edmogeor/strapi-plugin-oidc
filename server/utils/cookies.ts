@@ -18,6 +18,7 @@ function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
 export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   ctx.cookies.set('strapi_admin_refresh', '', options);
-  // oidc_authenticated is set with path '/' so it must be cleared with the same path
+  // oidc_authenticated and oidc_id_token are set with path '/' so they must be cleared with the same path
   ctx.cookies.set('oidc_authenticated', '', { ...options, path: '/' });
+  ctx.cookies.set('oidc_id_token', '', { ...options, path: '/' });
 }

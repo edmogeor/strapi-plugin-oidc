@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- RP-Initiated Logout (OpenID Connect RP-Initiated Logout 1.0): `GET /strapi-plugin-oidc/logout` now appends `id_token_hint` (stored as an httpOnly cookie after login) and `post_logout_redirect_uri` to the provider's end-session URL when available.
+- New config option `OIDC_POST_LOGOUT_REDIRECT_URI`: where the provider should redirect the user after completing logout.
+
+### Changed
+
+- `OIDC_LOGOUT_URL` renamed to `OIDC_END_SESSION_ENDPOINT` to match the OIDC discovery document field name (`end_session_endpoint`).
+- `OIDC_USER_INFO_ENDPOINT` renamed to `OIDC_USERINFO_ENDPOINT` to match the OIDC discovery document field name (`userinfo_endpoint`).
+- `OIDC_SCOPES` renamed to `OIDC_SCOPE` to match the OAuth2 parameter name (`scope`).
+
 ## [1.4.3] - 2026-04-07
 
 ### Changed
@@ -24,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - OIDC `state` parameter is now always generated server-side; user-supplied values are ignored, preventing CSRF parameter injection.
-- Access token is always sent to the userinfo endpoint via `Authorization: Bearer` header (RFC 6750 §2.1). The deprecated query-parameter method has been removed along with the `OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER` config option.
+- Access token is always sent to the userinfo endpoint via `Authorization: Bearer` header (RFC 6750 §2.1). The deprecated query-parameter method has been removed along with the `OIDC_USERINFO_ENDPOINT_WITH_AUTH_HEADER` config option.
 - OIDC nonce is now included in the authorization request and validated against the ID token on callback, preventing ID token replay attacks.
 - OIDC callback errors now return a generic message instead of raw internal error details.
 - Fixed Gmail alias regex (was a no-op string literal instead of a regular expression).
@@ -121,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Logout now only redirects to the OIDC provider's logout URL (`OIDC_LOGOUT_URL`) for sessions established via OIDC, identified server-side by the `oidc_authenticated` cookie. Local admin users are redirected directly to the Strapi login page.
+- Logout now only redirects to the OIDC provider's logout URL (`OIDC_END_SESSION_ENDPOINT`) for sessions established via OIDC, identified server-side by the `oidc_authenticated` cookie. Local admin users are redirected directly to the Strapi login page.
 
 ### Changed
 
