@@ -1,19 +1,27 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import type {
+  Core,
+  WhitelistEntry,
+  OidcRole,
+  WhitelistController,
+  RoleController,
+  OidcController,
+} from './test-types';
 
 const whitelistFixture: { email: string; roles: string[] }[] = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/whitelist-import.json'), 'utf-8'),
 );
 
 describe('Controllers E2E', () => {
-  let strapi: any;
-  let whitelistController: any;
-  let roleController: any;
-  let oidcController: any;
+  let strapi: Core.Strapi;
+  let whitelistController: WhitelistController;
+  let roleController: RoleController;
+  let oidcController: OidcController;
 
   beforeAll(() => {
-    strapi = (global as any).strapiInstance;
+    strapi = globalThis.strapiInstance;
     whitelistController = strapi.plugin('strapi-plugin-oidc').controller('whitelist');
     roleController = strapi.plugin('strapi-plugin-oidc').controller('role');
     oidcController = strapi.plugin('strapi-plugin-oidc').controller('oidc');
@@ -111,7 +119,7 @@ describe('Controllers E2E', () => {
       const ctxInfo = { body: null as any };
       await whitelistController.info(ctxInfo);
       const addedUser = ctxInfo.body.whitelistUsers.find(
-        (u: any) => u.email === 'controller-test@whitelist.com',
+        (u: WhitelistEntry) => u.email === 'controller-test@whitelist.com',
       );
       expect(addedUser).toBeDefined();
 
@@ -125,7 +133,7 @@ describe('Controllers E2E', () => {
       // Verify it's removed
       await whitelistController.info(ctxInfo);
       const removedUser = ctxInfo.body.whitelistUsers.find(
-        (u: any) => u.email === 'controller-test@whitelist.com',
+        (u: WhitelistEntry) => u.email === 'controller-test@whitelist.com',
       );
       expect(removedUser).toBeUndefined();
     });
@@ -217,7 +225,7 @@ describe('Controllers E2E', () => {
       const ctxInfo = { body: null as any };
       await whitelistController.info(ctxInfo);
 
-      const userEmails = ctxInfo.body.whitelistUsers.map((u: any) => u.email);
+      const userEmails = ctxInfo.body.whitelistUsers.map((u: WhitelistEntry) => u.email);
       expect(userEmails).not.toContain('sync1@test.com');
       expect(userEmails).toContain('sync2@test.com');
       expect(userEmails).toContain('sync3@test.com');
@@ -248,7 +256,7 @@ describe('Controllers E2E', () => {
     it('should find roles', async () => {
       const ctxFind = {
         body: null as any,
-        send: function (data: any) {
+        send: function (data: unknown) {
           this.body = data;
         },
       };
@@ -262,13 +270,13 @@ describe('Controllers E2E', () => {
       // 1. Fetch original roles to restore later
       const ctxFindOriginal = {
         body: null as any,
-        send: function (data: any) {
+        send: function (data: unknown) {
           this.body = data;
         },
       };
       await roleController.find(ctxFindOriginal);
       const originalRoles = ctxFindOriginal.body;
-      const originalRole4 = originalRoles.find((r: any) => r.oauth_type === '4')?.role || [];
+      const originalRole4 = originalRoles.find((r: OidcRole) => r.oauth_type === '4')?.role || [];
 
       const ctxUpdate = {
         request: {
@@ -277,7 +285,7 @@ describe('Controllers E2E', () => {
           },
         },
         body: null,
-        send: function (data: any, status: number) {
+        send: function (data: unknown, status: number) {
           this.body = { data, status };
         },
       };
@@ -287,13 +295,13 @@ describe('Controllers E2E', () => {
 
       const ctxFind = {
         body: null as any,
-        send: function (data: any) {
+        send: function (data: unknown) {
           this.body = data;
         },
       };
       await roleController.find(ctxFind);
 
-      const updatedRole = ctxFind.body.find((r: any) => r.oauth_type === '4');
+      const updatedRole = ctxFind.body.find((r: OidcRole) => r.oauth_type === '4');
       expect(updatedRole.role).toEqual(expect.arrayContaining([1, 2]));
 
       // Restore the original roles
@@ -304,7 +312,7 @@ describe('Controllers E2E', () => {
           },
         },
         body: null,
-        send: function (data: any, status: number) {
+        send: function (data: unknown, status: number) {
           this.body = { data, status };
         },
       };
@@ -313,24 +321,26 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
-    const expectCookieCleared = (ctx: any, name: string) =>
+    const expectCookieCleared = (ctx: ReturnType<typeof makeLogoutCtx>, name: string) =>
       expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
 
     const makeLogoutCtx = (initialCookies: Record<string, string> = {}) => {
-      const cookieCalls: Array<{ name: string; value: string; opts?: any }> = [];
+      const cookieCalls: Array<{ name: string; value: string; opts?: Record<string, unknown> }> =
+        [];
       return {
         request: { secure: false },
+        redirectedTo: undefined as string | undefined,
         cookies: {
           get(name: string) {
             return initialCookies[name];
           },
-          set(name: string, value: string, opts?: any) {
+          set(name: string, value: string, opts?: Record<string, unknown>) {
             cookieCalls.push({ name, value, opts });
           },
           calls: cookieCalls,
         },
         redirect(url: string) {
-          (this as any).redirectedTo = url;
+          (this as { redirectedTo: string | undefined }).redirectedTo = url;
         },
       };
     };
@@ -343,7 +353,7 @@ describe('Controllers E2E', () => {
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
       await oidcController.logout(ctxLogout);
 
-      expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
+      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
       expectCookieCleared(ctxLogout, 'oidc_authenticated');
     });
@@ -357,7 +367,7 @@ describe('Controllers E2E', () => {
       const ctxLogout = makeLogoutCtx(); // no oidc_authenticated cookie
       await oidcController.logout(ctxLogout);
 
-      expect((ctxLogout as any).redirectedTo).toBe('/admin/auth/login');
+      expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
     });
 
@@ -368,7 +378,7 @@ describe('Controllers E2E', () => {
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
       await oidcController.logout(ctxLogout);
 
-      expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');
+      expect(ctxLogout.redirectedTo).toBe('/custom-admin/auth/login');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
       expectCookieCleared(ctxLogout, 'oidc_authenticated');
     });

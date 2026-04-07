@@ -1,7 +1,9 @@
 import request from 'supertest';
+import type { Response } from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
+import type { Core } from './test-types';
 
 const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
@@ -19,8 +21,8 @@ const MOCK_OIDC_CONFIG = {
 };
 
 describe('OIDC E2E Tests', () => {
-  let strapi: any;
-  let agent: any;
+  let strapi: Core.Strapi;
+  let agent: ReturnType<typeof request.agent>;
 
   const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
     await strapi
@@ -30,7 +32,7 @@ describe('OIDC E2E Tests', () => {
   };
 
   beforeAll(async () => {
-    strapi = (global as any).strapiInstance;
+    strapi = globalThis.strapiInstance;
     agent = request.agent(strapi.server.httpServer);
 
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
@@ -262,8 +264,8 @@ describe('OIDC E2E Tests', () => {
 
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
-    const parseCookies = (res: any): string[] =>
-      ([] as string[]).concat(res.headers['set-cookie'] || []);
+    const parseCookies = (res: Response): string[] =>
+      ([] as string[]).concat((res.headers['set-cookie'] as string | string[] | undefined) || []);
 
     const isCookieExpired = (cookies: string[], name: string): boolean => {
       const cookie = cookies.find((c) => c.startsWith(`${name}=`));

@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { Core, WhitelistService, RoleService, OAuthService } from './test-types';
 
 describe('OIDC Services E2E', () => {
-  let strapi: any;
-  let whitelistService: any;
-  let roleService: any;
-  let oauthService: any;
+  let strapi: Core.Strapi;
+  let whitelistService: WhitelistService;
+  let roleService: RoleService;
+  let oauthService: OAuthService;
 
   beforeAll(() => {
-    strapi = (global as any).strapiInstance;
+    strapi = globalThis.strapiInstance;
     whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
     roleService = strapi.plugin('strapi-plugin-oidc').service('role');
     oauthService = strapi.plugin('strapi-plugin-oidc').service('oauth');
@@ -32,7 +33,7 @@ describe('OIDC Services E2E', () => {
 
       const user = await whitelistService.checkWhitelistForEmail('e2e-test@whitelist.com');
       expect(user).toBeDefined();
-      expect(user.email).toBe('e2e-test@whitelist.com');
+      expect(user!.email).toBe('e2e-test@whitelist.com');
     });
 
     it('should throw when user not in whitelist and whitelist is active', async () => {
@@ -79,7 +80,11 @@ describe('OIDC Services E2E', () => {
     });
 
     it('renderSignUpSuccess should set isLoggedIn flag in localStorage', () => {
-      const html = oauthService.renderSignUpSuccess('mock-jwt', { id: 1 }, 'mock-nonce');
+      const html = oauthService.renderSignUpSuccess(
+        'mock-jwt',
+        { id: 1, email: 'test@test.com' },
+        'mock-nonce',
+      );
       expect(html).toContain("localStorage.setItem('isLoggedIn', 'true')");
     });
   });

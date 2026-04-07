@@ -1,12 +1,13 @@
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { Core, WhitelistEntry } from './test-types';
 
 describe('Whitelist Content-API Routes', () => {
-  let strapi: any;
+  let strapi: Core.Strapi;
   let apiToken: string;
 
   beforeAll(async () => {
-    strapi = (global as any).strapiInstance;
+    strapi = globalThis.strapiInstance;
 
     // Create a full-access API token for programmatic access tests
     const result = await strapi.service('admin::api-token').create({
@@ -58,7 +59,9 @@ describe('Whitelist Content-API Routes', () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.whitelistUsers)).toBe(true);
-    expect(res.body.whitelistUsers.some((u: any) => u.email === 'api-get@test.com')).toBe(true);
+    expect(
+      res.body.whitelistUsers.some((u: WhitelistEntry) => u.email === 'api-get@test.com'),
+    ).toBe(true);
   });
 
   it('POST /whitelist — registers a new email', async () => {
@@ -74,9 +77,9 @@ describe('Whitelist Content-API Routes', () => {
     const listRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);
-    expect(listRes.body.whitelistUsers.some((u: any) => u.email === 'api-register@test.com')).toBe(
-      true,
-    );
+    expect(
+      listRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === 'api-register@test.com'),
+    ).toBe(true);
   });
 
   it('POST /whitelist/import — bulk-imports entries and skips duplicates', async () => {
@@ -118,7 +121,9 @@ describe('Whitelist Content-API Routes', () => {
     const listRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);
-    const entry = listRes.body.whitelistUsers.find((u: any) => u.email === 'api-delete@test.com');
+    const entry = listRes.body.whitelistUsers.find(
+      (u: WhitelistEntry) => u.email === 'api-delete@test.com',
+    );
     expect(entry).toBeDefined();
 
     const delRes = await request(strapi.server.httpServer)
@@ -130,9 +135,9 @@ describe('Whitelist Content-API Routes', () => {
     const afterRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);
-    expect(afterRes.body.whitelistUsers.some((u: any) => u.email === 'api-delete@test.com')).toBe(
-      false,
-    );
+    expect(
+      afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === 'api-delete@test.com'),
+    ).toBe(false);
   });
 
   it('DELETE /whitelist — removes all entries', async () => {

@@ -51,8 +51,17 @@ export interface OAuthService {
   addGmailAlias(email: string, alias: string): string;
 }
 
+export interface AdminRole {
+  id: number;
+  name: string;
+  code: string;
+  [key: string]: unknown;
+}
+
 export interface RoleService {
   oidcRoles(): Promise<{ roles: string[] } | null>;
+  getOidcRoles(): AdminRole[];
+  find(): Promise<AdminRole[]>;
 }
 
 export interface WhitelistService {
