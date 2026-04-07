@@ -26,9 +26,4 @@ This will run Vitest with the V8 coverage provider and generate a text summary i
 
 ## Test App Accounts
 
-The `test-app` includes a pre-configured SQLite database with a super admin account for testing purposes.
-
-**Super Admin Login Details:**
-
-- **Email:** `admin@strapi.test`
-- **Password:** `SuperAdmin123!`
+The `test-app` uses a SQLite database with a super admin account for testing purposes. Credentials are defined in `test-app/.env` and should be set up locally before running tests.
