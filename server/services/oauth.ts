@@ -123,7 +123,7 @@ function renderHtmlTemplate(title: string, content: string): string {
 export default function oauthService({ strapi }) {
   return {
     async createUser(email, lastname, firstname, locale, roles = []) {
-      // If the email address contains uppercase letters, convert it to lowercase and retrieve it from the DB. If not, register a new email address with a lower-case email address.
+      // If the email has uppercase letters, check if a lowercase version already exists
       const userService = strapi.service('admin::user');
       if (/[A-Z]/.test(email)) {
         const dbUser = await userService.findOneByEmail(email.toLocaleLowerCase());
@@ -140,7 +140,7 @@ export default function oauthService({ strapi }) {
         preferedLanguage: locale,
       });
 
-      return await userService.register({
+      return userService.register({
         registrationToken: createdUser.registrationToken,
         userInfo: {
           firstname: firstname || 'unset',
@@ -160,7 +160,7 @@ export default function oauthService({ strapi }) {
       if (!baseAlias) {
         return baseEmail;
       }
-      const alias = baseAlias.replace('/+/g', '');
+      const alias = baseAlias.replace(/\+/g, '');
       const beforePosition = baseEmail.indexOf('@');
       const origin = baseEmail.substring(0, beforePosition);
       const domain = baseEmail.substring(beforePosition);
@@ -198,12 +198,9 @@ export default function oauthService({ strapi }) {
         provider: 'strapi-plugin-oidc',
       });
     },
-    // Sign In Success
     renderSignUpSuccess(jwtToken, user, nonce) {
-      // get REMEMBER_ME from config
       const config = strapi.config.get('plugin::strapi-plugin-oidc');
-      const REMEMBER_ME = config['REMEMBER_ME'];
-      const isRememberMe = !!REMEMBER_ME;
+      const isRememberMe = !!config['REMEMBER_ME'];
 
       const content = `
     <noscript>
@@ -231,7 +228,6 @@ export default function oauthService({ strapi }) {
 
       return renderHtmlTemplate('Authenticating...', content);
     },
-    // Sign In Error
     renderSignUpError(message) {
       const safeMessage = String(message)
         .replace(/&/g, '&amp;')
@@ -266,8 +262,7 @@ export default function oauthService({ strapi }) {
       const deviceId = randomUUID();
 
       const config = strapi.config.get('plugin::strapi-plugin-oidc');
-      const REMEMBER_ME = config['REMEMBER_ME'];
-      const rememberMe = !!REMEMBER_ME;
+      const rememberMe = !!config['REMEMBER_ME'];
 
       const { token: refreshToken, absoluteExpiresAt } = await sessionManager(
         'admin',

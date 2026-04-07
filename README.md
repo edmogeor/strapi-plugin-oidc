@@ -41,7 +41,6 @@ module.exports = ({ env }) => ({
       OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false, // true = Bearer header, false = query param
       OIDC_LOGOUT_URL: '', // Provider logout URL; omit to redirect to Strapi login
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config

@@ -1,10 +1,10 @@
 import {
   Box,
   Button,
+  Dialog,
   Divider,
   Field,
   Flex,
-  Grid,
   IconButton,
   Table,
   Tbody,
@@ -22,13 +22,11 @@ import {
 } from '@strapi/design-system';
 import styled from 'styled-components';
 import { useCallback, useRef, useState } from 'react';
-import { Check, Download, Plus, Trash, Upload, WarningCircle } from '@strapi/icons';
-import { Dialog } from '@strapi/design-system';
-import getTrad from '../../utils/getTrad';
+import { Download, Plus, Trash, Upload, WarningCircle } from '@strapi/icons';
+import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import { OIDCRole, RoleDef } from '../Role';
-
-import { useNotification } from '@strapi/strapi/admin';
+import getTrad from '../../utils/getTrad';
 
 const CustomTable = styled(Table)`
   th,
@@ -39,7 +37,7 @@ const CustomTable = styled(Table)`
   }
 `;
 
-const LocalizedDate = ({ date }: { date: string }) => {
+function LocalizedDate({ date }: { date: string }) {
   const userLocale = navigator.language || 'en-US';
   return new Intl.DateTimeFormat(userLocale, {
     year: 'numeric',
@@ -48,7 +46,7 @@ const LocalizedDate = ({ date }: { date: string }) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(date));
-};
+}
 
 export interface WhitelistUser {
   email: string;
@@ -62,8 +60,8 @@ interface WhitelistProps {
   oidcRoles?: OIDCRole[];
   useWhitelist: boolean;
   loading: boolean;
-  onSave: (email: string, roles: string[]) => Promise<void>;
-  onDelete: (email: string) => Promise<void>;
+  onSave: (email: string, roles: string[]) => void;
+  onDelete: (email: string) => void;
   onDeleteAll: () => void;
   onImport: (entries: { email: string; roles: string[] }[]) => Promise<number>;
   onExport: () => void;
@@ -92,7 +90,20 @@ export default function Whitelist({
   const pageCount = Math.ceil(users.length / PAGE_SIZE) || 1;
   const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const onSaveEmail = useCallback(async () => {
+  const getRoleNames = (roleIds: string[]): string =>
+    roleIds
+      .map((roleId) => {
+        const r = roles.find((ro) => String(ro.id) === String(roleId));
+        return r ? r.name : roleId;
+      })
+      .join(', ');
+
+  const defaultRoleNames = getRoleNames(oidcRoles.flatMap((oidc) => oidc.role ?? []));
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isValidEmail = emailRegex.test(email);
+
+  const onSaveEmail = useCallback(() => {
     const emailText = email.trim();
     if (users.some((user) => user.email === emailText)) {
       toggleNotification({
@@ -100,16 +111,11 @@ export default function Whitelist({
         message: formatMessage(getTrad('whitelist.error.unique')),
       });
     } else {
-      await onSave(emailText, selectedRoles);
+      onSave(emailText, selectedRoles);
       setEmail('');
       setSelectedRoles([]);
     }
   }, [email, selectedRoles, users, onSave, formatMessage, toggleNotification]);
-
-  const isValidEmail = useCallback(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }, [email]);
 
   const handleImport = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,10 +233,10 @@ export default function Whitelist({
             <Box style={{ flex: 1 }}>
               <Field.Root>
                 <Field.Input
-                  type={'text'}
+                  type="text"
                   disabled={loading}
                   value={email}
-                  hasError={Boolean(email && !isValidEmail())}
+                  hasError={Boolean(email && !isValidEmail)}
                   onChange={(e) => setEmail(e.currentTarget.value)}
                   placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
                 />
@@ -258,7 +264,7 @@ export default function Whitelist({
               <Button
                 size="L"
                 startIcon={<Plus />}
-                disabled={loading || email.trim() === '' || !isValidEmail()}
+                disabled={loading || email.trim() === '' || !isValidEmail}
                 loading={loading}
                 onClick={onSaveEmail}
               >
@@ -291,25 +297,9 @@ export default function Whitelist({
                 </Tr>
               ) : (
                 paginatedUsers.map((user, index) => {
-                  const getRoleNames = (roleIds: string[]) =>
-                    roleIds
-                      .map((roleId) => {
-                        const r = roles.find((ro) => String(ro.id) === String(roleId));
-                        return r ? r.name : roleId;
-                      })
-                      .join(', ');
-
-                  let userRolesNames = getRoleNames(user.roles || []);
-                  let isDefault = false;
-
-                  if (!userRolesNames) {
-                    const defaultRolesIds = oidcRoles.reduce<string[]>((acc, oidc) => {
-                      if (oidc.role) acc.push(...oidc.role);
-                      return acc;
-                    }, []);
-                    userRolesNames = getRoleNames(defaultRolesIds);
-                    isDefault = Boolean(userRolesNames);
-                  }
+                  const explicitRoleNames = getRoleNames(user.roles || []);
+                  const isDefault = !explicitRoleNames && Boolean(defaultRoleNames);
+                  const userRolesNames = explicitRoleNames || defaultRoleNames;
 
                   return (
                     <Tr key={user.email}>

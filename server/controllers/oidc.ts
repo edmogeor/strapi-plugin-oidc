@@ -2,58 +2,56 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
 
+const REQUIRED_CONFIG_KEYS = [
+  'OIDC_CLIENT_ID',
+  'OIDC_CLIENT_SECRET',
+  'OIDC_REDIRECT_URI',
+  'OIDC_SCOPES',
+  'OIDC_TOKEN_ENDPOINT',
+  'OIDC_USER_INFO_ENDPOINT',
+  'OIDC_GRANT_TYPE',
+  'OIDC_FAMILY_NAME_FIELD',
+  'OIDC_GIVEN_NAME_FIELD',
+  'OIDC_AUTHORIZATION_ENDPOINT',
+] as const;
+
 function configValidation(): Record<string, string> {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
-  const requiredKeys = [
-    'OIDC_CLIENT_ID',
-    'OIDC_CLIENT_SECRET',
-    'OIDC_REDIRECT_URI',
-    'OIDC_SCOPES',
-    'OIDC_TOKEN_ENDPOINT',
-    'OIDC_USER_INFO_ENDPOINT',
-    'OIDC_GRANT_TYPE',
-    'OIDC_FAMILY_NAME_FIELD',
-    'OIDC_GIVEN_NAME_FIELD',
-    'OIDC_AUTHORIZATION_ENDPOINT',
-  ];
 
-  if (requiredKeys.every((key) => config[key])) {
+  if (REQUIRED_CONFIG_KEYS.every((key) => config[key])) {
     return config;
   }
-  throw new Error(`The following configuration keys are required: ${requiredKeys.join(', ')}`);
+  throw new Error(
+    `The following configuration keys are required: ${REQUIRED_CONFIG_KEYS.join(', ')}`,
+  );
 }
 
 async function oidcSignIn(ctx: any) {
-  let { state } = ctx.query as { state?: string };
   const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPES, OIDC_AUTHORIZATION_ENDPOINT } =
     configValidation();
 
-  // Generate code verifier and code challenge
   const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
 
-  if (!state) {
-    state = randomBytes(32).toString('base64url');
-  }
+  // Always generate state server-side — never accept caller-supplied state, as that
+  // would defeat the anti-CSRF purpose of the parameter.
+  const state = randomBytes(32).toString('base64url');
+  // Nonce prevents ID token replay attacks (OIDC Core §3.1.2.1).
+  const nonce = randomBytes(32).toString('base64url');
 
-  const isProduction = strapi.config.get('environment') === 'production';
-
-  // Store the code verifier and state in cookies
-  // We use `secure: isProduction && ctx.request.secure` to align with Strapi's own session management.
-  // This ensures cookies are secure in production, provided the reverse proxy is configured correctly
+  // Cookie options aligned with Strapi's own session management.
+  // Secure in production, provided the reverse proxy is configured correctly
   // (sending X-Forwarded-Proto and proxy: true in Strapi config).
-  ctx.cookies.set('oidc_code_verifier', codeVerifier, {
+  const isProduction = strapi.config.get('environment') === 'production';
+  const cookieOptions = {
     httpOnly: true,
-    maxAge: 600000,
+    maxAge: 600000, // 10 minutes
     secure: isProduction && ctx.request.secure,
-    sameSite: 'lax',
-  }); // 10 min
+    sameSite: 'lax' as const,
+  };
 
-  ctx.cookies.set('oidc_state', state, {
-    httpOnly: true,
-    maxAge: 600000,
-    secure: isProduction && ctx.request.secure,
-    sameSite: 'lax',
-  });
+  ctx.cookies.set('oidc_code_verifier', codeVerifier, cookieOptions);
+  ctx.cookies.set('oidc_state', state, cookieOptions);
+  ctx.cookies.set('oidc_nonce', nonce, cookieOptions);
 
   const params = new URLSearchParams();
   params.append('response_type', 'code');
@@ -63,6 +61,7 @@ async function oidcSignIn(ctx: any) {
   params.append('code_challenge', codeChallenge);
   params.append('code_challenge_method', 'S256');
   params.append('state', state);
+  params.append('nonce', nonce);
 
   const authorizationUrl = `${OIDC_AUTHORIZATION_ENDPOINT}?${params.toString()}`;
   ctx.set('Location', authorizationUrl);
@@ -72,6 +71,7 @@ async function oidcSignIn(ctx: any) {
 async function exchangeTokenAndFetchUserInfo(
   config: Record<string, string>,
   params: URLSearchParams,
+  expectedNonce: string,
 ) {
   const response = await fetch(config.OIDC_TOKEN_ENDPOINT, {
     method: 'POST',
@@ -82,37 +82,37 @@ async function exchangeTokenAndFetchUserInfo(
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(
-      `Failed to exchange token: ${response.status} ${response.statusText} - ${errText}`,
-    );
+    throw new Error('Token exchange failed');
   }
 
   const tokenData = await response.json();
 
-  let userInfoEndpointHeaders: HeadersInit = {};
-  let userInfoEndpointParameters = `?access_token=${tokenData.access_token}`;
-
-  if (config.OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER) {
-    userInfoEndpointHeaders = {
-      Authorization: `Bearer ${tokenData.access_token}`,
-    };
-    userInfoEndpointParameters = '';
+  // Validate the nonce in the ID token if the provider returned one.
+  // The ID token is a JWT; the payload is the second base64url segment.
+  if (tokenData.id_token) {
+    try {
+      const payloadB64 = tokenData.id_token.split('.')[1];
+      const idTokenPayload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+      if (idTokenPayload.nonce !== expectedNonce) {
+        throw new Error('Nonce mismatch');
+      }
+    } catch (e) {
+      if (e.message === 'Nonce mismatch') throw e;
+      throw new Error('Failed to parse ID token');
+    }
   }
 
-  const userInfoEndpoint = `${config.OIDC_USER_INFO_ENDPOINT}${userInfoEndpointParameters}`;
-  const userResponse = await fetch(userInfoEndpoint, {
-    headers: userInfoEndpointHeaders,
+  // Always use the Authorization header (RFC 6750 §2.1). Sending the token as a
+  // URL query parameter (§2.3) is deprecated because it leaks into server/proxy logs.
+  const userResponse = await fetch(config.OIDC_USER_INFO_ENDPOINT, {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
   });
 
   if (!userResponse.ok) {
-    const errText = await userResponse.text();
-    throw new Error(
-      `Failed to fetch user info: ${userResponse.status} ${userResponse.statusText} - ${errText}`,
-    );
+    throw new Error('Failed to fetch user info');
   }
 
-  return await userResponse.json();
+  return userResponse.json();
 }
 
 async function registerNewUser(
@@ -161,14 +161,9 @@ async function handleUserAuthentication(
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);
 
-  const dbUser = await userService.findOneByEmail(email);
-
-  let activateUser;
-
-  if (dbUser) {
-    activateUser = dbUser;
-  } else {
-    activateUser = await registerNewUser(
+  const activateUser =
+    (await userService.findOneByEmail(email)) ??
+    (await registerNewUser(
       userService,
       oauthService,
       roleService,
@@ -177,8 +172,7 @@ async function handleUserAuthentication(
       whitelistUser,
       config,
       ctx,
-    );
-  }
+    ));
 
   const jwtToken = await oauthService.generateToken(activateUser, ctx);
   oauthService.triggerSignInSuccess(activateUser);
@@ -198,11 +192,13 @@ async function oidcSignInCallback(ctx: any) {
   }
   const oidcState = ctx.cookies.get('oidc_state');
   const codeVerifier = ctx.cookies.get('oidc_code_verifier');
+  const oidcNonce = ctx.cookies.get('oidc_nonce');
 
-  // Clear one-time-use PKCE/state cookies immediately — they are no longer needed
+  // Clear one-time-use PKCE/state/nonce cookies immediately — they are no longer needed
   // after this point and should not linger in the browser.
   ctx.cookies.set('oidc_state', null);
   ctx.cookies.set('oidc_code_verifier', null);
+  ctx.cookies.set('oidc_nonce', null);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     return ctx.send(oauthService.renderSignUpError('Invalid state'));
@@ -217,7 +213,7 @@ async function oidcSignInCallback(ctx: any) {
   params.append('code_verifier', codeVerifier);
 
   try {
-    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params);
+    const userResponseData = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce);
 
     const { activateUser, jwtToken } = await handleUserAuthentication(
       userService,
@@ -236,7 +232,7 @@ async function oidcSignInCallback(ctx: any) {
     ctx.send(html);
   } catch (e) {
     console.error('ERROR CAUGHT IN OIDC SIGNIN:', e);
-    ctx.send(oauthService.renderSignUpError(e.message));
+    ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
   }
 }
 

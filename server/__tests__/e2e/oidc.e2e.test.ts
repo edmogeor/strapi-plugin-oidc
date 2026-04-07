@@ -1,5 +1,20 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+
+const MOCK_OIDC_CONFIG = {
+  REMEMBER_ME: false,
+  OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
+  OIDC_CLIENT_ID: 'mock-client-id',
+  OIDC_CLIENT_SECRET: 'mock-client-secret',
+  OIDC_SCOPES: 'openid profile email',
+  OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
+  OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
+  OIDC_USER_INFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
+  OIDC_GRANT_TYPE: 'authorization_code',
+  OIDC_FAMILY_NAME_FIELD: 'family_name',
+  OIDC_GIVEN_NAME_FIELD: 'given_name',
+  OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
+};
 
 describe('OIDC E2E Tests', () => {
   let strapi: any;
@@ -16,22 +31,7 @@ describe('OIDC E2E Tests', () => {
     strapi = (global as any).strapiInstance;
     agent = request.agent(strapi.server.httpServer);
 
-    // Give the plugin some mocked config
-    strapi.config.set('plugin::strapi-plugin-oidc', {
-      REMEMBER_ME: false,
-      OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
-      OIDC_CLIENT_ID: 'mock-client-id',
-      OIDC_CLIENT_SECRET: 'mock-client-secret',
-      OIDC_SCOPES: 'openid profile email',
-      OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
-      OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-      OIDC_USER_INFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false,
-      OIDC_GRANT_TYPE: 'authorization_code',
-      OIDC_FAMILY_NAME_FIELD: 'family_name',
-      OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
-    });
+    strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
 
     // Disable whitelist for tests
     await setSettings(false, false);
@@ -146,7 +146,7 @@ describe('OIDC E2E Tests', () => {
     // The plugin should return a 200 OK with an HTML page showing the error
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain('Not present in whitelist');
+    expect(callbackRes.text).toContain('Authentication failed. Please try again.');
   });
 
   it('should fail if callback is missing code', async () => {
@@ -179,23 +179,14 @@ describe('OIDC E2E Tests', () => {
       return !!cookie && /expires=Thu, 01 Jan 1970/i.test(cookie);
     };
 
+    const logoutWithOidcSession = () =>
+      request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .set('Cookie', 'oidc_authenticated=1')
+        .redirects(0);
+
     beforeEach(async () => {
-      // Start each test with enforceOIDC enabled and a clean state
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        REMEMBER_ME: false,
-        OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
-        OIDC_CLIENT_ID: 'mock-client-id',
-        OIDC_CLIENT_SECRET: 'mock-client-secret',
-        OIDC_SCOPES: 'openid profile email',
-        OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
-        OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-        OIDC_USER_INFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-        OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false,
-        OIDC_GRANT_TYPE: 'authorization_code',
-        OIDC_FAMILY_NAME_FIELD: 'family_name',
-        OIDC_GIVEN_NAME_FIELD: 'given_name',
-        OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
-      });
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
       await setSettings(false, true);
     });
 
@@ -343,10 +334,7 @@ describe('OIDC E2E Tests', () => {
       });
 
       it('clears oidc_authenticated cookie on logout', async () => {
-        const res = await request(strapi.server.httpServer)
-          .get('/strapi-plugin-oidc/logout')
-          .set('Cookie', 'oidc_authenticated=1')
-          .redirects(0);
+        const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
 
@@ -361,25 +349,13 @@ describe('OIDC E2E Tests', () => {
     // -------------------------------------------------------------------------
     describe('Selective OIDC logout redirect', () => {
       it('redirects to OIDC logout URL when oidc_authenticated cookie is present', async () => {
-        strapi.config.set('plugin::strapi-plugin-oidc', {
-          ...strapi.config.get('plugin::strapi-plugin-oidc'),
-          OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
-        });
-
-        const res = await request(strapi.server.httpServer)
-          .get('/strapi-plugin-oidc/logout')
-          .set('Cookie', 'oidc_authenticated=1')
-          .redirects(0);
+        const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe('https://mock-oidc.com/logout');
       });
 
       it('redirects to admin login when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
-        strapi.config.set('plugin::strapi-plugin-oidc', {
-          ...strapi.config.get('plugin::strapi-plugin-oidc'),
-          OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
-        });
         strapi.config.set('admin.url', '/admin');
 
         const res = await request(strapi.server.httpServer)

@@ -15,10 +15,6 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       OIDC_AUTHORIZATION_ENDPOINT: env('OIDC_AUTHORIZATION_ENDPOINT', 'https://mock-oidc.com/auth'),
       OIDC_TOKEN_ENDPOINT: env('OIDC_TOKEN_ENDPOINT', 'https://mock-oidc.com/token'),
       OIDC_USER_INFO_ENDPOINT: env('OIDC_USER_INFO_ENDPOINT', 'https://mock-oidc.com/userinfo'),
-      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: env.bool(
-        'OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER',
-        false,
-      ),
       OIDC_GRANT_TYPE: env('OIDC_GRANT_TYPE', 'authorization_code'),
       OIDC_LOGOUT_URL: env('OIDC_LOGOUT_URL', ''),
       OIDC_FAMILY_NAME_FIELD: env('OIDC_FAMILY_NAME_FIELD', 'family_name'),
