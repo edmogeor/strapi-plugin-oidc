@@ -54,5 +54,6 @@
   "unsaved.title": "Unsaved Changes",
   "unsaved.description": "You have unsaved changes that will be lost if you leave. Do you want to continue?",
   "unsaved.confirm": "Leave",
-  "unsaved.cancel": "Stay"
+  "unsaved.cancel": "Stay",
+  "whitelist.table.roles.default": "(Default)"
 }

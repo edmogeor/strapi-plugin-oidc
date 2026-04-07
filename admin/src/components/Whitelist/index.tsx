@@ -311,7 +311,7 @@ export default function Whitelist({
                             <span>{userRolesNames}</span>
                             {isDefault && (
                               <Typography variant="pi" textColor="neutral500">
-                                (Default)
+                                {formatMessage(getTrad('whitelist.table.roles.default'))}
                               </Typography>
                             )}
                           </Flex>
