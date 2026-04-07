@@ -217,16 +217,20 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
+    const makeLogoutCtx = () => ({
+      request: { secure: false },
+      cookies: { set: () => {} },
+      redirect(url: string) {
+        (this as any).redirectedTo = url;
+      },
+    });
+
     it('should redirect to OIDC provider logout URL if configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
         OIDC_LOGOUT_URL: 'https://mock-oidc.com/logout',
       });
 
-      const ctxLogout = {
-        redirect: (url: string) => {
-          (ctxLogout as any).redirectedTo = url;
-        },
-      };
+      const ctxLogout = makeLogoutCtx();
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('https://mock-oidc.com/logout');
@@ -236,11 +240,7 @@ describe('Controllers E2E', () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_LOGOUT_URL: undefined });
       strapi.config.set('admin.url', '/custom-admin');
 
-      const ctxLogout = {
-        redirect: (url: string) => {
-          (ctxLogout as any).redirectedTo = url;
-        },
-      };
+      const ctxLogout = makeLogoutCtx();
       await oidcController.logout(ctxLogout);
 
       expect((ctxLogout as any).redirectedTo).toBe('/custom-admin/auth/login');

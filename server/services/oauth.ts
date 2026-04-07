@@ -302,6 +302,9 @@ export default function oauthService({ strapi }) {
       }
 
       ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);
+      // Marker cookie so the enforceOIDC middleware can distinguish OIDC sessions
+      // from pre-existing local sessions. httpOnly so it cannot be forged by JS.
+      ctx.cookies.set('oidc_authenticated', '1', cookieOptions);
 
       const accessResult = await sessionManager('admin').generateAccessToken(refreshToken);
       if ('error' in accessResult) {

@@ -238,6 +238,27 @@ async function logout(ctx: any) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
   const logoutUrl = config.OIDC_LOGOUT_URL;
 
+  // Clear the httpOnly refresh cookie so the server-side enforceOIDC middleware
+  // can properly redirect to OIDC on the next request rather than letting the
+  // stale cookie pass through and causing a login page flash.
+  const isProduction = strapi.config.get('environment') === 'production';
+  const cookiePath = strapi.config.get('admin.auth.cookie.path', '/admin');
+  const domain =
+    strapi.config.get('admin.auth.cookie.domain') || strapi.config.get('admin.auth.domain');
+  const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax');
+
+  const expiredCookieOptions = {
+    httpOnly: true,
+    secure: isProduction && ctx.request.secure,
+    path: cookiePath,
+    domain,
+    sameSite,
+    maxAge: 0,
+    expires: new Date(0),
+  };
+  ctx.cookies.set('strapi_admin_refresh', '', expiredCookieOptions);
+  ctx.cookies.set('oidc_authenticated', '', expiredCookieOptions);
+
   if (logoutUrl) {
     ctx.redirect(logoutUrl);
   } else {

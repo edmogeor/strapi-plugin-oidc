@@ -37,40 +37,65 @@ export default {
 
   bootstrap() {
     let isLogoutInProgress = false;
+    let historyPatched = false;
+
+    const ENFORCE_CACHE_KEY = 'strapi_oidc_enforced';
 
     const isAuthRoute = (path: string) =>
       /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
-    // Asynchronously fetch enforceOIDC so we can intercept client-side navigations
-    // (Server-side Koa middleware already handles initial load 302 redirects)
+    // Patch history.pushState/replaceState to redirect auth routes to OIDC.
+    // Guarded so double-calls are safe.
+    const patchHistory = () => {
+      if (historyPatched) return;
+      historyPatched = true;
+
+      const interceptHistory = (originalMethod: any) => {
+        return function (
+          ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
+        ) {
+          const url = args[2];
+          if (url && typeof url === 'string') {
+            const urlWithoutQuery = url.split('?')[0].split('#')[0];
+            if (isAuthRoute(urlWithoutQuery)) {
+              if (isLogoutInProgress) {
+                // Block local navigation to login page to prevent UI flash during logout
+                return;
+              }
+              window.location.href = '/strapi-plugin-oidc/oidc';
+              return;
+            }
+          }
+          return originalMethod.apply(window.history, args);
+        };
+      };
+
+      window.history.pushState = interceptHistory(window.history.pushState);
+      window.history.replaceState = interceptHistory(window.history.replaceState);
+
+      // Redirect immediately if we're already on an auth route (e.g. hard refresh to /auth/login)
+      if (isAuthRoute(window.location.pathname)) {
+        window.location.replace('/strapi-plugin-oidc/oidc');
+      }
+    };
+
+    // Synchronously patch history from the cached value so there is zero window
+    // where React Router can render the login page on return visits.
+    if (localStorage.getItem(ENFORCE_CACHE_KEY) === '1') {
+      patchHistory();
+    }
+
+    // Async verify and keep the cache up to date.
     const checkEnforceOIDC = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
         if (response.ok) {
           const data = await response.json();
           if (data.enforceOIDC) {
-            const interceptHistory = (originalMethod: any) => {
-              return function (
-                ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
-              ) {
-                const url = args[2];
-                if (url && typeof url === 'string') {
-                  const urlWithoutQuery = url.split('?')[0].split('#')[0];
-                  if (isAuthRoute(urlWithoutQuery)) {
-                    if (isLogoutInProgress) {
-                      // Block local navigation to login page to prevent UI flash during logout
-                      return;
-                    }
-                    window.location.href = '/strapi-plugin-oidc/oidc';
-                    return;
-                  }
-                }
-                return originalMethod.apply(window.history, args);
-              };
-            };
-
-            window.history.pushState = interceptHistory(window.history.pushState);
-            window.history.replaceState = interceptHistory(window.history.replaceState);
+            localStorage.setItem(ENFORCE_CACHE_KEY, '1');
+            patchHistory(); // no-op if already patched from cache
+          } else {
+            localStorage.removeItem(ENFORCE_CACHE_KEY);
           }
         }
       } catch (error) {
