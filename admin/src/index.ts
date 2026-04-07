@@ -139,6 +139,13 @@ export default {
       patchHistory();
     }
 
+    // If we land on an auth route (no cache yet, or hard refresh), hide the page
+    // immediately so the login form never paints while the async check is in flight.
+    // The async check will either redirect (enforced) or restore visibility (not enforced).
+    if (isAuthRoute(window.location.pathname)) {
+      document.documentElement.style.visibility = 'hidden';
+    }
+
     // Async verify and keep the cache up to date.
     const checkEnforceOIDC = async () => {
       try {
