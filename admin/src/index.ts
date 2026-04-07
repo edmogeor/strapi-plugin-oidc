@@ -56,7 +56,11 @@ export default {
                 const url = args[2];
                 if (url && typeof url === 'string') {
                   const urlWithoutQuery = url.split('?')[0].split('#')[0];
-                  if (isAuthRoute(urlWithoutQuery) && !isLogoutInProgress) {
+                  if (isAuthRoute(urlWithoutQuery)) {
+                    if (isLogoutInProgress) {
+                      // Block local navigation to login page to prevent UI flash during logout
+                      return;
+                    }
                     window.location.href = '/strapi-plugin-oidc/oidc';
                     return;
                   }
