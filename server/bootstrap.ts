@@ -1,4 +1,4 @@
-import { resolveEnforceOIDC } from './utils/enforceOIDC';
+import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 
 export default async function bootstrap({ strapi }) {
   const enforceOidcMiddleware = async (ctx, next) => {
@@ -83,6 +83,24 @@ export default async function bootstrap({ strapi }) {
   ];
 
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
+
+  // If OIDC_ENFORCE is set in config, write it through to the DB so the value
+  // persists after the env var is removed.
+  const enforceOIDCConfig = getEnforceOIDCConfig(strapi);
+  if (enforceOIDCConfig !== null) {
+    try {
+      const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+      const settings = await whitelistService.getSettings();
+      if (settings.enforceOIDC !== enforceOIDCConfig) {
+        await whitelistService.setSettings({ ...settings, enforceOIDC: enforceOIDCConfig });
+        strapi.log.info(
+          `[strapi-plugin-oidc] OIDC_ENFORCE=${enforceOIDCConfig} written to database settings`,
+        );
+      }
+    } catch (err) {
+      strapi.log.error('[strapi-plugin-oidc] Failed to sync OIDC_ENFORCE to database:', err);
+    }
+  }
 
   try {
     const oidcRoleCount = await strapi.query('plugin::strapi-plugin-oidc.roles').count({

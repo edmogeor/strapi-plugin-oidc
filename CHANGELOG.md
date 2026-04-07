@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-04-07
+
+### Changed
+
+- `OIDC_ENFORCE` config value is now written through to the database on startup when set. This means removing the env var after a lockout recovery will leave the database in the correct state, preventing re-lockout.
+
 ## [1.3.1] - 2026-04-07
 
 ### Changed
