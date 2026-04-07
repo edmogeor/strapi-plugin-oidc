@@ -28,7 +28,7 @@ module.exports = ({ env }) => ({
   'strapi-plugin-oidc': {
     enabled: true,
     config: {
-      // Required
+      // Required — find these in your provider's OIDC discovery document
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
       OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
@@ -41,7 +41,7 @@ module.exports = ({ env }) => ({
       OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL; omit to redirect to Strapi login
+      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL for RP-initiated logout
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
@@ -50,9 +50,15 @@ module.exports = ({ env }) => ({
 });
 ```
 
+All required values come from your provider's OIDC discovery document, typically available at `https://your-provider/.well-known/openid-configuration`.
+
 ## Login
 
-Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button that is always injected into the Strapi login page.
+Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button injected into the Strapi login page.
+
+## Logout
+
+When `OIDC_END_SESSION_ENDPOINT` is set, clicking logout in Strapi redirects the browser to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
 
 ## Admin Settings
 
@@ -60,7 +66,7 @@ Manage the plugin under **Settings → OIDC Plugin**.
 
 **Default Roles** — Select which Strapi admin role(s) are assigned to new users on first login.
 
-**Whitelist** — Restrict access to specific email addresses. When the whitelist is enabled, only listed emails can log in. When empty, any successfully authenticated OIDC user gets an account. The whitelist supports:
+**Whitelist** — Restrict access to specific email addresses. When enabled, only listed emails can log in. When empty, any successfully authenticated OIDC user gets an account. The whitelist supports:
 
 - Adding individual emails with optional role overrides
 - JSON import / export (see [format](#import-format) below)
@@ -130,20 +136,14 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
 
 This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
 
-### Changes made to the original codebase:
+### Changes from the original:
 
-- Removed alternative SSO methods to simplify the plugin.
-- Redesigned the Whitelist and Role management UI (switched to native Strapi cards, added pagination, etc.).
-- Added an OIDC logout redirect URL.
-- Added an option to "Enforce OIDC login" with an admin toggle (automatically disabled if the whitelist is empty).
-- Migrated the testing framework to Vitest and added comprehensive test coverage for controllers and services.
-- Cleaned up dead code and unused dependencies to improve maintainability.
-- Upgraded to use newer versions of Node.js.
-- Added styled success and error pages.
-- Always injects a "Login via SSO" button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`. When enforcement is on, standard login fields are hidden so only the SSO button is visible.
-- Whitelist improvements:
-  - JSON import and export (uses human-readable role names).
-  - Bulk delete all entries with a confirmation dialog.
-  - Unsaved changes confirmation when navigating away from the settings page.
-  - Programmatic API for managing the whitelist via Strapi API tokens (list, register, import, delete, delete all).
-- Added misc. quality of life improvements and bug fixes.
+- Removed alternative SSO methods to focus solely on OIDC.
+- Redesigned the Whitelist and Role management UI using native Strapi components.
+- Added OIDC enforcement with an admin toggle and config override (`OIDC_ENFORCE`).
+- Added RP-initiated logout with smart session detection — skips the provider redirect if the session is already expired.
+- Migrated to Vitest with comprehensive e2e test coverage.
+- Config variable names aligned with OIDC discovery document field names (`OIDC_SCOPE`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`).
+- Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
+- Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API.
+- Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
