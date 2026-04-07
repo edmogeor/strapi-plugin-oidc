@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-07
+
+### Added
+
+- `OIDC_ENFORCE` config variable overrides the Admin UI enforcement toggle and takes priority over the database setting. Set to `false` to regain access if locked out, then restart Strapi. When set, the toggle in the Admin UI is disabled and an info notice is shown.
+- SSO login button is now always injected on the Strapi login page (no longer requires a toggle). Includes a key icon for visual differentiation. Button text remains configurable via `OIDC_SSO_BUTTON_TEXT`.
+
+### Changed
+
+- Enforcement no longer redirects users away from the login page server-side. Instead, when enforcement is enabled the standard login fields (email, password, remember-me, submit button, forgot-password link) are removed from the DOM client-side via `MutationObserver`, leaving only the SSO button.
+- Removed `showSSOButton` and `ssoButtonText` from database settings. The SSO button is always present; button text is controlled by the `OIDC_SSO_BUTTON_TEXT` config option.
+- Extracted shared `OIDC_ENFORCE` resolution logic into `server/utils/enforceOIDC.ts` to avoid duplication between the middleware and controller.
+- All translation strings fall back to `en.json` as the single source of truth; no hardcoded duplicates.
+
+### Fixed
+
+- `OIDC_ENFORCE` env variable (`"true"`/`"false"` strings) is now correctly parsed as boolean, preventing enforcement remaining active when set to `"false"`.
+
 ## [1.2.4] - 2026-04-07
 
 ### Fixed
