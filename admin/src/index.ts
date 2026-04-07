@@ -37,34 +37,22 @@ export default {
 
   bootstrap() {
     let isLogoutInProgress = false;
+    let enforceOIDC = false;
 
     const isAuthRoute = (path: string) => {
       const match = path.match(/\/auth\/(login|register|forgot-password|reset-password)/);
       return match !== null;
     };
 
-    const initialPath = window.location.pathname;
-    let styleElem: HTMLStyleElement | null = null;
-    if (isAuthRoute(initialPath) && !isLogoutInProgress) {
-      styleElem = document.createElement('style');
-      styleElem.innerHTML = 'body { display: none !important; }';
-      document.head.appendChild(styleElem);
-    }
-
-    let willRedirect = false;
-
+    // Asynchronously fetch enforceOIDC so we can intercept client-side navigations
+    // (Server-side Koa middleware already handles initial load 302 redirects)
     const checkEnforceOIDC = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
         if (response.ok) {
           const data = await response.json();
           if (data.enforceOIDC) {
-            const currentPath = window.location.pathname;
-            if (isAuthRoute(currentPath) && !isLogoutInProgress) {
-              willRedirect = true;
-              window.location.href = '/strapi-plugin-oidc/oidc';
-              return;
-            }
+            enforceOIDC = true;
 
             const interceptHistory = (originalMethod: any) => {
               return function (
@@ -88,10 +76,6 @@ export default {
         }
       } catch (error) {
         console.error('Failed to check OIDC enforcement setting:', error);
-      } finally {
-        if (!willRedirect && styleElem && styleElem.parentNode) {
-          styleElem.parentNode.removeChild(styleElem);
-        }
       }
     };
     checkEnforceOIDC();
@@ -110,6 +94,8 @@ export default {
 
       if (isLogout && response.ok) {
         window.location.href = '/strapi-plugin-oidc/logout';
+        // Return a pending promise to prevent Strapi from completing the logout redirect
+        return new Promise(() => {});
       } else if (isLogout) {
         isLogoutInProgress = false; // Reset if logout failed
       }

@@ -84,7 +84,10 @@ describe('OIDC E2E Tests', () => {
     expect(localLoginAllowed.status).not.toBe(403);
 
     // Ensure GET to /admin/auth/login doesn't redirect
-    const getLoginAllowed = await agent.get('/admin/auth/login').redirects(0);
+    const getLoginAllowed = await agent
+      .get('/admin/auth/login')
+      .set('Accept', 'text/html')
+      .redirects(0);
     expect(getLoginAllowed.status).not.toBe(302);
 
     // 2. Enable enforceOIDC in settings
@@ -104,15 +107,46 @@ describe('OIDC E2E Tests', () => {
     expect(localLoginBlocked.status).toBe(403);
     expect(localLoginBlocked.body.error.message).toContain('Local login is disabled');
 
-    // Ensure GET to /admin/auth/login redirects to OIDC
-    const getLoginBlocked = await agent.get('/admin/auth/login').redirects(0);
+    // Ensure other POST auth routes are blocked
+    const registerBlocked = await agent.post('/admin/register').send({});
+    expect(registerBlocked.status).toBe(403);
+
+    const forgotPasswordBlocked = await agent.post('/admin/forgot-password').send({});
+    expect(forgotPasswordBlocked.status).toBe(403);
+
+    const resetPasswordBlocked = await agent.post('/admin/reset-password').send({});
+    expect(resetPasswordBlocked.status).toBe(403);
+
+    // Ensure GET HTML routes redirect to OIDC
+    const unauthAgent = request.agent(strapi.server.httpServer);
+
+    const getLoginBlocked = await unauthAgent
+      .get('/admin/auth/login')
+      .set('Accept', 'text/html')
+      .redirects(0);
     expect(getLoginBlocked.status).toBe(302);
     expect(getLoginBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
 
-    // Ensure GET to /admin/auth/register redirects to OIDC
-    const getRegisterBlocked = await agent.get('/admin/auth/register').redirects(0);
+    const getRegisterBlocked = await unauthAgent
+      .get('/admin/auth/register')
+      .set('Accept', 'text/html')
+      .redirects(0);
     expect(getRegisterBlocked.status).toBe(302);
     expect(getRegisterBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
+
+    const getForgotPasswordBlocked = await unauthAgent
+      .get('/admin/auth/forgot-password')
+      .set('Accept', 'text/html')
+      .redirects(0);
+    expect(getForgotPasswordBlocked.status).toBe(302);
+    expect(getForgotPasswordBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
+
+    const getResetPasswordBlocked = await unauthAgent
+      .get('/admin/auth/reset-password')
+      .set('Accept', 'text/html')
+      .redirects(0);
+    expect(getResetPasswordBlocked.status).toBe(302);
+    expect(getResetPasswordBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
