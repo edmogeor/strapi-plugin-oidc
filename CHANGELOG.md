@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-07
+
+### Added
+
+- **Whitelist import / export** — upload a JSON file to bulk-add entries; export the current list to JSON. Role names are used in the file (resolved to IDs on import) for readability. Duplicate emails and entries already in the whitelist are silently skipped. If an imported email already exists as a Strapi admin user, their current roles are used automatically.
+- **Delete All** — new button in the whitelist toolbar with a confirmation dialog. Clears all whitelist entries at once.
+- **Unsaved changes modal** — navigating away from the Settings page with unsaved changes now prompts a confirmation dialog (Leave / Stay), powered by React Router's `useBlocker`.
+- **"(Default)" role label** — whitelist entries that have no explicit roles assigned now show their effective default role(s) with a `(Default)` badge in the table.
+- **Programmatic Whitelist API** — whitelist can now be managed via Strapi API tokens (Full Access). All endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`:
+  - `GET /whitelist` — list all entries
+  - `POST /whitelist` — add one or more emails
+  - `POST /whitelist/import` — bulk import from a JSON array
+  - `DELETE /whitelist/:id` — remove an entry by ID
+  - `DELETE /whitelist` — remove all entries
+
+### Changed
+
+- Routes restructured to the correct Strapi v5 `{ admin, content-api }` object format, enabling API-token authentication on content-api routes while preserving admin-session authentication on the existing admin routes.
+
 ## [1.3.2] - 2026-04-07
 
 ### Changed
