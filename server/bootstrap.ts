@@ -7,6 +7,7 @@ export default async function bootstrap({ strapi }) {
     const authRoutes = [
       `${adminUrl}/login`,
       `${adminUrl}/register`,
+      `${adminUrl}/register-admin`,
       `${adminUrl}/forgot-password`,
       `${adminUrl}/reset-password`,
     ];

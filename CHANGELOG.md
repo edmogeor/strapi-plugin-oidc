@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-04-07
+
+### Security
+
+- Block `POST /admin/register-admin` when OIDC is enforced. This route (initial super-admin setup) was previously missing from the enforcement middleware, allowing it to be reached even with local login disabled.
+
 ## [1.4.1] - 2026-04-07
 
 ### Security

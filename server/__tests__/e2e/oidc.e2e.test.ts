@@ -256,6 +256,19 @@ describe('OIDC E2E Tests', () => {
         expect(res.status).toBe(403);
       });
 
+      it('blocks POST /admin/register-admin directly', async () => {
+        const res = await request(strapi.server.httpServer)
+          .post('/admin/register-admin')
+          .send({
+            firstname: 'Test',
+            lastname: 'User',
+            email: 'test@test.com',
+            password: 'Password1!',
+          });
+
+        expect(res.status).toBe(403);
+      });
+
       it('blocks POST /admin/forgot-password directly', async () => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/forgot-password')
