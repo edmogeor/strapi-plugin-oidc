@@ -102,4 +102,5 @@ This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.
 - Cleaned up dead code and unused dependencies to improve maintainability.
 - Upgraded to use newer versions of Node.js.
 - Added styled success and error pages.
+- Added an optional "Login via SSO" button on the Strapi login page, allowing users to authenticate via OIDC without enforcing it for everyone. Button text is configurable from the admin settings.
 - Added misc. quality of life improvements and bug fixes.
