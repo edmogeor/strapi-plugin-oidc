@@ -199,6 +199,11 @@ async function oidcSignInCallback(ctx: any) {
   const oidcState = ctx.cookies.get('oidc_state');
   const codeVerifier = ctx.cookies.get('oidc_code_verifier');
 
+  // Clear one-time-use PKCE/state cookies immediately — they are no longer needed
+  // after this point and should not linger in the browser.
+  ctx.cookies.set('oidc_state', null);
+  ctx.cookies.set('oidc_code_verifier', null);
+
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     return ctx.send(oauthService.renderSignUpError('Invalid state'));
   }

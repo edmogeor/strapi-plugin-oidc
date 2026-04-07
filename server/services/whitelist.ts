@@ -24,8 +24,6 @@ export default function whitelistService({ strapi }) {
         settings = {
           useWhitelist: true,
           enforceOIDC: false,
-          showSSOButton: true,
-          ssoButtonText: 'Login via SSO',
         };
         await getPluginStore().set({ key: 'settings', value: settings });
       }

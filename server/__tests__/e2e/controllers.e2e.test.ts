@@ -69,7 +69,6 @@ describe('Controllers E2E', () => {
       const ctxPublic = { body: null };
       await whitelistController.publicSettings(ctxPublic);
       expect(ctxPublic.body).toMatchObject({ enforceOIDC: true });
-      expect(ctxPublic.body).toHaveProperty('showSSOButton');
       expect(ctxPublic.body).toHaveProperty('ssoButtonText');
     });
 

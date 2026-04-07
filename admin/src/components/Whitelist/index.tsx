@@ -282,7 +282,7 @@ export default function Whitelist({
                         setPage((p) => Math.max(1, p - 1));
                       }}
                     >
-                      Go to previous page
+                      {formatMessage(getTrad('pagination.previous'))}
                     </PreviousLink>
                     {Array.from({ length: pageCount }).map((_, i) => (
                       <PageLink
@@ -294,7 +294,7 @@ export default function Whitelist({
                           setPage(i + 1);
                         }}
                       >
-                        Go to page {i + 1}
+                        {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
                       </PageLink>
                     ))}
                     <NextLink
@@ -304,7 +304,7 @@ export default function Whitelist({
                         setPage((p) => Math.min(pageCount, p + 1));
                       }}
                     >
-                      Go to next page
+                      {formatMessage(getTrad('pagination.next'))}
                     </NextLink>
                   </Pagination>
                 </Flex>

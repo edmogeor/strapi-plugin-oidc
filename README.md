@@ -37,38 +37,32 @@ module.exports = ({ env }) => ({
   'strapi-plugin-oidc': {
     enabled: true,
     config: {
-      // Set to true to store the token in local storage, false for session storage
-      REMEMBER_ME: false,
-      // How long the remember me session should last in days (defaults to 30 days)
-      REMEMBER_ME_DAYS: 30,
-
-      // OpenID Connect Settings
-      OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback', // Callback URI after successful login
+      // --- Required ---
       OIDC_CLIENT_ID: '[Client ID from OpenID Provider]',
       OIDC_CLIENT_SECRET: '[Client Secret from OpenID Provider]',
-
-      OIDC_SCOPES: 'openid profile email', // Standard OIDC scopes
-
-      // API Endpoints required for OIDC provider
+      OIDC_REDIRECT_URI: '[Your Strapi URL]/strapi-plugin-oidc/oidc/callback',
       OIDC_AUTHORIZATION_ENDPOINT: '[Authorization Endpoint]',
       OIDC_TOKEN_ENDPOINT: '[Token Endpoint]',
       OIDC_USER_INFO_ENDPOINT: '[User Info Endpoint]',
-      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false,
+
+      // --- Defaults provided — only set if your provider differs ---
+      OIDC_SCOPES: 'openid profile email',
       OIDC_GRANT_TYPE: 'authorization_code',
+      OIDC_FAMILY_NAME_FIELD: 'family_name', // OIDC claim for the user's surname
+      OIDC_GIVEN_NAME_FIELD: 'given_name', // OIDC claim for the user's first name
 
-      // Customizable user field mapping for user creation
-      OIDC_FAMILY_NAME_FIELD: 'family_name',
-      OIDC_GIVEN_NAME_FIELD: 'given_name',
-
-      // Redirect to OIDC provider's logout page when users log out of Strapi
-      OIDC_LOGOUT_URL: '[OIDC Provider Logout URL]',
+      // --- Optional ---
+      OIDC_USER_INFO_ENDPOINT_WITH_AUTH_HEADER: false, // true = Bearer token header, false = query param
+      OIDC_LOGOUT_URL: '', // OIDC provider logout URL; omit to return to Strapi login instead
+      OIDC_SSO_BUTTON_TEXT: 'Login via SSO', // Text on the SSO button injected into the login page
+      OIDC_ENFORCE: null, // null = use Admin UI setting; true/false = override it in config
+      REMEMBER_ME: false, // true = persist session in localStorage across browser restarts
+      REMEMBER_ME_DAYS: 30, // Session duration in days when REMEMBER_ME is true
     },
   },
   // ...
 });
 ```
-
-Make sure to replace the placeholder values (e.g., `[Client ID from OpenID Provider]`) with the actual connection details from your chosen OIDC identity provider.
 
 ## How to Login
 
@@ -85,7 +79,9 @@ Once the plugin is installed and configured, you can manage the OIDC settings fr
 
 - **Whitelist Management**: Restrict login to specific users by adding their email addresses to the whitelist. You can also whitelist entire email domains (e.g., `*@company.com`). If the whitelist is empty, any user who successfully authenticates via your OIDC provider will be able to log in and an account will be automatically created for them.
 - **Default Role Assignment**: Select the default Strapi admin role that will be assigned to newly created users when they log in for the first time via OIDC.
-- **Enforce OIDC Login**: When enabled, the default Strapi email and password login form will be disabled and the standard login will be redirected to the OIDC login URL, forcing all administrators to log in using your OIDC provider. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
+- **SSO Login Button**: A "Login via SSO" button is always injected into the Strapi login page, allowing users to authenticate via OIDC. The button text is configurable via the `OIDC_SSO_BUTTON_TEXT` config option.
+- **Enforce OIDC Login**: When enabled, the standard email/password fields, remember me checkbox, and login button are hidden on the login page, leaving only the SSO button. All direct login API calls are also blocked server-side. _(Note: This option is automatically disabled and grayed out if your whitelist is empty to prevent accidentally locking everyone out of the admin panel)._
+- **`OIDC_ENFORCE` config override**: Setting `OIDC_ENFORCE: true` or `OIDC_ENFORCE: false` in your plugin config takes priority over the Admin UI toggle and locks it. Set `OIDC_ENFORCE: false` in your config to regain access if you are ever locked out, then restart Strapi.
 
 ## Credits & Changes
 
@@ -102,5 +98,5 @@ This plugin is a hard fork of the original [`strapi-plugin-sso`](https://github.
 - Cleaned up dead code and unused dependencies to improve maintainability.
 - Upgraded to use newer versions of Node.js.
 - Added styled success and error pages.
-- Added an optional "Login via SSO" button on the Strapi login page, allowing users to authenticate via OIDC without enforcing it for everyone. Button text is configurable from the admin settings.
+- Always injects a "Login via SSO" button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`. When enforcement is on, standard login fields are hidden so only the SSO button is visible.
 - Added misc. quality of life improvements and bug fixes.

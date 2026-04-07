@@ -16,7 +16,12 @@ export function SuccessAlertMessage({ onClose }: { onClose: () => void }) {
   const { formatMessage } = useIntl();
   return (
     <AlertMessage>
-      <Alert title="Success" variant={'success'} closeLabel={''} onClose={onClose}>
+      <Alert
+        title={formatMessage(getTrad('alert.title.success'))}
+        variant={'success'}
+        closeLabel={''}
+        onClose={onClose}
+      >
         {formatMessage(getTrad('page.save.success'))}
       </Alert>
     </AlertMessage>
@@ -27,7 +32,12 @@ export function ErrorAlertMessage({ onClose }: { onClose: () => void }) {
   const { formatMessage } = useIntl();
   return (
     <AlertMessage>
-      <Alert title="Error" variant={'danger'} closeLabel={''} onClose={onClose}>
+      <Alert
+        title={formatMessage(getTrad('alert.title.error'))}
+        variant={'danger'}
+        closeLabel={''}
+        onClose={onClose}
+      >
         {formatMessage(getTrad('page.save.error'))}
       </Alert>
     </AlertMessage>
@@ -45,7 +55,12 @@ export function MatchedUserAlertMessage({
   const id = count > 1 ? 'whitelist.users_exists' : 'whitelist.user_exists';
   return (
     <AlertMessage>
-      <Alert title="Info" variant={'default'} closeLabel={''} onClose={onClose}>
+      <Alert
+        title={formatMessage(getTrad('alert.title.info'))}
+        variant={'default'}
+        closeLabel={''}
+        onClose={onClose}
+      >
         {formatMessage(getTrad(id))}
       </Alert>
     </AlertMessage>

@@ -118,36 +118,14 @@ describe('OIDC E2E Tests', () => {
     const resetPasswordBlocked = await agent.post('/admin/reset-password').send({});
     expect(resetPasswordBlocked.status).toBe(403);
 
-    // Ensure GET HTML routes redirect to OIDC
+    // GET HTML routes should NOT redirect — enforcement is handled client-side via DOM removal
     const unauthAgent = request.agent(strapi.server.httpServer);
 
-    const getLoginBlocked = await unauthAgent
+    const getLoginAllowedEnforced = await unauthAgent
       .get('/admin/auth/login')
       .set('Accept', 'text/html')
       .redirects(0);
-    expect(getLoginBlocked.status).toBe(302);
-    expect(getLoginBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
-
-    const getRegisterBlocked = await unauthAgent
-      .get('/admin/auth/register')
-      .set('Accept', 'text/html')
-      .redirects(0);
-    expect(getRegisterBlocked.status).toBe(302);
-    expect(getRegisterBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
-
-    const getForgotPasswordBlocked = await unauthAgent
-      .get('/admin/auth/forgot-password')
-      .set('Accept', 'text/html')
-      .redirects(0);
-    expect(getForgotPasswordBlocked.status).toBe(302);
-    expect(getForgotPasswordBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
-
-    const getResetPasswordBlocked = await unauthAgent
-      .get('/admin/auth/reset-password')
-      .set('Accept', 'text/html')
-      .redirects(0);
-    expect(getResetPasswordBlocked.status).toBe(302);
-    expect(getResetPasswordBlocked.headers.location).toBe('/strapi-plugin-oidc/oidc');
+    expect(getLoginAllowedEnforced.status).not.toBe(302);
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
@@ -229,18 +207,16 @@ describe('OIDC E2E Tests', () => {
     // Fix 1: Pre-existing local sessions are rejected
     // -------------------------------------------------------------------------
     describe('Fix 1: Pre-existing local sessions', () => {
-      it('redirects to OIDC and clears the refresh cookie when only strapi_admin_refresh is present', async () => {
+      it('does not redirect GET admin pages — enforcement is client-side only', async () => {
         const res = await request(strapi.server.httpServer)
           .get('/admin/auth/login')
           .set('Cookie', 'strapi_admin_refresh=some-local-token')
           .set('Accept', 'text/html')
           .redirects(0);
 
-        expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
-
-        const cookies = parseCookies(res);
-        expect(isCookieExpired(cookies, 'strapi_admin_refresh')).toBe(true);
+        // No server-side redirect — DOM removal happens in the browser
+        expect(res.status).not.toBe(302);
+        expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
 
       it('allows admin HTML through when both strapi_admin_refresh and oidc_authenticated are present', async () => {

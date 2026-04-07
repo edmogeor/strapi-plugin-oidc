@@ -15,6 +15,8 @@ export default {
     OIDC_FAMILY_NAME_FIELD: 'family_name',
     OIDC_GIVEN_NAME_FIELD: 'given_name',
     OIDC_LOGOUT_URL: '',
+    OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
+    OIDC_ENFORCE: null, // null = use DB setting; true/false = override DB (useful for lockout recovery)
   },
   validator() {},
 };

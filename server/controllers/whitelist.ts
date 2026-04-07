@@ -1,19 +1,29 @@
+function getEnforceOIDCConfig(): boolean | null {
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
+  const val = config.OIDC_ENFORCE;
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'boolean') return val;
+  if (val === 'true') return true;
+  if (val === 'false') return false;
+  return null;
+}
+
 async function info(ctx) {
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
   const settings = await whitelistService.getSettings();
   const whitelistUsers = await whitelistService.getUsers();
+  const enforceOIDCConfig = getEnforceOIDCConfig();
 
   ctx.body = {
     useWhitelist: settings.useWhitelist,
-    enforceOIDC: settings.enforceOIDC || false,
-    showSSOButton: settings.showSSOButton !== false,
-    ssoButtonText: settings.ssoButtonText || 'Login via SSO',
+    enforceOIDC: enforceOIDCConfig !== null ? enforceOIDCConfig : settings.enforceOIDC || false,
+    enforceOIDCConfig,
     whitelistUsers,
   };
 }
 
 async function updateSettings(ctx) {
-  let { useWhitelist, enforceOIDC, showSSOButton, ssoButtonText } = ctx.request.body;
+  let { useWhitelist, enforceOIDC } = ctx.request.body;
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
 
   if (useWhitelist && enforceOIDC) {
@@ -23,17 +33,18 @@ async function updateSettings(ctx) {
     }
   }
 
-  await whitelistService.setSettings({ useWhitelist, enforceOIDC, showSSOButton, ssoButtonText });
-  ctx.body = { useWhitelist, enforceOIDC, showSSOButton, ssoButtonText };
+  await whitelistService.setSettings({ useWhitelist, enforceOIDC });
+  ctx.body = { useWhitelist, enforceOIDC };
 }
 
 async function publicSettings(ctx) {
   const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
   const settings = await whitelistService.getSettings();
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
+  const enforceOIDCConfig = getEnforceOIDCConfig();
   ctx.body = {
-    enforceOIDC: settings.enforceOIDC || false,
-    showSSOButton: settings.showSSOButton !== false,
-    ssoButtonText: settings.ssoButtonText || 'Login via SSO',
+    enforceOIDC: enforceOIDCConfig !== null ? enforceOIDCConfig : settings.enforceOIDC || false,
+    ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
   };
 }
 

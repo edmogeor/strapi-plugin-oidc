@@ -21,14 +21,9 @@ export function useOidcSettings() {
   const [useWhitelist, setUseWhitelist] = useState(false);
   const [initialEnforceOIDC, setInitialEnforceOIDC] = useState(false);
   const [enforceOIDC, setEnforceOIDC] = useState(false);
+  const [enforceOIDCConfig, setEnforceOIDCConfig] = useState<boolean | null>(null);
   const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([]);
   const [users, setUsers] = useState<WhitelistUser[]>([]);
-
-  // Login settings
-  const [initialShowSSOButton, setInitialShowSSOButton] = useState(true);
-  const [showSSOButton, setShowSSOButton] = useState(true);
-  const [initialSSOButtonText, setInitialSSOButtonText] = useState('Login via SSO');
-  const [ssoButtonText, setSSOButtonText] = useState('Login via SSO');
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
@@ -45,10 +40,7 @@ export function useOidcSettings() {
       setInitialUseWhitelist(response.data.useWhitelist);
       setEnforceOIDC(response.data.enforceOIDC);
       setInitialEnforceOIDC(response.data.enforceOIDC);
-      setShowSSOButton(response.data.showSSOButton !== false);
-      setInitialShowSSOButton(response.data.showSSOButton !== false);
-      setSSOButtonText(response.data.ssoButtonText || 'Login via SSO');
-      setInitialSSOButtonText(response.data.ssoButtonText || 'Login via SSO');
+      setEnforceOIDCConfig(response.data.enforceOIDCConfig ?? null);
     });
   }, [get]);
 
@@ -84,19 +76,9 @@ export function useOidcSettings() {
     setEnforceOIDC(e.target.checked);
   };
 
-  const onToggleShowSSOButton = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setShowSSOButton(e.target.checked);
-  };
-
-  const onChangeSSOButtonText = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSSOButtonText(e.target.value);
-  };
-
   const isDirty =
     useWhitelist !== initialUseWhitelist ||
     enforceOIDC !== initialEnforceOIDC ||
-    showSSOButton !== initialShowSSOButton ||
-    ssoButtonText !== initialSSOButtonText ||
     JSON.stringify(oidcRoles) !== JSON.stringify(initialOidcRoles) ||
     JSON.stringify(users) !== JSON.stringify(initialUsers);
 
@@ -115,15 +97,11 @@ export function useOidcSettings() {
       await put('/strapi-plugin-oidc/whitelist/settings', {
         useWhitelist,
         enforceOIDC,
-        showSSOButton,
-        ssoButtonText,
       });
 
       setInitialOIDCRoles(JSON.parse(JSON.stringify(oidcRoles)));
       setInitialUseWhitelist(useWhitelist);
       setInitialEnforceOIDC(enforceOIDC);
-      setInitialShowSSOButton(showSSOButton);
-      setInitialSSOButtonText(ssoButtonText);
 
       get('/strapi-plugin-oidc/whitelist').then((getResponse) => {
         setUsers(getResponse.data.whitelistUsers);
@@ -156,10 +134,9 @@ export function useOidcSettings() {
       roles,
       useWhitelist,
       enforceOIDC,
+      enforceOIDCConfig,
       initialEnforceOIDC,
       users,
-      showSSOButton,
-      ssoButtonText,
       isDirty,
     },
     actions: {
@@ -171,8 +148,6 @@ export function useOidcSettings() {
       onDeleteWhitelist,
       onToggleWhitelist,
       onToggleEnforce,
-      onToggleShowSSOButton,
-      onChangeSSOButtonText,
       onSaveAll,
     },
   };

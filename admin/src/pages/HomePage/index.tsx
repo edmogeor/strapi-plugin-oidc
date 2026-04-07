@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import { Box, Flex, Typography, Button, TextInput } from '@strapi/design-system';
-import { WarningCircle } from '@strapi/icons';
+import { Box, Flex, Typography, Button } from '@strapi/design-system';
+import { WarningCircle, Information } from '@strapi/icons';
 import { Page, Layouts } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
@@ -74,26 +74,40 @@ function HomePage() {
                 {formatMessage(getTrad('login.settings.title'))}
               </Typography>
             </Box>
-            <Flex direction="column" alignItems="stretch" gap={4}>
-              <Flex direction="column" alignItems="stretch" gap={2}>
-                <Flex alignItems="center" gap={3} wrap="wrap">
-                  <Typography variant="omega" style={{ minWidth: '280px' }}>
-                    {formatMessage(getTrad('enforce.title'))}
-                  </Typography>
-                  <Box minWidth="160px">
-                    <CustomSwitch
-                      checked={state.enforceOIDC}
-                      onChange={actions.onToggleEnforce}
-                      disabled={state.useWhitelist && state.users.length === 0}
-                      label={
-                        state.enforceOIDC
-                          ? formatMessage(getTrad('enforce.toggle.enabled'))
-                          : formatMessage(getTrad('enforce.toggle.disabled'))
-                      }
-                    />
-                  </Box>
-                </Flex>
-                {state.enforceOIDC && state.enforceOIDC !== state.initialEnforceOIDC && (
+            <Flex direction="column" alignItems="stretch" gap={2}>
+              <Flex alignItems="center" gap={3} wrap="wrap">
+                <Typography variant="omega" style={{ minWidth: '280px' }}>
+                  {formatMessage(getTrad('enforce.title'))}
+                </Typography>
+                <Box minWidth="160px">
+                  <CustomSwitch
+                    checked={state.enforceOIDC}
+                    onChange={actions.onToggleEnforce}
+                    disabled={
+                      state.enforceOIDCConfig !== null ||
+                      (state.useWhitelist && state.users.length === 0)
+                    }
+                    label={
+                      state.enforceOIDC
+                        ? formatMessage(getTrad('enforce.toggle.enabled'))
+                        : formatMessage(getTrad('enforce.toggle.disabled'))
+                    }
+                  />
+                </Box>
+              </Flex>
+              {state.enforceOIDCConfig !== null && (
+                <Box background="primary100" padding={3} hasRadius>
+                  <Flex gap={3} alignItems="center">
+                    <Information fill="primary600" />
+                    <Typography textColor="primary600">
+                      {formatMessage(getTrad('enforce.config.info'))}
+                    </Typography>
+                  </Flex>
+                </Box>
+              )}
+              {state.enforceOIDCConfig === null &&
+                state.enforceOIDC &&
+                state.enforceOIDC !== state.initialEnforceOIDC && (
                   <Box background="danger100" padding={3} hasRadius>
                     <Flex gap={3} alignItems="center">
                       <WarningCircle fill="danger600" />
@@ -103,43 +117,6 @@ function HomePage() {
                     </Flex>
                   </Box>
                 )}
-              </Flex>
-              <Flex alignItems="center" gap={3} wrap="wrap">
-                <Typography variant="omega" style={{ minWidth: '280px' }}>
-                  {formatMessage(getTrad('login.sso.show'))}
-                </Typography>
-                <Box minWidth="160px">
-                  <CustomSwitch
-                    checked={state.showSSOButton}
-                    onChange={actions.onToggleShowSSOButton}
-                    label={
-                      state.showSSOButton
-                        ? formatMessage(getTrad('enforce.toggle.enabled'))
-                        : formatMessage(getTrad('enforce.toggle.disabled'))
-                    }
-                  />
-                </Box>
-              </Flex>
-              {state.showSSOButton && (
-                <Flex alignItems="center" gap={3} wrap="wrap">
-                  <Typography
-                    variant="omega"
-                    tag="label"
-                    htmlFor="sso-button-text"
-                    style={{ minWidth: '280px' }}
-                  >
-                    {formatMessage(getTrad('login.sso.button.text.label'))}
-                  </Typography>
-                  <Box style={{ flex: 1, minWidth: '160px' }}>
-                    <TextInput
-                      id="sso-button-text"
-                      aria-label={formatMessage(getTrad('login.sso.button.text.label'))}
-                      value={state.ssoButtonText}
-                      onChange={actions.onChangeSSOButtonText}
-                    />
-                  </Box>
-                </Flex>
-              )}
             </Flex>
           </Box>
           <Flex justifyContent="flex-end">

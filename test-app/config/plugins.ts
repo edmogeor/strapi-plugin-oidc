@@ -23,6 +23,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       OIDC_LOGOUT_URL: env('OIDC_LOGOUT_URL', ''),
       OIDC_FAMILY_NAME_FIELD: env('OIDC_FAMILY_NAME_FIELD', 'family_name'),
       OIDC_GIVEN_NAME_FIELD: env('OIDC_GIVEN_NAME_FIELD', 'given_name'),
+      OIDC_ENFORCE: env('OIDC_ENFORCE', null),
     },
   },
 });

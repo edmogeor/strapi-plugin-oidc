@@ -1,5 +1,3 @@
-import { clearAuthCookies } from './utils/cookies';
-
 export default async function bootstrap({ strapi }) {
   const enforceOidcMiddleware = async (ctx, next) => {
     const adminUrl = strapi.config.get('admin.url', '/admin');
@@ -12,21 +10,30 @@ export default async function bootstrap({ strapi }) {
     ];
 
     const isPostAuth = authRoutes.includes(ctx.request.path) && ctx.request.method === 'POST';
-    // Fix 4: also block token refresh for non-OIDC sessions
     const isTokenRefresh =
       ctx.request.path === `${adminUrl}/token/refresh` && ctx.request.method === 'POST';
-    const isHtmlRequest =
-      ctx.request.accepts('html', 'json') === 'html' && !ctx.request.path.match(/\.[a-zA-Z0-9]+$/);
-    const isGetAdminHtml =
-      ctx.request.method === 'GET' && ctx.request.path.startsWith(adminUrl) && isHtmlRequest;
 
-    if (isPostAuth || isTokenRefresh || isGetAdminHtml) {
+    if (isPostAuth || isTokenRefresh) {
       try {
         const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
         const settings = await whitelistService.getSettings();
 
-        if (settings?.enforceOIDC) {
-          // Fix 2: block all local auth POST endpoints
+        const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
+        const oidcEnforceVal = config.OIDC_ENFORCE;
+        const enforceOIDCConfig =
+          oidcEnforceVal === null || oidcEnforceVal === undefined
+            ? null
+            : typeof oidcEnforceVal === 'boolean'
+              ? oidcEnforceVal
+              : oidcEnforceVal === 'true'
+                ? true
+                : oidcEnforceVal === 'false'
+                  ? false
+                  : null;
+        const enforceOIDC =
+          enforceOIDCConfig !== null ? enforceOIDCConfig : (settings?.enforceOIDC ?? false);
+
+        if (enforceOIDC) {
           if (isPostAuth) {
             ctx.status = 403;
             ctx.body = {
@@ -43,7 +50,6 @@ export default async function bootstrap({ strapi }) {
 
           const hasOidcSession = !!ctx.cookies.get('oidc_authenticated');
 
-          // Fix 4: block token refresh for sessions not created via OIDC
           if (isTokenRefresh && !hasOidcSession) {
             ctx.status = 401;
             ctx.body = {
@@ -56,23 +62,6 @@ export default async function bootstrap({ strapi }) {
               },
             };
             return;
-          }
-
-          if (isGetAdminHtml) {
-            const hasRefreshCookie = !!ctx.cookies.get('strapi_admin_refresh');
-
-            // Fix 1: pre-existing local session — has a refresh cookie but no OIDC marker.
-            // Clear the stale cookie and redirect to OIDC so they must re-authenticate.
-            if (hasRefreshCookie && !hasOidcSession) {
-              clearAuthCookies(strapi, ctx);
-              ctx.redirect('/strapi-plugin-oidc/oidc');
-              return;
-            }
-
-            if (!hasRefreshCookie) {
-              ctx.redirect('/strapi-plugin-oidc/oidc');
-              return;
-            }
           }
         }
       } catch (err) {

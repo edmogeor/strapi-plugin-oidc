@@ -2,7 +2,7 @@ import { getTranslation } from './utils/getTranslation';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 import Initializer from './components/Initializer';
-import en from './translations/en.json';
+import { t, en } from './utils/getTrad';
 
 const name = pluginPkg.strapi.displayName;
 
@@ -37,66 +37,16 @@ export default {
   },
 
   bootstrap() {
-    let isLogoutInProgress = false;
-    let historyPatched = false;
-
-    const ENFORCE_CACHE_KEY = 'strapi_oidc_enforced';
+    const defaultButtonText = t('login.sso');
 
     const isAuthRoute = (path: string) =>
       /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
-    // Patch history.pushState/replaceState to redirect auth routes to OIDC.
-    // Guarded so double-calls are safe.
-    const patchHistory = () => {
-      if (historyPatched) return;
-      historyPatched = true;
-
-      const interceptHistory = (originalMethod: any) => {
-        return function (
-          ...args: [data: unknown, unused: string, url?: string | URL | null | undefined]
-        ) {
-          const url = args[2];
-          if (url && typeof url === 'string') {
-            const urlWithoutQuery = url.split('?')[0].split('#')[0];
-            if (isAuthRoute(urlWithoutQuery)) {
-              if (isLogoutInProgress) {
-                // Block local navigation to login page to prevent UI flash during logout
-                return;
-              }
-              if (sessionStorage.getItem('oidc_logout')) {
-                sessionStorage.removeItem('oidc_logout');
-                return originalMethod.apply(window.history, args);
-              }
-              document.documentElement.style.visibility = 'hidden';
-              window.location.href = '/strapi-plugin-oidc/oidc';
-              return;
-            }
-          }
-          return originalMethod.apply(window.history, args);
-        };
-      };
-
-      window.history.pushState = interceptHistory(window.history.pushState);
-      window.history.replaceState = interceptHistory(window.history.replaceState);
-
-      // Redirect immediately if we're already on an auth route (e.g. hard refresh to /auth/login)
-      if (isAuthRoute(window.location.pathname)) {
-        if (sessionStorage.getItem('oidc_logout')) {
-          sessionStorage.removeItem('oidc_logout');
-          document.documentElement.style.visibility = '';
-        } else {
-          document.documentElement.style.visibility = 'hidden';
-          window.location.replace('/strapi-plugin-oidc/oidc');
-        }
-      }
-    };
-
-    // --- SSO button injection (shown on login page when enforceOIDC is false) ---
+    // --- SSO button injection + enforcement DOM removal ---
     let ssoButtonInjected = false;
-    let ssoObserver: MutationObserver | null = null;
-    let ssoButtonText = en['login.sso']; // overwritten by server settings
+    let loginObserver: MutationObserver | null = null;
 
-    const injectSSOButton = () => {
+    const injectSSOButton = (buttonText: string) => {
       if (ssoButtonInjected) return;
       if (!isAuthRoute(window.location.pathname)) return;
       if (document.getElementById('strapi-oidc-sso-btn')) return;
@@ -109,7 +59,6 @@ export default {
       btn.type = 'button';
       // Copy styled-components classes from the submit button so appearance is identical
       btn.className = submitButton.className;
-      btn.style.marginTop = '8px';
       btn.onclick = () => {
         window.location.href = '/strapi-plugin-oidc/oidc';
       };
@@ -118,88 +67,93 @@ export default {
       const innerSpan = submitButton.querySelector('span');
       const span = document.createElement('span');
       if (innerSpan) span.className = innerSpan.className;
-      span.textContent = ssoButtonText;
+      span.style.display = 'inline-flex';
+      span.style.alignItems = 'center';
+      span.style.gap = '8px';
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '16');
+      svg.setAttribute('height', '16');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('stroke-linecap', 'round');
+      svg.setAttribute('stroke-linejoin', 'round');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.innerHTML =
+        '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/>' +
+        '<circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>';
+
+      span.appendChild(svg);
+      span.appendChild(document.createTextNode(buttonText));
       btn.appendChild(span);
 
       submitButton.parentNode.insertBefore(btn, submitButton.nextSibling);
       ssoButtonInjected = true;
     };
 
-    const startSSOButtonObserver = () => {
-      if (ssoObserver) return;
-      injectSSOButton(); // try immediately in case form is already rendered
-      ssoObserver = new MutationObserver(() => {
-        if (isAuthRoute(window.location.pathname)) injectSSOButton();
+    // Remove standard login elements from the DOM when enforcement is on.
+    // Uses stable semantic selectors so it survives Strapi's hashed class names.
+    // Called on each observer tick so elements re-added by React are removed again.
+    const removeEnforcedElements = () => {
+      // Form field wrappers (email, password, remember-me) and the login submit button
+      [
+        'form > div > div:has(input[name="email"])',
+        'form > div > div:has(input[name="password"])',
+        'form > div > div:has(button[role="checkbox"])',
+        'form > div > button[type="submit"]:not(#strapi-oidc-sso-btn)',
+      ].forEach((selector) => {
+        document.querySelectorAll(selector).forEach((el) => el.remove());
       });
-      ssoObserver.observe(document.body, { childList: true, subtree: true });
+
+      // Forgot password link — remove its outer wrapper div so no empty space remains
+      document.querySelectorAll('a[href*="forgot-password"]').forEach((el) => {
+        (el.closest('div')?.parentElement ?? el).remove();
+      });
     };
 
-    const stopSSOButtonObserver = () => {
-      ssoObserver?.disconnect();
-      ssoObserver = null;
-      document.getElementById('strapi-oidc-sso-btn')?.remove();
-      ssoButtonInjected = false;
+    const startLoginObserver = (buttonText: string, enforced: boolean) => {
+      if (loginObserver) return;
+
+      const tick = () => {
+        if (!isAuthRoute(window.location.pathname)) return;
+        injectSSOButton(buttonText);
+        if (enforced) removeEnforcedElements();
+      };
+
+      tick(); // try immediately in case the form is already in the DOM
+      loginObserver = new MutationObserver(tick);
+      loginObserver.observe(document.body, { childList: true, subtree: true });
     };
-    // --- end SSO button injection ---
+    // --- end SSO button / enforcement ---
 
-    // Hide the page immediately if the user has no JWT — they will be redirected to
-    // OIDC (if enforced) or the login page will be revealed by the async check.
-    // This prevents both the loading spinner and the login form from ever painting.
-    // Skip if we just logged out — the user should land on the login page, not be
-    // looped back to OIDC.
-    if (!localStorage.getItem('jwtToken') && !sessionStorage.getItem('oidc_logout')) {
-      document.documentElement.style.visibility = 'hidden';
-    }
-
-    // Synchronously patch history from the cached value so there is zero window
-    // where React Router can render the login page on return visits.
-    if (localStorage.getItem(ENFORCE_CACHE_KEY) === '1') {
-      patchHistory();
-    }
-
-    // If we land directly on an auth route (no cache yet, or hard refresh), hide the
-    // page so the login form never paints while the async check is in flight.
-    if (isAuthRoute(window.location.pathname)) {
-      document.documentElement.style.visibility = 'hidden';
-    }
-
-    // Async verify and keep the cache up to date.
-    const checkEnforceOIDC = async () => {
+    // Fetch public settings, then start the login observer.
+    const applySettings = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
         if (response.ok) {
           const data = await response.json();
-          if (data.enforceOIDC) {
-            localStorage.setItem(ENFORCE_CACHE_KEY, '1');
-            stopSSOButtonObserver();
-            patchHistory(); // no-op if already patched from cache
-          } else {
-            localStorage.removeItem(ENFORCE_CACHE_KEY);
-            document.documentElement.style.visibility = '';
-            if (data.showSSOButton !== false) {
-              ssoButtonText = data.ssoButtonText || en['login.sso'];
-              startSSOButtonObserver();
-            } else {
-              stopSSOButtonObserver();
-            }
-          }
+          startLoginObserver(data.ssoButtonText || defaultButtonText, !!data.enforceOIDC);
+        } else {
+          startLoginObserver(defaultButtonText, false);
         }
       } catch (error) {
-        document.documentElement.style.visibility = '';
-        console.error('Failed to check OIDC enforcement setting:', error);
+        startLoginObserver(defaultButtonText, false);
+        console.error('Failed to fetch OIDC settings:', error);
       }
     };
-    checkEnforceOIDC();
+    applySettings();
 
+    // Intercept logout to route through the plugin endpoint.
+    // The server reads oidc_authenticated and decides whether to call the OIDC
+    // provider's logout URL. sessionStorage.oidc_logout prevents the enforcement
+    // redirect from looping the user back into OIDC after logout.
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       const isLogout =
         url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
-
-      if (isLogout) {
-        isLogoutInProgress = true;
-      }
 
       const response = await originalFetch(...args);
 
@@ -215,47 +169,37 @@ export default {
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
 
-        // Mark that a logout just occurred so the enforcement redirect doesn't loop
-        // the user back into OIDC after the provider redirects them back to admin.
-        // sessionStorage persists across the full redirect chain within the same tab.
-        sessionStorage.setItem('oidc_logout', '1');
-
         // Always route through the plugin logout endpoint — the server decides whether
         // to redirect to the OIDC provider based on the oidc_authenticated cookie.
         window.location.href = '/strapi-plugin-oidc/logout';
         // Return a pending promise to prevent Strapi from completing the logout redirect
         return new Promise(() => {});
-      } else if (isLogout) {
-        isLogoutInProgress = false; // Reset if logout failed
       }
 
       return response;
     };
   },
+
   async registerTrads({ locales }: { locales: string[] }) {
+    const transformKeys = (data: Record<string, string>) =>
+      Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [
+          key.startsWith('global.') ? key : getTranslation(key),
+          value,
+        ]),
+      );
+
     const importedTrads = await Promise.all(
       locales.map((locale: string) => {
-        return import(`./translations/${locale}.json`)
-          .then(({ default: data }) => {
-            const newData = Object.fromEntries(
-              Object.entries(data).map(([key, value]) => [
-                key.startsWith('global.') ? key : getTranslation(key),
-                value,
-              ]),
-            );
-            return {
-              data: newData,
-              locale,
-            };
-          })
-          .catch(() => {
-            return {
-              data: {},
-              locale,
-            };
-          });
+        if (locale === 'en') {
+          return Promise.resolve({ data: transformKeys(en), locale });
+        }
+        // Additional locale files live in translations/locales/ (e.g. fr.json, de.json)
+        return import(`./translations/locales/${locale}.json`)
+          .then(({ default: data }) => ({ data: transformKeys(data), locale }))
+          .catch(() => ({ data: {}, locale }));
       }),
     );
-    return Promise.resolve(importedTrads);
+    return importedTrads;
   },
 };
