@@ -26,10 +26,15 @@
   },
   "keywords": [
     "strapi",
-    "plugin",
+    "strapi-plugin",
+    "oidc",
     "oauth",
-    "OIDC",
-    "Zitadel"
+    "sso",
+    "authentication",
+    "keycloak",
+    "auth0",
+    "okta",
+    "azure-ad"
   ],
   "peerDependencies": {
     "@strapi/strapi": "^5.24.1",

@@ -11,7 +11,7 @@
   </p>
 </div>
 
-A Strapi plugin that provides OpenID Connect (OIDC) authentication for the Strapi Admin Panel. Supports Zitadel, Keycloak, Auth0, AWS Cognito, Okta, Azure AD, Google, GitLab, and any other OpenID Connect provider.
+A Strapi plugin that provides OpenID Connect (OIDC) authentication for the Strapi Admin Panel. Supports Keycloak, Auth0, Okta, Azure AD, and any other OpenID Connect provider.
 
 ## Installation
 
