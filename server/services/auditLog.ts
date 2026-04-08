@@ -1,10 +1,10 @@
 import type { AuditEntry, AuditLogRecord } from '../types';
+import { isAuditLogEnabled } from '../utils/pluginConfig';
 
 export default function auditLogService({ strapi }) {
   return {
     async log({ action, email, ip, metadata }: AuditEntry): Promise<void> {
-      const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
-      if (Number(config.AUDIT_LOG_RETENTION_DAYS ?? 90) === 0) return;
+      if (!isAuditLogEnabled()) return;
 
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').create({
         data: {

@@ -103,7 +103,6 @@ export default function AuditLog() {
         type: 'success',
         message: formatMessage(getTrad('auditlog.clear.success')),
       });
-      setPage(1);
       fetchLogs(1);
     } catch {
       toggleNotification({
@@ -240,9 +239,13 @@ export default function AuditLog() {
                   <Flex gap={2} alignItems="center">
                     <Typography variant="omega">{record.action}</Typography>
                     <Tooltip label={formatMessage(getTrad(`auditlog.action.${record.action}`))}>
-                      <Flex style={{ cursor: 'help' }}>
-                        <Information aria-hidden width="1.4rem" height="1.4rem" fill="primary600" />
-                      </Flex>
+                      <Information
+                        aria-hidden
+                        style={{ cursor: 'help' }}
+                        width="1.4rem"
+                        height="1.4rem"
+                        fill="primary600"
+                      />
                     </Tooltip>
                   </Flex>
                 </Td>

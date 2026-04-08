@@ -1,4 +1,5 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
+import { isAuditLogEnabled } from '../utils/pluginConfig';
 import type { WhitelistService } from '../types';
 
 function getWhitelistService(): WhitelistService {
@@ -9,14 +10,12 @@ async function info(ctx) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
   const whitelistUsers = await whitelistService.getUsers();
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
-
   ctx.body = {
     useWhitelist: settings.useWhitelist,
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     enforceOIDCConfig: getEnforceOIDCConfig(strapi),
     whitelistUsers,
-    auditLogEnabled: Number(config.AUDIT_LOG_RETENTION_DAYS ?? 90) !== 0,
+    auditLogEnabled: isAuditLogEnabled(),
   };
 }
 
