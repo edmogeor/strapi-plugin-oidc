@@ -28,7 +28,7 @@ export function useOidcSettings() {
   const [enforceOIDCConfig, setEnforceOIDCConfig] = useState<boolean | null>(null);
   const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([]);
   const [users, setUsers] = useState<WhitelistUser[]>([]);
-  const [auditLogEnabled, setAuditLogEnabled] = useState(true);
+  const [whitelistResponse, setWhitelistResponse] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
@@ -39,6 +39,7 @@ export function useOidcSettings() {
       setRoles(response.data.data);
     });
     get('/strapi-plugin-oidc/whitelist').then((response) => {
+      setWhitelistResponse(response.data);
       setUsers(response.data.whitelistUsers);
       setInitialUsers(deepClone(response.data.whitelistUsers));
       setUseWhitelist(response.data.useWhitelist);
@@ -46,7 +47,6 @@ export function useOidcSettings() {
       setEnforceOIDC(response.data.enforceOIDC);
       setInitialEnforceOIDC(response.data.enforceOIDC);
       setEnforceOIDCConfig(response.data.enforceOIDCConfig ?? null);
-      setAuditLogEnabled(response.data.auditLogEnabled ?? true);
     });
   }, [get]);
 
@@ -141,6 +141,7 @@ export function useOidcSettings() {
       setInitialEnforceOIDC(enforceOIDC);
 
       get('/strapi-plugin-oidc/whitelist').then((getResponse) => {
+        setWhitelistResponse(getResponse.data);
         setUsers(getResponse.data.whitelistUsers);
         setInitialUsers(deepClone(getResponse.data.whitelistUsers));
       });
@@ -175,7 +176,7 @@ export function useOidcSettings() {
       initialEnforceOIDC,
       users,
       isDirty,
-      auditLogEnabled,
+      auditLogEnabled: (whitelistResponse.auditLogEnabled as boolean) ?? true,
     },
     actions: {
       setSuccess,

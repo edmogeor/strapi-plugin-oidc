@@ -44,7 +44,13 @@ export default function auditLogService({ strapi }) {
     },
 
     async clearAll(): Promise<void> {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      const BATCH_SIZE = 1000;
+      let deleted: number;
+      do {
+        deleted = await strapi.db
+          .query('plugin::strapi-plugin-oidc.audit-log')
+          .deleteMany({ limit: BATCH_SIZE });
+      } while (deleted === BATCH_SIZE);
     },
 
     async cleanup(retentionDays: number): Promise<void> {
