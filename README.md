@@ -48,6 +48,7 @@ module.exports = ({ env }) => ({
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
+      AUDIT_LOG_RETENTION_DAYS: 90, // Delete audit log entries older than this many days on startup
     },
   },
 });
@@ -75,6 +76,8 @@ Manage the plugin under **Settings → OIDC Plugin**.
 - JSON import / export (see [format](#import-format) below)
 - Bulk delete with confirmation
 - Unsaved changes are held in the UI until **Save Changes** is clicked
+
+**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Records older than `AUDIT_LOG_RETENTION_DAYS` (default: 90) are automatically purged on each Strapi startup. The audit log is also accessible [via API](#audit-log-api).
 
 **Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
 
@@ -135,6 +138,72 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 ```
 
+## Audit Log API
+
+Audit log entries can be fetched programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+
+| Method | Path                                        | Description                    |
+| ------ | ------------------------------------------- | ------------------------------ |
+| `GET`  | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries  |
+| `GET`  | `/api/strapi-plugin-oidc/audit-logs/export` | All records as NDJSON download |
+
+### Query parameters (`GET /audit-logs`)
+
+| Parameter  | Default | Description      |
+| ---------- | ------- | ---------------- |
+| `page`     | `1`     | Page number      |
+| `pageSize` | `25`    | Results per page |
+
+Results are sorted newest-first. The response shape is:
+
+```json
+{
+  "results": [
+    {
+      "id": 1,
+      "action": "login_success",
+      "email": "alice@example.com",
+      "userId": 4,
+      "ip": "203.0.113.42",
+      "reason": null,
+      "metadata": { "userCreated": false },
+      "createdAt": "2026-04-08T12:00:00.000Z",
+      "updatedAt": "2026-04-08T12:00:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 25, "total": 1, "pageCount": 1 }
+}
+```
+
+### Recorded actions
+
+| Action                  | Trigger                                             |
+| ----------------------- | --------------------------------------------------- |
+| `login_success`         | Successful OIDC authentication                      |
+| `user_created`          | New Strapi admin user created during login          |
+| `login_failure`         | Generic authentication error (missing code, etc.)   |
+| `state_mismatch`        | CSRF state cookie does not match callback parameter |
+| `nonce_mismatch`        | ID token nonce does not match the session nonce     |
+| `token_exchange_failed` | Provider returned an error during token exchange    |
+| `whitelist_rejected`    | Email not present in the active whitelist           |
+| `logout`                | User logged out via `/logout`                       |
+| `session_expired`       | Logout attempted but provider session already stale |
+
+Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc::auth.<action>`, which Enterprise audit log listeners pick up automatically.
+
+### Examples
+
+```bash
+# Paginated list
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:1337/api/strapi-plugin-oidc/audit-logs?page=1&pageSize=50"
+
+# NDJSON export (pipe directly to a file or SIEM ingestor)
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:1337/api/strapi-plugin-oidc/audit-logs/export \
+  -o oidc-audit-log.ndjson
+```
+
 ## Credits & Changes
 
 This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
@@ -150,6 +219,7 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
 - Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API.
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
+- Audit log: persists every auth lifecycle event to a queryable table with Admin UI viewer, NDJSON export, configurable retention, and a REST API.
 
 ## License
 
