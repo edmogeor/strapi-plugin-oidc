@@ -11,13 +11,16 @@ async function find(ctx: StrapiContext): Promise<void> {
 }
 
 async function exportLogs(ctx: StrapiContext): Promise<void> {
-  const rows = await getAuditLogService().findAll();
+  const date = new Date().toISOString().slice(0, 10);
   ctx.set('Content-Type', 'application/x-ndjson');
-  ctx.set(
-    'Content-Disposition',
-    `attachment; filename="oidc-audit-log-${new Date().toISOString().slice(0, 10)}.ndjson"`,
-  );
-  ctx.body = rows.map((r) => JSON.stringify(r)).join('\n');
+  ctx.set('Content-Disposition', `attachment; filename="oidc-audit-log-${date}.ndjson"`);
+  ctx.body = (async function* () {
+    for await (const batch of getAuditLogService().streamExport()) {
+      for (const row of batch) {
+        yield JSON.stringify(row) + '\n';
+      }
+    }
+  })();
 }
 
 async function clearAll(ctx: StrapiContext): Promise<void> {
