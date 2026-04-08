@@ -114,20 +114,7 @@ export default function AuditLog() {
 
   const handleExport = async () => {
     try {
-      // Retrieve the admin JWT using the same storage key and JSON-encoding
-      // strategy as Strapi's getFetchClient, so it works regardless of whether
-      // "remember me" was used at login.
-      const rawToken = localStorage.getItem('jwtToken');
-      let token = '';
-      if (rawToken) {
-        try {
-          token = JSON.parse(rawToken);
-        } catch {
-          token = rawToken;
-        }
-      }
       const response = await fetch('/strapi-plugin-oidc/audit-logs/export', {
-        headers: { Authorization: `Bearer ${token}` },
         credentials: 'include',
       });
       if (!response.ok) {
