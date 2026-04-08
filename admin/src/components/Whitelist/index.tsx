@@ -399,19 +399,127 @@ export default function Whitelist({
                   >
                     {formatMessage(getTrad('pagination.previous'))}
                   </PreviousLink>
-                  {Array.from({ length: pageCount }).map((_, i) => (
-                    <PageLink
-                      key={i + 1}
-                      number={i + 1}
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setPage(i + 1);
-                      }}
-                    >
-                      {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                    </PageLink>
-                  ))}
+                  {pageCount <= 10 ? (
+                    Array.from({ length: pageCount }).map((_, i) => (
+                      <PageLink
+                        key={i + 1}
+                        number={i + 1}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(i + 1);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
+                      </PageLink>
+                    ))
+                  ) : page <= 6 ? (
+                    <>
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <PageLink
+                          key={i + 1}
+                          number={i + 1}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(i + 1);
+                          }}
+                        >
+                          {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
+                        </PageLink>
+                      ))}
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      <PageLink
+                        number={pageCount}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageCount);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: pageCount })}
+                      </PageLink>
+                    </>
+                  ) : page >= pageCount - 5 ? (
+                    <>
+                      <PageLink
+                        number={1}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(1);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
+                      </PageLink>
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      {Array.from({ length: 9 }).map((_, i) => {
+                        const pageNum = pageCount - 8 + i;
+                        return (
+                          <PageLink
+                            key={pageNum}
+                            number={pageNum}
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage(pageNum);
+                            }}
+                          >
+                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
+                          </PageLink>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      <PageLink
+                        number={1}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(1);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
+                      </PageLink>
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const pageNum = page - 3 + i;
+                        return (
+                          <PageLink
+                            key={pageNum}
+                            number={pageNum}
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage(pageNum);
+                            }}
+                          >
+                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
+                          </PageLink>
+                        );
+                      })}
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      <PageLink
+                        number={pageCount}
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageCount);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: pageCount })}
+                      </PageLink>
+                    </>
+                  )}
                   <NextLink
                     href="#"
                     onClick={(e) => {
