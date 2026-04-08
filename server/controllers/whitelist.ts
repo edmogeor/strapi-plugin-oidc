@@ -1,5 +1,6 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
+import { formatDatetimeForFilename } from '../utils/datetime';
 import type { WhitelistService, StrapiContext } from '../types';
 
 function getWhitelistService(): WhitelistService {
@@ -100,8 +101,7 @@ async function deleteAll(ctx) {
 }
 
 async function exportWhitelist(ctx: StrapiContext): Promise<void> {
-  const now = new Date();
-  const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  const datetime = formatDatetimeForFilename(new Date());
   ctx.set('Content-Type', 'application/json');
   ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-whitelist-${datetime}.json"`);
 

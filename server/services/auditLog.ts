@@ -41,29 +41,15 @@ export default function auditLogService({ strapi }) {
       });
     },
 
-    async *streamExport(batchSize = 1000): AsyncGenerator<AuditLogRecord[], void, undefined> {
-      let offset = 0;
-      while (true) {
-        const rows = await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findMany({
-          sort: { createdAt: 'desc' },
-          limit: batchSize,
-          offset,
-        });
-        if (rows.length === 0) break;
-        yield rows;
-        if (rows.length < batchSize) break;
-        offset += batchSize;
-      }
-    },
-
     async clearAll(): Promise<void> {
       const BATCH_SIZE = 1000;
-      let deleted: number;
+      let deletedCount: number;
       do {
-        deleted = await strapi.db
+        const result = await strapi.db
           .query('plugin::strapi-plugin-oidc.audit-log')
           .deleteMany({ limit: BATCH_SIZE });
-      } while (deleted === BATCH_SIZE);
+        deletedCount = result.count;
+      } while (deletedCount === BATCH_SIZE);
     },
 
     async cleanup(retentionDays: number): Promise<void> {

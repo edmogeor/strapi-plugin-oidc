@@ -1,4 +1,5 @@
 import type { StrapiContext, AuditLogService } from '../types';
+import { formatDatetimeForFilename } from '../utils/datetime';
 
 function getAuditLogService(): AuditLogService {
   return strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
@@ -11,8 +12,7 @@ async function find(ctx: StrapiContext): Promise<void> {
 }
 
 async function exportLogs(ctx: StrapiContext): Promise<void> {
-  const now = new Date();
-  const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  const datetime = formatDatetimeForFilename(new Date());
   ctx.set('Content-Type', 'application/json');
   ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-audit-log-${datetime}.json"`);
 

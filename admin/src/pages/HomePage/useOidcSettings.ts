@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { OIDCRole, RoleDef } from '../../components/Role';
 import { WhitelistUser } from '../../components/Whitelist';
+import { formatDatetimeForFilename } from '../../utils/datetime';
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -93,8 +94,7 @@ export function useOidcSettings() {
         roles: (userRoles || []).map((id) => roleMap.get(String(id)) ?? id),
       }),
     );
-    const now = new Date();
-    const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const datetime = formatDatetimeForFilename(new Date());
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
