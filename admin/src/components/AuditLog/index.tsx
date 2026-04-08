@@ -114,8 +114,12 @@ export default function AuditLog() {
 
   const handleExport = async () => {
     try {
+      // Extract token from cookie (how Strapi stores it) and send as Bearer header.
+      // The admin::isAuthenticatedAdmin policy only reads Authorization header, not cookies.
+      const cookieMatch = document.cookie.match(/(?:^|;\s*)jwtToken=([^;]+)/);
+      const token = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
       const response = await fetch('/strapi-plugin-oidc/audit-logs/export', {
-        credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         toggleNotification({
