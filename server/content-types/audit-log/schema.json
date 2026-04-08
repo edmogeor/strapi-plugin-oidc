@@ -13,7 +13,6 @@
   "attributes": {
     "action": { "type": "string", "required": true },
     "email": { "type": "string" },
-    "ip": { "type": "string" },
-    "metadata": { "type": "json" }
+    "ip": { "type": "string" }
   }
 }

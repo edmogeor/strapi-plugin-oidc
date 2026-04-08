@@ -3,7 +3,7 @@ import { isAuditLogEnabled } from '../utils/pluginConfig';
 
 export default function auditLogService({ strapi }) {
   return {
-    async log({ action, email, ip, metadata }: AuditEntry): Promise<void> {
+    async log({ action, email, ip }: AuditEntry): Promise<void> {
       if (!isAuditLogEnabled()) return;
 
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').create({
@@ -11,7 +11,6 @@ export default function auditLogService({ strapi }) {
           action,
           email: email ?? null,
           ip: ip ?? null,
-          metadata: metadata ?? null,
         },
       });
 
@@ -20,7 +19,6 @@ export default function auditLogService({ strapi }) {
         eventHub.emit(`strapi-plugin-oidc::auth.${action}`, {
           email,
           ip,
-          metadata,
           provider: 'strapi-plugin-oidc',
         });
       }

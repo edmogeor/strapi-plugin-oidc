@@ -48,7 +48,7 @@ module.exports = ({ env }) => ({
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
-      AUDIT_LOG_RETENTION_DAYS: 90, // Purge audit log entries older than this many days (runs daily at midnight)
+      AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
     },
   },
 });
@@ -77,7 +77,7 @@ Manage the plugin under **Settings → OIDC Plugin**.
 - Bulk delete with confirmation
 - Unsaved changes are held in the UI until **Save Changes** is clicked
 
-**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Records older than `AUDIT_LOG_RETENTION_DAYS` (default: 90) are automatically purged by a daily cron job that runs at midnight. The audit log is also accessible [via API](#audit-log-api).
+**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
 
 **Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
 
@@ -169,8 +169,7 @@ Results are sorted newest-first. The response shape is:
       "datetime": "2026-04-08T12:00:00.000Z",
       "action": "login_success",
       "email": "alice@example.com",
-      "ip": "203.0.113.42",
-      "metadata": null
+      "ip": "203.0.113.42"
     }
   ],
   "pagination": { "page": 1, "pageSize": 25, "total": 1, "pageCount": 1 }
@@ -219,9 +218,9 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Migrated to Vitest with comprehensive e2e test coverage.
 - Config variable names aligned with OIDC discovery document field names (`OIDC_SCOPE`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`).
 - Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
-- Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API. Delete by email rather than ID.
+- Whitelist: programmatic REST API with JSON import/export, bulk delete, delete by email, and unsaved changes guard.
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
-- Audit log: persists every auth lifecycle event to a queryable table with Admin UI viewer, NDJSON export, configurable retention, and a REST API. API and export responses strip framework fields (id, documentId, locale, publishedAt, updatedAt, createdAt) and use a single `datetime` timestamp.
+- Audit log: records all auth events to a queryable table with Admin UI, NDJSON export, and REST API. API responses use a single `datetime` field and omit framework metadata (id, documentId, locale, publishedAt, etc.). A separate `user_created` event is emitted when a Strapi admin is provisioned during login.
 
 ## License
 

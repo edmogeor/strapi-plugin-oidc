@@ -280,7 +280,6 @@ async function oidcSignInCallback(ctx: StrapiContext) {
       action: 'login_success',
       email: activateUser.email,
       ip: ctx.ip,
-      metadata: { userCreated },
     });
 
     const nonce = randomUUID();

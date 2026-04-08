@@ -93,7 +93,6 @@ export interface AuditEntry {
   action: AuditAction;
   email?: string;
   ip?: string;
-  metadata?: Record<string, unknown>;
 }
 
 export interface AuditLogRecord extends AuditEntry {
