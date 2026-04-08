@@ -326,7 +326,7 @@ async function logout(ctx: StrapiContext) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (response.ok) {
-        await auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip });
+        auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
         return ctx.redirect(logoutUrl);
       }
     } catch {

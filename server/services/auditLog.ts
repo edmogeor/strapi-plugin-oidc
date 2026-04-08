@@ -26,6 +26,12 @@ export default function auditLogService({ strapi }) {
       }
     },
 
+    async findAll(): Promise<AuditLogRecord[]> {
+      return strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    },
+
     async find({ page = 1, pageSize = 25 }: { page?: number; pageSize?: number } = {}): Promise<{
       results: AuditLogRecord[];
       pagination: { page: number; pageSize: number; total: number; pageCount: number };
@@ -37,10 +43,19 @@ export default function auditLogService({ strapi }) {
       });
     },
 
-    async findAll(): Promise<AuditLogRecord[]> {
-      return strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findMany({
-        orderBy: { createdAt: 'desc' },
-      });
+    async *streamExport(batchSize = 1000): AsyncGenerator<AuditLogRecord[], void, undefined> {
+      let page = 1;
+      while (true) {
+        const result = await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findPage({
+          sort: { createdAt: 'desc' },
+          page,
+          pageSize: batchSize,
+        });
+        if (result.results.length === 0) break;
+        yield result.results;
+        if (page >= result.pagination.pageCount) break;
+        page++;
+      }
     },
 
     async clearAll(): Promise<void> {
