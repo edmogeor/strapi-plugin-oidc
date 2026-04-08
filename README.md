@@ -91,9 +91,10 @@ The whitelist can be managed programmatically using a Strapi **API token** (Sett
 | Method   | Path                                       | Description            |
 | -------- | ------------------------------------------ | ---------------------- |
 | `GET`    | `/api/strapi-plugin-oidc/whitelist`        | List all entries       |
+| `GET`    | `/api/strapi-plugin-oidc/whitelist/export` | Export as JSON         |
 | `POST`   | `/api/strapi-plugin-oidc/whitelist`        | Add one or more emails |
 | `POST`   | `/api/strapi-plugin-oidc/whitelist/import` | Bulk import            |
-| `DELETE` | `/api/strapi-plugin-oidc/whitelist/:id`    | Remove by ID           |
+| `DELETE` | `/api/strapi-plugin-oidc/whitelist/:email` | Remove by email        |
 | `DELETE` | `/api/strapi-plugin-oidc/whitelist`        | Remove all entries     |
 
 API calls write directly to the database — there is no unsaved state.
@@ -119,6 +120,11 @@ Duplicate emails within the payload and emails already in the whitelist are sile
 curl -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 
+# Export
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:1337/api/strapi-plugin-oidc/whitelist/export \
+  -o whitelist.json
+
 # Add
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "roles": ["Editor"]}' \
@@ -129,9 +135,9 @@ curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/js
   -d '{"users": [{"email": "a@example.com", "roles": ["Editor"]}, {"email": "b@example.com"}]}' \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist/import
 
-# Delete one
+# Delete one (by email)
 curl -X DELETE -H "Authorization: Bearer <token>" \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist/42
+  "http://localhost:1337/api/strapi-plugin-oidc/whitelist/user%40example.com"
 
 # Delete all
 curl -X DELETE -H "Authorization: Bearer <token>" \
@@ -160,15 +166,11 @@ Results are sorted newest-first. The response shape is:
 {
   "results": [
     {
-      "id": 1,
+      "datetime": "2026-04-08T12:00:00.000Z",
       "action": "login_success",
       "email": "alice@example.com",
-      "userId": 4,
       "ip": "203.0.113.42",
-      "reason": null,
-      "metadata": { "userCreated": false },
-      "createdAt": "2026-04-08T12:00:00.000Z",
-      "updatedAt": "2026-04-08T12:00:00.000Z"
+      "metadata": null
     }
   ],
   "pagination": { "page": 1, "pageSize": 25, "total": 1, "pageCount": 1 }
@@ -217,9 +219,9 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Migrated to Vitest with comprehensive e2e test coverage.
 - Config variable names aligned with OIDC discovery document field names (`OIDC_SCOPE`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`).
 - Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
-- Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API.
+- Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API. Delete by email rather than ID.
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
-- Audit log: persists every auth lifecycle event to a queryable table with Admin UI viewer, NDJSON export, configurable retention, and a REST API.
+- Audit log: persists every auth lifecycle event to a queryable table with Admin UI viewer, NDJSON export, configurable retention, and a REST API. API and export responses strip framework fields (id, documentId, locale, publishedAt, updatedAt, createdAt) and use a single `datetime` timestamp.
 
 ## License
 
