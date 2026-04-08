@@ -55,5 +55,14 @@
   "unsaved.description": "You have unsaved changes that will be lost if you leave. Do you want to continue?",
   "unsaved.confirm": "Leave",
   "unsaved.cancel": "Stay",
-  "whitelist.table.roles.default": "(Default)"
+  "whitelist.table.roles.default": "(Default)",
+  "auditlog.title": "Audit Logs",
+  "auditlog.export": "Download",
+  "auditlog.table.timestamp": "Timestamp",
+  "auditlog.table.action": "Action",
+  "auditlog.table.email": "Email",
+  "auditlog.table.userId": "User ID",
+  "auditlog.table.ip": "IP",
+  "auditlog.table.reason": "Reason",
+  "auditlog.table.empty": "No audit log entries"
 }

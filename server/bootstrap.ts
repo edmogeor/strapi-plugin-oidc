@@ -126,6 +126,15 @@ export default async function bootstrap({ strapi }) {
     strapi.log.warn('Could not initialize default OIDC role:', err.message);
   }
 
+  try {
+    const pluginConfig = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
+    const retentionDays = Number(pluginConfig.AUDIT_LOG_RETENTION_DAYS ?? 90);
+    const auditLogService = strapi.plugin('strapi-plugin-oidc').service('auditLog');
+    await auditLogService.cleanup(retentionDays);
+  } catch (err) {
+    strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
+  }
+
   strapi.db.lifecycles.subscribe({
     models: ['admin::user'],
     async afterUpdate(event) {

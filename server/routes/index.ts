@@ -116,6 +116,18 @@ export default {
         handler: 'whitelist.deleteAll',
         config: adminPolicies('update'),
       },
+      {
+        method: 'GET',
+        path: '/audit-logs',
+        handler: 'auditLog.find',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs/export',
+        handler: 'auditLog.export',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
     ],
   },
 

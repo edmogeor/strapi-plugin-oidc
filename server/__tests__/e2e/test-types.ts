@@ -6,6 +6,7 @@ import type {
   RoleService,
   OAuthService,
   AdminRole,
+  AuditLogService,
 } from '../../types';
 
 export type {
@@ -15,6 +16,7 @@ export type {
   RoleService,
   OAuthService,
   AdminRole,
+  AuditLogService,
 };
 
 /** Typed global used by setup.ts and all test files. */

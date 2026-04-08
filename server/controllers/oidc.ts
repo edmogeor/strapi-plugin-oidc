@@ -9,6 +9,9 @@ import type {
   RoleService,
   WhitelistService,
   AdminUserService,
+  StrapiAdminUser,
+  AuditAction,
+  AuditLogService,
 } from '../types';
 
 const REQUIRED_CONFIG_KEYS = [
@@ -139,7 +142,7 @@ async function registerNewUser(
   whitelistUser: WhitelistEntry | null,
   config: Record<string, string>,
   ctx: StrapiContext,
-) {
+): Promise<StrapiAdminUser> {
   let roles: string[] = [];
   if (whitelistUser?.roles?.length > 0) {
     roles = whitelistUser.roles;
@@ -172,15 +175,16 @@ async function handleUserAuthentication(
   userResponseData: OidcUserInfo,
   config: Record<string, string>,
   ctx: StrapiContext,
-) {
+): Promise<{ activateUser: StrapiAdminUser; jwtToken: string; userCreated: boolean }> {
   const email = String(userResponseData.email).toLowerCase();
 
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);
 
-  const activateUser =
-    (await userService.findOneByEmail(email)) ??
-    (await registerNewUser(
+  let userCreated = false;
+  let activateUser = await userService.findOneByEmail(email);
+  if (!activateUser) {
+    activateUser = await registerNewUser(
       userService,
       oauthService,
       roleService,
@@ -189,12 +193,14 @@ async function handleUserAuthentication(
       whitelistUser,
       config,
       ctx,
-    ));
+    );
+    userCreated = true;
+  }
 
   const jwtToken = await oauthService.generateToken(activateUser, ctx);
   oauthService.triggerSignInSuccess(activateUser);
 
-  return { activateUser, jwtToken };
+  return { activateUser, jwtToken, userCreated };
 }
 
 async function oidcSignInCallback(ctx: StrapiContext) {
@@ -205,8 +211,10 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   const whitelistService = strapi
     .plugin('strapi-plugin-oidc')
     .service('whitelist') as WhitelistService;
+  const auditLog = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
 
   if (!ctx.query.code) {
+    await auditLog.log({ action: 'login_failure', ip: ctx.ip, reason: 'missing_code' });
     return ctx.send(oauthService.renderSignUpError('code Not Found'));
   }
   const oidcState = ctx.cookies.get('oidc_state');
@@ -220,6 +228,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   ctx.cookies.set('oidc_nonce', null);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
+    await auditLog.log({ action: 'state_mismatch', ip: ctx.ip });
     return ctx.send(oauthService.renderSignUpError('Invalid state'));
   }
 
@@ -231,12 +240,11 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   params.append('grant_type', config.OIDC_GRANT_TYPE);
   params.append('code_verifier', codeVerifier ?? '');
 
+  let userInfo: OidcUserInfo | undefined;
   try {
-    const { userInfo, accessToken } = await exchangeTokenAndFetchUserInfo(
-      config,
-      params,
-      oidcNonce ?? '',
-    );
+    const exchangeResult = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce ?? '');
+    userInfo = exchangeResult.userInfo;
+    const accessToken = exchangeResult.accessToken;
 
     const isProduction = strapi.config.get('environment') === 'production';
     ctx.cookies.set('oidc_access_token', accessToken, {
@@ -246,7 +254,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
       sameSite: 'lax' as const,
     });
 
-    const { activateUser, jwtToken } = await handleUserAuthentication(
+    const { activateUser, jwtToken, userCreated } = await handleUserAuthentication(
       userService,
       oauthService,
       roleService,
@@ -256,19 +264,45 @@ async function oidcSignInCallback(ctx: StrapiContext) {
       ctx,
     );
 
+    if (userCreated) {
+      await auditLog.log({
+        action: 'user_created',
+        email: activateUser.email,
+        userId: activateUser.id,
+        ip: ctx.ip,
+      });
+    }
+    await auditLog.log({
+      action: 'login_success',
+      email: activateUser.email,
+      userId: activateUser.id,
+      ip: ctx.ip,
+      metadata: { userCreated },
+    });
+
     const nonce = randomUUID();
     const html = oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce);
 
     ctx.set('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
     ctx.send(html);
   } catch (e) {
-    console.error('ERROR CAUGHT IN OIDC SIGNIN:', e);
+    const msg = (e as Error).message ?? '';
+    const action: AuditAction = msg.includes('whitelist')
+      ? 'whitelist_rejected'
+      : msg === 'Nonce mismatch'
+        ? 'nonce_mismatch'
+        : msg === 'Token exchange failed'
+          ? 'token_exchange_failed'
+          : 'login_failure';
+    await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, reason: msg });
+    strapi.log.error('OIDC sign-in error:', e);
     ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
   }
 }
 
 async function logout(ctx: StrapiContext) {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
+  const auditLog = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
 
@@ -287,18 +321,24 @@ async function logout(ctx: StrapiContext) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (response.ok) {
+        await auditLog.log({ action: 'logout', ip: ctx.ip });
         return ctx.redirect(logoutUrl);
       }
     } catch {
       // Network error — fall through to Strapi login
     }
+    await auditLog.log({ action: 'session_expired', ip: ctx.ip });
     return ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
 
   if (logoutUrl && isOidcSession) {
+    await auditLog.log({ action: 'logout', ip: ctx.ip });
     return ctx.redirect(logoutUrl);
   }
 
+  if (isOidcSession) {
+    await auditLog.log({ action: 'logout', ip: ctx.ip });
+  }
   ctx.redirect(`${adminPanelUrl}/auth/login`);
 }
 

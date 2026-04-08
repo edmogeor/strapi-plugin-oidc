@@ -76,3 +76,39 @@ export interface WhitelistService {
 export interface AdminUserService {
   findOneByEmail(email: string): Promise<StrapiAdminUser | null>;
 }
+
+export type AuditAction =
+  | 'login_success'
+  | 'login_failure'
+  | 'state_mismatch'
+  | 'nonce_mismatch'
+  | 'token_exchange_failed'
+  | 'whitelist_rejected'
+  | 'logout'
+  | 'session_expired'
+  | 'user_created';
+
+export interface AuditEntry {
+  action: AuditAction;
+  email?: string;
+  userId?: number;
+  ip?: string;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AuditLogRecord extends AuditEntry {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditLogService {
+  log(entry: AuditEntry): Promise<void>;
+  find(opts?: { page?: number; pageSize?: number }): Promise<{
+    results: AuditLogRecord[];
+    pagination: { page: number; pageSize: number; total: number; pageCount: number };
+  }>;
+  findAll(): Promise<AuditLogRecord[]>;
+  cleanup(retentionDays: number): Promise<void>;
+}
