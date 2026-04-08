@@ -162,6 +162,16 @@ export default {
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
       },
+      {
+        method: 'GET',
+        path: '/audit-logs',
+        handler: 'auditLog.find',
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs/export',
+        handler: 'auditLog.export',
+      },
     ],
   },
 };

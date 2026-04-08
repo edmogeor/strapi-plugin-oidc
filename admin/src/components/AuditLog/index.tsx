@@ -30,20 +30,9 @@ const CustomTable = styled(Table)`
   }
 `;
 
-type AuditAction =
-  | 'login_success'
-  | 'login_failure'
-  | 'state_mismatch'
-  | 'nonce_mismatch'
-  | 'token_exchange_failed'
-  | 'whitelist_rejected'
-  | 'logout'
-  | 'session_expired'
-  | 'user_created';
-
 interface AuditLogRecord {
   id: number;
-  action: AuditAction;
+  action: string;
   email?: string;
   userId?: number;
   ip?: string;
@@ -56,19 +45,6 @@ interface PaginationInfo {
   pageSize: number;
   total: number;
   pageCount: number;
-}
-
-function actionColor(action: AuditAction): string {
-  switch (action) {
-    case 'login_success':
-    case 'user_created':
-      return 'success600';
-    case 'logout':
-    case 'session_expired':
-      return 'neutral600';
-    default:
-      return 'danger600';
-  }
 }
 
 function LocalizedDate({ date }: { date: string }) {
@@ -195,13 +171,7 @@ export default function AuditLog() {
                   </Typography>
                 </Td>
                 <Td>
-                  <Typography
-                    variant="omega"
-                    textColor={actionColor(record.action)}
-                    fontWeight="bold"
-                  >
-                    {record.action}
-                  </Typography>
+                  <Typography variant="omega">{record.action}</Typography>
                 </Td>
                 <Td>
                   <Typography variant="omega">{record.email ?? '—'}</Typography>
