@@ -11,16 +11,18 @@ async function find(ctx: StrapiContext): Promise<void> {
 }
 
 async function exportLogs(ctx: StrapiContext): Promise<void> {
-  const date = new Date().toISOString().slice(0, 10);
-  ctx.set('Content-Type', 'application/x-ndjson');
-  ctx.set('Content-Disposition', `attachment; filename="oidc-audit-log-${date}.ndjson"`);
-  ctx.body = (async function* () {
-    for await (const batch of getAuditLogService().streamExport()) {
-      for (const row of batch) {
-        yield JSON.stringify(row) + '\n';
-      }
-    }
-  })();
+  const now = new Date();
+  const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  ctx.set('Content-Type', 'application/json');
+  ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-audit-log-${datetime}.json"`);
+
+  const rows = await getAuditLogService().findAll();
+  ctx.body = rows.map((row) => ({
+    datetime: row.createdAt,
+    action: row.action,
+    email: row.email ?? null,
+    ip: row.ip ?? null,
+  }));
 }
 
 async function clearAll(ctx: StrapiContext): Promise<void> {

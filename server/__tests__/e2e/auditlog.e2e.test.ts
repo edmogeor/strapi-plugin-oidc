@@ -107,7 +107,7 @@ describe('AuditLog Controller', () => {
     expect(Array.isArray((ctx.body as { results: unknown[] }).results)).toBe(true);
   });
 
-  it('export() sets NDJSON content-type and streams records', async () => {
+  it('export() sets JSON content-type and returns records array', async () => {
     const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
     const headers: Record<string, string> = {};
     const ctx = {
@@ -118,17 +118,12 @@ describe('AuditLog Controller', () => {
       body: null as unknown,
     };
     await auditLogController.export(ctx);
-    expect(headers['Content-Type']).toBe('application/x-ndjson');
-    // ctx.body is an AsyncGenerator that yields NDJSON strings
-    const chunks: string[] = [];
-    for await (const chunk of ctx.body as AsyncGenerator<string>) {
-      chunks.push(chunk);
-    }
-    const text = chunks.join('');
-    const lines = text.split('\n').filter(Boolean);
-    expect(lines.length).toBeGreaterThan(0);
-    for (const line of lines) {
-      expect(() => JSON.parse(line)).not.toThrow();
+    expect(headers['Content-Type']).toBe('application/json');
+    const records = ctx.body as Array<{ datetime: string; action: string }>;
+    expect(Array.isArray(records)).toBe(true);
+    expect(records.length).toBeGreaterThan(0);
+    for (const line of records) {
+      expect(() => JSON.stringify(line)).not.toThrow();
     }
   });
 });

@@ -77,7 +77,7 @@ Manage the plugin under **Settings → OIDC Plugin**.
 - Bulk delete with confirmation
 - Unsaved changes are held in the UI until **Save Changes** is clicked
 
-**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
+**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as JSON, compatible with SIEM tools and log processors. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
 
 **Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
 
@@ -148,10 +148,10 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
 
 Audit log entries can be fetched programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
 
-| Method | Path                                        | Description                    |
-| ------ | ------------------------------------------- | ------------------------------ |
-| `GET`  | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries  |
-| `GET`  | `/api/strapi-plugin-oidc/audit-logs/export` | All records as NDJSON download |
+| Method | Path                                        | Description                   |
+| ------ | ------------------------------------------- | ----------------------------- |
+| `GET`  | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries |
+| `GET`  | `/api/strapi-plugin-oidc/audit-logs/export` | All records as JSON download  |
 
 ### Query parameters (`GET /audit-logs`)
 
@@ -199,10 +199,10 @@ Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc:
 curl -H "Authorization: Bearer <token>" \
   "http://localhost:1337/api/strapi-plugin-oidc/audit-logs?page=1&pageSize=50"
 
-# NDJSON export (pipe directly to a file or SIEM ingestor)
+# JSON export
 curl -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/audit-logs/export \
-  -o oidc-audit-log.ndjson
+  -o oidc-audit-log.json
 ```
 
 ## Credits & Changes
@@ -220,7 +220,7 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
 - Whitelist: programmatic REST API with JSON import/export, bulk delete, delete by email, and unsaved changes guard.
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
-- Audit log: records all auth events to a queryable table with Admin UI, NDJSON export, and REST API. API responses use a single `datetime` field and omit framework metadata (id, documentId, locale, publishedAt, etc.). A separate `user_created` event is emitted when a Strapi admin is provisioned during login.
+- Audit log: records all auth events to a queryable table with Admin UI, JSON export, and REST API. API responses use a single `datetime` field and omit framework metadata (id, documentId, locale, publishedAt, etc.). A separate `user_created` event is emitted when a Strapi admin is provisioned during login.
 
 ## License
 

@@ -1,6 +1,6 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
-import type { WhitelistService } from '../types';
+import type { WhitelistService, StrapiContext } from '../types';
 
 function getWhitelistService(): WhitelistService {
   return strapi.plugin('strapi-plugin-oidc').service('whitelist') as WhitelistService;
@@ -97,6 +97,17 @@ async function removeEmail(ctx) {
 async function deleteAll(ctx) {
   await strapi.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
   ctx.body = {};
+}
+
+async function exportWhitelist(ctx: StrapiContext): Promise<void> {
+  const now = new Date();
+  const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  ctx.set('Content-Type', 'application/json');
+  ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-whitelist-${datetime}.json"`);
+
+  const whitelistService = getWhitelistService();
+  const users = await whitelistService.getUsers();
+  ctx.body = users.map((u) => ({ email: u.email, roles: u.roles }));
 }
 
 async function importUsers(ctx) {
@@ -212,4 +223,5 @@ export default {
   deleteAll,
   syncUsers,
   importUsers,
+  exportWhitelist,
 };

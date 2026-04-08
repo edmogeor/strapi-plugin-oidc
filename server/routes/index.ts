@@ -118,6 +118,12 @@ export default {
       },
       {
         method: 'GET',
+        path: '/whitelist/export',
+        handler: 'whitelist.exportWhitelist',
+        config: adminPolicies('read'),
+      },
+      {
+        method: 'GET',
         path: '/audit-logs',
         handler: 'auditLog.find',
         config: { policies: ['admin::isAuthenticatedAdmin'] },
@@ -167,6 +173,11 @@ export default {
         method: 'DELETE',
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
+      },
+      {
+        method: 'GET',
+        path: '/whitelist/export',
+        handler: 'whitelist.exportWhitelist',
       },
       {
         method: 'GET',

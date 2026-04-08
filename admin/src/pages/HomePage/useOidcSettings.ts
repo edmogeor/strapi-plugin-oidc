@@ -84,12 +84,15 @@ export function useOidcSettings() {
     return response.data.importedCount as number;
   };
 
-  const onExport = () => {
+  const onExport = async () => {
+    const response = await get('/strapi-plugin-oidc/whitelist/export');
     const roleMap = new Map(roles.map((r) => [String(r.id), r.name]));
-    const data = users.map(({ email, roles: userRoles }) => ({
-      email,
-      roles: (userRoles || []).map((id) => roleMap.get(String(id)) ?? id),
-    }));
+    const data = (response.data as Array<{ email: string; roles?: string[] }>).map(
+      ({ email, roles: userRoles }) => ({
+        email,
+        roles: (userRoles || []).map((id) => roleMap.get(String(id)) ?? id),
+      }),
+    );
     const now = new Date();
     const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

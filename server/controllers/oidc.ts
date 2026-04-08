@@ -328,11 +328,14 @@ async function logout(ctx: StrapiContext) {
         auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
         return ctx.redirect(logoutUrl);
       }
+      // Non-ok means the session expired at the provider
+      await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      return ctx.redirect(`${adminPanelUrl}/auth/login`);
     } catch {
-      // Network error — fall through to Strapi login
+      // Network error — treat as session expired
+      await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      return ctx.redirect(`${adminPanelUrl}/auth/login`);
     }
-    await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
-    return ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
 
   if (isOidcSession) {

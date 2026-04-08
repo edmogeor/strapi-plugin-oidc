@@ -428,7 +428,7 @@ export default function Whitelist({
                           {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
                         </PageLink>
                       ))}
-                      <Typography textColor="neutral600" paddingX={2}>
+                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
                         …
                       </Typography>
                       <PageLink
@@ -454,7 +454,7 @@ export default function Whitelist({
                       >
                         {formatMessage(getTrad('pagination.page'), { page: 1 })}
                       </PageLink>
-                      <Typography textColor="neutral600" paddingX={2}>
+                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
                         …
                       </Typography>
                       {Array.from({ length: 9 }).map((_, i) => {
@@ -486,7 +486,7 @@ export default function Whitelist({
                       >
                         {formatMessage(getTrad('pagination.page'), { page: 1 })}
                       </PageLink>
-                      <Typography textColor="neutral600" paddingX={2}>
+                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
                         …
                       </Typography>
                       {Array.from({ length: 7 }).map((_, i) => {
@@ -505,7 +505,7 @@ export default function Whitelist({
                           </PageLink>
                         );
                       })}
-                      <Typography textColor="neutral600" paddingX={2}>
+                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
                         …
                       </Typography>
                       <PageLink
