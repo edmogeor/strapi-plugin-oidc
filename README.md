@@ -5,8 +5,11 @@
     <a href="https://www.npmjs.com/package/strapi-plugin-oidc">
       <img src="https://img.shields.io/npm/v/strapi-plugin-oidc.svg" alt="npm version">
     </a>
-    <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml">
-      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/test.yml/badge.svg?branch=main" alt="Tests">
+    <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml">
+      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+    </a>
+    <a href="./LICENSE">
+      <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"/>
     </a>
   </p>
 </div>
@@ -131,6 +134,10 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
 curl -X DELETE -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 ```
+
+## License
+
+[MIT](./LICENSE)
 
 ## Credits & Changes
 
