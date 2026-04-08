@@ -287,13 +287,14 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     ctx.send(html);
   } catch (e) {
     const msg = (e as Error).message ?? '';
-    const action: AuditAction = msg.includes('whitelist')
-      ? 'whitelist_rejected'
-      : msg === 'Nonce mismatch'
-        ? 'nonce_mismatch'
-        : msg === 'Token exchange failed'
-          ? 'token_exchange_failed'
-          : 'login_failure';
+    let action: AuditAction = 'login_failure';
+    if (msg.includes('whitelist')) {
+      action = 'whitelist_rejected';
+    } else if (msg === 'Nonce mismatch') {
+      action = 'nonce_mismatch';
+    } else if (msg === 'Token exchange failed') {
+      action = 'token_exchange_failed';
+    }
     await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, reason: msg });
     strapi.log.error('OIDC sign-in error:', e);
     ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
@@ -331,14 +332,14 @@ async function logout(ctx: StrapiContext) {
     return ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
 
-  if (logoutUrl && isOidcSession) {
-    await auditLog.log({ action: 'logout', ip: ctx.ip });
-    return ctx.redirect(logoutUrl);
-  }
-
   if (isOidcSession) {
     await auditLog.log({ action: 'logout', ip: ctx.ip });
   }
+
+  if (logoutUrl && isOidcSession) {
+    return ctx.redirect(logoutUrl);
+  }
+
   ctx.redirect(`${adminPanelUrl}/auth/login`);
 }
 

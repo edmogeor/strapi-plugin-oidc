@@ -144,7 +144,7 @@ export default function AuditLog() {
           </Tr>
         </Thead>
         <Tbody>
-          {loading ? (
+          {loading && (
             <Tr>
               <Td colSpan={6}>
                 <Flex justifyContent="center" padding={4}>
@@ -152,7 +152,8 @@ export default function AuditLog() {
                 </Flex>
               </Td>
             </Tr>
-          ) : records.length === 0 ? (
+          )}
+          {!loading && records.length === 0 && (
             <Tr>
               <Td colSpan={6}>
                 <Flex justifyContent="center" padding={4}>
@@ -162,7 +163,8 @@ export default function AuditLog() {
                 </Flex>
               </Td>
             </Tr>
-          ) : (
+          )}
+          {!loading &&
             records.map((record) => (
               <Tr key={record.id}>
                 <Td>
@@ -186,8 +188,7 @@ export default function AuditLog() {
                   <Typography variant="omega">{record.reason ?? '—'}</Typography>
                 </Td>
               </Tr>
-            ))
-          )}
+            ))}
         </Tbody>
       </CustomTable>
 

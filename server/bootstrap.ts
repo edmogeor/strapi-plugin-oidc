@@ -132,11 +132,8 @@ export default async function bootstrap({ strapi }) {
     'strapi-plugin-oidc-audit-log-cleanup': {
       task: async () => {
         try {
-          const pluginConfig = strapi.config.get('plugin::strapi-plugin-oidc') as Record<
-            string,
-            unknown
-          >;
-          const retentionDays = Number(pluginConfig.AUDIT_LOG_RETENTION_DAYS ?? 90);
+          const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
+          const retentionDays = Number(config.AUDIT_LOG_RETENTION_DAYS ?? 90);
           await strapi.plugin('strapi-plugin-oidc').service('auditLog').cleanup(retentionDays);
         } catch (err) {
           strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);

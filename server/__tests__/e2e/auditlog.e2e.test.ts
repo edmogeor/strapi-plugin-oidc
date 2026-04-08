@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core, AuditLogService } from './test-types';
