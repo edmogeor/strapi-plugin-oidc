@@ -119,13 +119,9 @@ describe('AuditLog Controller', () => {
     };
     await auditLogController.export(ctx);
     expect(headers['Content-Type']).toBe('application/x-ndjson');
-    // ctx.body is an AsyncGenerator that yields NDJSON strings
-    const chunks: string[] = [];
-    for await (const chunk of ctx.body as AsyncGenerator<string>) {
-      chunks.push(chunk);
-    }
-    const text = chunks.join('');
-    const lines = text.split('\n').filter(Boolean);
+    expect(typeof ctx.body).toBe('string');
+    // Each line should be valid JSON
+    const lines = (ctx.body as string).split('\n').filter(Boolean);
     expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
       expect(() => JSON.parse(line)).not.toThrow();

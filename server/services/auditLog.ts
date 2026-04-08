@@ -44,17 +44,17 @@ export default function auditLogService({ strapi }) {
     },
 
     async *streamExport(batchSize = 1000): AsyncGenerator<AuditLogRecord[], void, undefined> {
-      let page = 1;
+      let offset = 0;
       while (true) {
-        const result = await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findPage({
+        const rows = await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findMany({
           sort: { createdAt: 'desc' },
-          page,
-          pageSize: batchSize,
+          limit: batchSize,
+          offset,
         });
-        if (result.results.length === 0) break;
-        yield result.results;
-        if (page >= result.pagination.pageCount) break;
-        page++;
+        if (rows.length === 0) break;
+        yield rows;
+        if (rows.length < batchSize) break;
+        offset += batchSize;
       }
     },
 
