@@ -135,10 +135,6 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 ```
 
-## License
-
-[MIT](./LICENSE)
-
 ## Credits & Changes
 
 This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
@@ -154,3 +150,7 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
 - Whitelist improvements: JSON import/export, bulk delete, unsaved changes guard, and a programmatic REST API.
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
+
+## License
+
+[MIT](./LICENSE)
