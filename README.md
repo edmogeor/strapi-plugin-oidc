@@ -48,7 +48,7 @@ module.exports = ({ env }) => ({
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
-      AUDIT_LOG_RETENTION_DAYS: 90, // Delete audit log entries older than this many days on startup
+      AUDIT_LOG_RETENTION_DAYS: 90, // Purge audit log entries older than this many days (runs daily at midnight)
     },
   },
 });
@@ -77,7 +77,7 @@ Manage the plugin under **Settings → OIDC Plugin**.
 - Bulk delete with confirmation
 - Unsaved changes are held in the UI until **Save Changes** is clicked
 
-**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Records older than `AUDIT_LOG_RETENTION_DAYS` (default: 90) are automatically purged on each Strapi startup. The audit log is also accessible [via API](#audit-log-api).
+**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (one JSON object per line), compatible with SIEM tools such as Splunk, Datadog, and the ELK stack. Records older than `AUDIT_LOG_RETENTION_DAYS` (default: 90) are automatically purged by a daily cron job that runs at midnight. The audit log is also accessible [via API](#audit-log-api).
 
 **Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
 

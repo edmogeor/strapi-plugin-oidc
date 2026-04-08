@@ -126,14 +126,25 @@ export default async function bootstrap({ strapi }) {
     strapi.log.warn('Could not initialize default OIDC role:', err.message);
   }
 
-  try {
-    const pluginConfig = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
-    const retentionDays = Number(pluginConfig.AUDIT_LOG_RETENTION_DAYS ?? 90);
-    const auditLogService = strapi.plugin('strapi-plugin-oidc').service('auditLog');
-    await auditLogService.cleanup(retentionDays);
-  } catch (err) {
-    strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
-  }
+  // Schedule daily audit log cleanup at midnight rather than running it once on startup,
+  // so long-running servers stay clean without needing a restart.
+  strapi.cron.add({
+    'strapi-plugin-oidc-audit-log-cleanup': {
+      task: async () => {
+        try {
+          const pluginConfig = strapi.config.get('plugin::strapi-plugin-oidc') as Record<
+            string,
+            unknown
+          >;
+          const retentionDays = Number(pluginConfig.AUDIT_LOG_RETENTION_DAYS ?? 90);
+          await strapi.plugin('strapi-plugin-oidc').service('auditLog').cleanup(retentionDays);
+        } catch (err) {
+          strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
+        }
+      },
+      options: { rule: '0 0 * * *' }, // daily at midnight
+    },
+  });
 
   strapi.db.lifecycles.subscribe({
     models: ['admin::user'],
