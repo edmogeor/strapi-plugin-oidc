@@ -114,9 +114,8 @@ export default function AuditLog() {
 
   const handleExport = async () => {
     try {
-      const token = localStorage.getItem('jwtToken') ?? '';
       const response = await fetch('/strapi-plugin-oidc/audit-logs/export', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!response.ok) {
         toggleNotification({
