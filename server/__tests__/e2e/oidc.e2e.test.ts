@@ -4,32 +4,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core } from './test-types';
-
-const MOCK_OIDC_CONFIG = {
-  REMEMBER_ME: false,
-  OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
-  OIDC_CLIENT_ID: 'mock-client-id',
-  OIDC_CLIENT_SECRET: 'mock-client-secret',
-  OIDC_SCOPE: 'openid profile email',
-  OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
-  OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-  OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-  OIDC_GRANT_TYPE: 'authorization_code',
-  OIDC_FAMILY_NAME_FIELD: 'family_name',
-  OIDC_GIVEN_NAME_FIELD: 'given_name',
-  OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-};
+import { MOCK_OIDC_CONFIG, setSettings } from './test-helpers';
 
 describe('OIDC E2E Tests', () => {
   let strapi: Core.Strapi;
   let agent: ReturnType<typeof request.agent>;
-
-  const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
-    await strapi
-      .plugin('strapi-plugin-oidc')
-      .service('whitelist')
-      .setSettings({ useWhitelist, enforceOIDC });
-  };
 
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
@@ -38,7 +17,7 @@ describe('OIDC E2E Tests', () => {
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
 
     // Disable whitelist for tests
-    await setSettings(false, false);
+    await setSettings(strapi, false, false);
   });
 
   afterAll(async () => {
@@ -96,7 +75,7 @@ describe('OIDC E2E Tests', () => {
     expect(getLoginAllowed.status).not.toBe(302);
 
     // 2. Enable enforceOIDC in settings
-    await setSettings(true, true);
+    await setSettings(strapi, true, true);
 
     // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
@@ -134,7 +113,7 @@ describe('OIDC E2E Tests', () => {
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
     // Ensure whitelist is active and no one is in it
-    await setSettings(true, false);
+    await setSettings(strapi, true, false);
 
     // 1. Initiate login to get a valid state
     const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
@@ -184,32 +163,39 @@ describe('OIDC E2E Tests', () => {
       return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`;
     };
 
-    it('shows generic error when token exchange fails', async () => {
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
-      );
-
-      const callbackUrl = await initiateLogin();
+    const assertGenericAuthError = async (callbackUrl: string) => {
       const res = await agent.get(callbackUrl).redirects(0);
-
       expect(res.status).toBe(200);
       expect(res.text).toContain('Authentication Failed');
       expect(res.text).toContain('Authentication failed. Please try again.');
       expect(res.text).not.toContain('mock-oidc.com');
+    };
+
+    const assertInvalidTokenRejected = async (idToken: string) => {
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: idToken }),
+        ),
+      );
+      const callbackUrl = await initiateLogin();
+      const res = await agent.get(callbackUrl).redirects(0);
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed. Please try again.');
+    };
+
+    it('shows generic error when token exchange fails', async () => {
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
+      );
+      await assertGenericAuthError(await initiateLogin());
     });
 
     it('shows generic error when userinfo fetch fails', async () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
       );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
-      expect(res.text).not.toContain('mock-oidc.com');
+      await assertGenericAuthError(await initiateLogin());
     });
 
     it('rejects a mismatched nonce in the ID token', async () => {
@@ -218,35 +204,11 @@ describe('OIDC E2E Tests', () => {
       const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
         'base64url',
       );
-      const fakeIdToken = `${header}.${payload}.fakesig`;
-
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: fakeIdToken }),
-        ),
-      );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      await assertInvalidTokenRejected(`${header}.${payload}.fakesig`);
     });
 
     it('rejects a malformed ID token', async () => {
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
-        ),
-      );
-
-      const callbackUrl = await initiateLogin();
-      const res = await agent.get(callbackUrl).redirects(0);
-
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      await assertInvalidTokenRejected('not.a.valid.jwt.at.all');
     });
 
     it('does not reflect user-supplied values in error responses', async () => {
@@ -280,11 +242,11 @@ describe('OIDC E2E Tests', () => {
 
     beforeEach(async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-      await setSettings(false, true);
+      await setSettings(strapi, false, true);
     });
 
     afterAll(async () => {
-      await setSettings(false, false);
+      await setSettings(strapi, false, false);
     });
 
     // -------------------------------------------------------------------------
@@ -315,7 +277,7 @@ describe('OIDC E2E Tests', () => {
       });
 
       it('does not reject local sessions when enforceOIDC is disabled', async () => {
-        await setSettings(false, false);
+        await setSettings(strapi, false, false);
 
         const res = await request(strapi.server.httpServer)
           .get('/admin/auth/login')
@@ -402,7 +364,7 @@ describe('OIDC E2E Tests', () => {
       });
 
       it('does not block token refresh when enforceOIDC is disabled', async () => {
-        await setSettings(false, false);
+        await setSettings(strapi, false, false);
 
         const res = await request(strapi.server.httpServer)
           .post('/admin/token/refresh')
@@ -420,7 +382,7 @@ describe('OIDC E2E Tests', () => {
     // -------------------------------------------------------------------------
     describe('oidc_authenticated cookie lifecycle', () => {
       it('sets oidc_authenticated cookie after a successful OIDC callback', async () => {
-        await setSettings(false, false); // disable enforce so callback completes normally
+        await setSettings(strapi, false, false); // disable enforce so callback completes normally
 
         const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
         const state = new URL(loginRes.headers.location).searchParams.get('state');

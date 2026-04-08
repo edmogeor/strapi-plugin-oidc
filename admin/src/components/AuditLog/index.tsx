@@ -1,12 +1,14 @@
 import {
   Box,
   Button,
+  Dialog,
   Flex,
   Table,
   Tbody,
   Td,
   Th,
   Thead,
+  Tooltip,
   Tr,
   Typography,
   Pagination,
@@ -16,8 +18,8 @@ import {
 } from '@strapi/design-system';
 import styled from 'styled-components';
 import { useCallback, useEffect, useState } from 'react';
-import { Download } from '@strapi/icons';
-import { useFetchClient } from '@strapi/strapi/admin';
+import { Download, Information, Trash, WarningCircle } from '@strapi/icons';
+import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 
@@ -34,9 +36,7 @@ interface AuditLogRecord {
   id: number;
   action: string;
   email?: string;
-  userId?: number;
   ip?: string;
-  reason?: string;
   createdAt: string;
 }
 
@@ -61,7 +61,8 @@ function LocalizedDate({ date }: { date: string }) {
 
 export default function AuditLog() {
   const { formatMessage } = useIntl();
-  const { get } = useFetchClient();
+  const { get, del } = useFetchClient();
+  const { toggleNotification } = useNotification();
 
   const [records, setRecords] = useState<AuditLogRecord[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -95,6 +96,23 @@ export default function AuditLog() {
     fetchLogs(page);
   }, [fetchLogs, page]);
 
+  const handleClearAll = async () => {
+    try {
+      await del('/strapi-plugin-oidc/audit-logs');
+      toggleNotification({
+        type: 'success',
+        message: formatMessage(getTrad('auditlog.clear.success')),
+      });
+      setPage(1);
+      fetchLogs(1);
+    } catch {
+      toggleNotification({
+        type: 'danger',
+        message: formatMessage(getTrad('auditlog.clear.error')),
+      });
+    }
+  };
+
   const handleExport = async () => {
     try {
       const rawToken = localStorage.getItem('jwtToken');
@@ -102,6 +120,13 @@ export default function AuditLog() {
       const response = await fetch('/strapi-plugin-oidc/audit-logs/export', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!response.ok) {
+        toggleNotification({
+          type: 'danger',
+          message: formatMessage(getTrad('auditlog.export.error')),
+        });
+        return;
+      }
       const text = await response.text();
       const blob = new Blob([text], { type: 'application/x-ndjson' });
       const url = URL.createObjectURL(blob);
@@ -111,7 +136,10 @@ export default function AuditLog() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // silently fail — download is best-effort
+      toggleNotification({
+        type: 'danger',
+        message: formatMessage(getTrad('auditlog.export.error')),
+      });
     }
   };
 
@@ -121,32 +149,68 @@ export default function AuditLog() {
         <Typography variant="pi" textColor="neutral600">
           {pagination.total} {pagination.total === 1 ? 'entry' : 'entries'}
         </Typography>
-        <Button
-          size="S"
-          variant="tertiary"
-          startIcon={<Download />}
-          onClick={handleExport}
-          disabled={pagination.total === 0}
-        >
-          {formatMessage(getTrad('auditlog.export'))}
-        </Button>
+        <Flex gap={2}>
+          <Button
+            size="S"
+            variant="tertiary"
+            startIcon={<Download />}
+            onClick={handleExport}
+            disabled={pagination.total === 0}
+          >
+            {formatMessage(getTrad('auditlog.export'))}
+          </Button>
+          <Dialog.Root>
+            <Dialog.Trigger>
+              <Button
+                size="S"
+                variant="danger-light"
+                startIcon={<Trash />}
+                disabled={pagination.total === 0}
+              >
+                {formatMessage(getTrad('auditlog.clear'))}
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Content>
+              <Dialog.Header>{formatMessage(getTrad('auditlog.clear.title'))}</Dialog.Header>
+              <Dialog.Body icon={<WarningCircle fill="danger600" />}>
+                <Flex justifyContent="center">
+                  <Typography textColor="neutral800" textAlign="center">
+                    {formatMessage(getTrad('auditlog.clear.description'), {
+                      count: pagination.total,
+                    })}
+                  </Typography>
+                </Flex>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.Cancel>
+                  <Button fullWidth variant="tertiary">
+                    {formatMessage(getTrad('page.cancel'))}
+                  </Button>
+                </Dialog.Cancel>
+                <Dialog.Action>
+                  <Button fullWidth variant="danger" onClick={handleClearAll}>
+                    {formatMessage(getTrad('auditlog.clear'))}
+                  </Button>
+                </Dialog.Action>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Root>
+        </Flex>
       </Flex>
 
-      <CustomTable colCount={6} rowCount={records.length}>
+      <CustomTable colCount={4} rowCount={records.length}>
         <Thead>
           <Tr>
             <Th>{formatMessage(getTrad('auditlog.table.timestamp'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.action'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.email'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.userId'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.ip'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.reason'))}</Th>
           </Tr>
         </Thead>
         <Tbody>
           {loading && (
             <Tr>
-              <Td colSpan={6}>
+              <Td colSpan={4}>
                 <Flex justifyContent="center" padding={4}>
                   <Typography textColor="neutral600">Loading…</Typography>
                 </Flex>
@@ -155,7 +219,7 @@ export default function AuditLog() {
           )}
           {!loading && records.length === 0 && (
             <Tr>
-              <Td colSpan={6}>
+              <Td colSpan={4}>
                 <Flex justifyContent="center" padding={4}>
                   <Typography textColor="neutral600">
                     {formatMessage(getTrad('auditlog.table.empty'))}
@@ -173,19 +237,20 @@ export default function AuditLog() {
                   </Typography>
                 </Td>
                 <Td>
-                  <Typography variant="omega">{record.action}</Typography>
+                  <Flex gap={2} alignItems="center">
+                    <Typography variant="omega">{record.action}</Typography>
+                    <Tooltip label={formatMessage(getTrad(`auditlog.action.${record.action}`))}>
+                      <Flex style={{ cursor: 'help' }}>
+                        <Information aria-hidden width="1.4rem" height="1.4rem" fill="primary600" />
+                      </Flex>
+                    </Tooltip>
+                  </Flex>
                 </Td>
                 <Td>
                   <Typography variant="omega">{record.email ?? '—'}</Typography>
                 </Td>
                 <Td>
-                  <Typography variant="omega">{record.userId ?? '—'}</Typography>
-                </Td>
-                <Td>
                   <Typography variant="omega">{record.ip ?? '—'}</Typography>
-                </Td>
-                <Td>
-                  <Typography variant="omega">{record.reason ?? '—'}</Typography>
                 </Td>
               </Tr>
             ))}

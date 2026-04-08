@@ -214,7 +214,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   const auditLog = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
 
   if (!ctx.query.code) {
-    await auditLog.log({ action: 'login_failure', ip: ctx.ip, reason: 'missing_code' });
+    await auditLog.log({ action: 'missing_code', ip: ctx.ip });
     return ctx.send(oauthService.renderSignUpError('code Not Found'));
   }
   const oidcState = ctx.cookies.get('oidc_state');
@@ -264,18 +264,21 @@ async function oidcSignInCallback(ctx: StrapiContext) {
       ctx,
     );
 
+    // Store identity in httpOnly session cookies so logout can attribute audit log entries.
+    const identityCookieOptions = {
+      httpOnly: true,
+      path: '/',
+      secure: isProduction && ctx.request.secure,
+      sameSite: 'lax' as const,
+    };
+    ctx.cookies.set('oidc_user_email', activateUser.email, identityCookieOptions);
+
     if (userCreated) {
-      await auditLog.log({
-        action: 'user_created',
-        email: activateUser.email,
-        userId: activateUser.id,
-        ip: ctx.ip,
-      });
+      await auditLog.log({ action: 'user_created', email: activateUser.email, ip: ctx.ip });
     }
     await auditLog.log({
       action: 'login_success',
       email: activateUser.email,
-      userId: activateUser.id,
       ip: ctx.ip,
       metadata: { userCreated },
     });
@@ -295,7 +298,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     } else if (msg === 'Token exchange failed') {
       action = 'token_exchange_failed';
     }
-    await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, reason: msg });
+    await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip });
     strapi.log.error('OIDC sign-in error:', e);
     ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
   }
@@ -310,6 +313,7 @@ async function logout(ctx: StrapiContext) {
   // Read before clearing — cookies are gone after clearAuthCookies.
   const isOidcSession = !!ctx.cookies.get('oidc_authenticated');
   const accessToken = ctx.cookies.get('oidc_access_token');
+  const userEmail = ctx.cookies.get('oidc_user_email') ?? undefined;
 
   clearAuthCookies(strapi, ctx);
 
@@ -322,18 +326,18 @@ async function logout(ctx: StrapiContext) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (response.ok) {
-        await auditLog.log({ action: 'logout', ip: ctx.ip });
+        await auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip });
         return ctx.redirect(logoutUrl);
       }
     } catch {
       // Network error — fall through to Strapi login
     }
-    await auditLog.log({ action: 'session_expired', ip: ctx.ip });
+    await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
     return ctx.redirect(`${adminPanelUrl}/auth/login`);
   }
 
   if (isOidcSession) {
-    await auditLog.log({ action: 'logout', ip: ctx.ip });
+    await auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip });
   }
 
   if (logoutUrl && isOidcSession) {

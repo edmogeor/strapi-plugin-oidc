@@ -128,6 +128,12 @@ export default {
         handler: 'auditLog.export',
         config: { policies: ['admin::isAuthenticatedAdmin'] },
       },
+      {
+        method: 'DELETE',
+        path: '/audit-logs',
+        handler: 'auditLog.clearAll',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
     ],
   },
 
@@ -171,6 +177,11 @@ export default {
         method: 'GET',
         path: '/audit-logs/export',
         handler: 'auditLog.export',
+      },
+      {
+        method: 'DELETE',
+        path: '/audit-logs',
+        handler: 'auditLog.clearAll',
       },
     ],
   },

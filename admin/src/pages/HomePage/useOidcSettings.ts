@@ -28,6 +28,7 @@ export function useOidcSettings() {
   const [enforceOIDCConfig, setEnforceOIDCConfig] = useState<boolean | null>(null);
   const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([]);
   const [users, setUsers] = useState<WhitelistUser[]>([]);
+  const [auditLogEnabled, setAuditLogEnabled] = useState(true);
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
@@ -45,6 +46,7 @@ export function useOidcSettings() {
       setEnforceOIDC(response.data.enforceOIDC);
       setInitialEnforceOIDC(response.data.enforceOIDC);
       setEnforceOIDCConfig(response.data.enforceOIDCConfig ?? null);
+      setAuditLogEnabled(response.data.auditLogEnabled ?? true);
     });
   }, [get]);
 
@@ -173,6 +175,7 @@ export function useOidcSettings() {
       initialEnforceOIDC,
       users,
       isDirty,
+      auditLogEnabled,
     },
     actions: {
       setSuccess,

@@ -13,9 +13,7 @@
   "attributes": {
     "action": { "type": "string", "required": true },
     "email": { "type": "string" },
-    "userId": { "type": "integer" },
     "ip": { "type": "string" },
-    "reason": { "type": "string" },
     "metadata": { "type": "json" }
   }
 }

@@ -2,14 +2,15 @@ import type { AuditEntry, AuditLogRecord } from '../types';
 
 export default function auditLogService({ strapi }) {
   return {
-    async log({ action, email, userId, ip, reason, metadata }: AuditEntry): Promise<void> {
+    async log({ action, email, ip, metadata }: AuditEntry): Promise<void> {
+      const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
+      if (Number(config.AUDIT_LOG_RETENTION_DAYS ?? 90) === 0) return;
+
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').create({
         data: {
           action,
           email: email ?? null,
-          userId: userId ?? null,
           ip: ip ?? null,
-          reason: reason ?? null,
           metadata: metadata ?? null,
         },
       });
@@ -18,9 +19,7 @@ export default function auditLogService({ strapi }) {
       if (eventHub) {
         eventHub.emit(`strapi-plugin-oidc::auth.${action}`, {
           email,
-          userId,
           ip,
-          reason,
           metadata,
           provider: 'strapi-plugin-oidc',
         });
@@ -42,6 +41,10 @@ export default function auditLogService({ strapi }) {
       return strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findMany({
         orderBy: { createdAt: 'desc' },
       });
+    },
+
+    async clearAll(): Promise<void> {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
     },
 
     async cleanup(retentionDays: number): Promise<void> {

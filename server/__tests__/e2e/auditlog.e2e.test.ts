@@ -3,21 +3,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core, AuditLogService } from './test-types';
-
-const MOCK_OIDC_CONFIG = {
-  REMEMBER_ME: false,
-  OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
-  OIDC_CLIENT_ID: 'mock-client-id',
-  OIDC_CLIENT_SECRET: 'mock-client-secret',
-  OIDC_SCOPE: 'openid profile email',
-  OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
-  OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-  OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-  OIDC_GRANT_TYPE: 'authorization_code',
-  OIDC_FAMILY_NAME_FIELD: 'family_name',
-  OIDC_GIVEN_NAME_FIELD: 'given_name',
-  OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-};
+import { MOCK_OIDC_CONFIG, setSettings } from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
 
@@ -147,18 +133,11 @@ describe('AuditLog E2E Integration', () => {
   let strapi: Core.Strapi;
   let agent: ReturnType<typeof request.agent>;
 
-  const setSettings = async (useWhitelist: boolean, enforceOIDC: boolean) => {
-    await strapi
-      .plugin('strapi-plugin-oidc')
-      .service('whitelist')
-      .setSettings({ useWhitelist, enforceOIDC });
-  };
-
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
     agent = request.agent(strapi.server.httpServer);
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-    await setSettings(false, false);
+    await setSettings(strapi, false, false);
   });
 
   afterAll(async () => {
@@ -208,7 +187,7 @@ describe('AuditLog E2E Integration', () => {
   });
 
   it('whitelist rejection creates a whitelist_rejected audit log entry', async () => {
-    await setSettings(true, false);
+    await setSettings(strapi, true, false);
     // Ensure test@company.com is NOT in the whitelist
     await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
       where: { email: 'test@company.com' },
@@ -216,7 +195,7 @@ describe('AuditLog E2E Integration', () => {
 
     await initiateLoginAndCallback(agent);
 
-    await setSettings(false, false);
+    await setSettings(strapi, false, false);
 
     const rows = await strapi.db
       .query(AUDIT_LOG_UID)

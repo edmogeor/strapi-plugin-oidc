@@ -125,14 +125,6 @@ function HomePage() {
                 )}
             </Flex>
           </Box>
-          <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
-            <Box paddingBottom={4}>
-              <Typography variant="beta" tag="h2">
-                {formatMessage(getTrad('auditlog.title'))}
-              </Typography>
-            </Box>
-            <AuditLog />
-          </Box>
           <Flex justifyContent="flex-end">
             <Button
               size="L"
@@ -143,6 +135,16 @@ function HomePage() {
               {formatMessage(getTrad('page.save'))}
             </Button>
           </Flex>
+          {state.auditLogEnabled && (
+            <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
+              <Box paddingBottom={4}>
+                <Typography variant="beta" tag="h2">
+                  {formatMessage(getTrad('auditlog.title'))}
+                </Typography>
+              </Box>
+              <AuditLog />
+            </Box>
+          )}
         </Flex>
       </Layouts.Content>
       <Dialog.Root open={blocker.state === 'blocked'}>

@@ -5,8 +5,8 @@ function getAuditLogService(): AuditLogService {
 }
 
 async function find(ctx: StrapiContext): Promise<void> {
-  const page = ctx.query.page ? Number(ctx.query.page) : 1;
-  const pageSize = ctx.query.pageSize ? Number(ctx.query.pageSize) : 25;
+  const page = Math.max(1, Number(ctx.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(ctx.query.pageSize) || 25));
   ctx.body = await getAuditLogService().find({ page, pageSize });
 }
 
@@ -20,7 +20,13 @@ async function exportLogs(ctx: StrapiContext): Promise<void> {
   ctx.body = rows.map((r) => JSON.stringify(r)).join('\n');
 }
 
+async function clearAll(ctx: StrapiContext): Promise<void> {
+  await getAuditLogService().clearAll();
+  ctx.status = 204;
+}
+
 export default {
   find,
   export: exportLogs,
+  clearAll,
 };

@@ -80,6 +80,7 @@ export interface AdminUserService {
 export type AuditAction =
   | 'login_success'
   | 'login_failure'
+  | 'missing_code'
   | 'state_mismatch'
   | 'nonce_mismatch'
   | 'token_exchange_failed'
@@ -91,9 +92,7 @@ export type AuditAction =
 export interface AuditEntry {
   action: AuditAction;
   email?: string;
-  userId?: number;
   ip?: string;
-  reason?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -110,5 +109,6 @@ export interface AuditLogService {
     pagination: { page: number; pageSize: number; total: number; pageCount: number };
   }>;
   findAll(): Promise<AuditLogRecord[]>;
+  clearAll(): Promise<void>;
   cleanup(retentionDays: number): Promise<void>;
 }
