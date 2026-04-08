@@ -59,6 +59,8 @@ function LocalizedDate({ date }: { date: string }) {
   }).format(new Date(date));
 }
 
+const PAGE_SIZE = 10;
+
 export default function AuditLog() {
   const { formatMessage } = useIntl();
   const { get, del } = useFetchClient();
@@ -67,7 +69,7 @@ export default function AuditLog() {
   const [records, setRecords] = useState<AuditLogRecord[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
-    pageSize: 25,
+    pageSize: PAGE_SIZE,
     total: 0,
     pageCount: 1,
   });
@@ -78,10 +80,12 @@ export default function AuditLog() {
     async (p: number) => {
       setLoading(true);
       try {
-        const response = await get(`/strapi-plugin-oidc/audit-logs?page=${p}&pageSize=25`);
+        const response = await get(
+          `/strapi-plugin-oidc/audit-logs?page=${p}&pageSize=${PAGE_SIZE}`,
+        );
         setRecords(response.data.results ?? []);
         setPagination(
-          response.data.pagination ?? { page: p, pageSize: 25, total: 0, pageCount: 1 },
+          response.data.pagination ?? { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 },
         );
       } catch {
         setRecords([]);
@@ -275,19 +279,131 @@ export default function AuditLog() {
               >
                 {formatMessage(getTrad('pagination.previous'))}
               </PreviousLink>
-              {Array.from({ length: pagination.pageCount }).map((_, i) => (
-                <PageLink
-                  key={i + 1}
-                  number={i + 1}
-                  href="#"
-                  onClick={(e: React.MouseEvent) => {
-                    e.preventDefault();
-                    setPage(i + 1);
-                  }}
-                >
-                  {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                </PageLink>
-              ))}
+              {pagination.pageCount <= 10 ? (
+                Array.from({ length: pagination.pageCount }).map((_, i) => (
+                  <PageLink
+                    key={i + 1}
+                    number={i + 1}
+                    href="#"
+                    onClick={(e: React.MouseEvent) => {
+                      e.preventDefault();
+                      setPage(i + 1);
+                    }}
+                  >
+                    {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
+                  </PageLink>
+                ))
+              ) : (
+                <>
+                  {page <= 6 ? (
+                    <>
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <PageLink
+                          key={i + 1}
+                          number={i + 1}
+                          href="#"
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            setPage(i + 1);
+                          }}
+                        >
+                          {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
+                        </PageLink>
+                      ))}
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      <PageLink
+                        number={pagination.pageCount}
+                        href="#"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          setPage(pagination.pageCount);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: pagination.pageCount })}
+                      </PageLink>
+                    </>
+                  ) : page >= pagination.pageCount - 5 ? (
+                    <>
+                      <PageLink
+                        number={1}
+                        href="#"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          setPage(1);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
+                      </PageLink>
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      {Array.from({ length: 9 }).map((_, i) => {
+                        const pageNum = pagination.pageCount - 8 + i;
+                        return (
+                          <PageLink
+                            key={pageNum}
+                            number={pageNum}
+                            href="#"
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              setPage(pageNum);
+                            }}
+                          >
+                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
+                          </PageLink>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      <PageLink
+                        number={1}
+                        href="#"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          setPage(1);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
+                      </PageLink>
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const pageNum = page - 3 + i + 1;
+                        return (
+                          <PageLink
+                            key={pageNum}
+                            number={pageNum}
+                            href="#"
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              setPage(pageNum);
+                            }}
+                          >
+                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
+                          </PageLink>
+                        );
+                      })}
+                      <Typography textColor="neutral600" paddingX={2}>
+                        …
+                      </Typography>
+                      <PageLink
+                        number={pagination.pageCount}
+                        href="#"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          setPage(pagination.pageCount);
+                        }}
+                      >
+                        {formatMessage(getTrad('pagination.page'), { page: pagination.pageCount })}
+                      </PageLink>
+                    </>
+                  )}
+                </>
+              )}
               <NextLink
                 href="#"
                 onClick={(e: React.MouseEvent) => {
