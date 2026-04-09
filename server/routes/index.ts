@@ -1,11 +1,13 @@
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS = 20;
-
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 
-const rateLimitMiddleware = async (ctx: StrapiContext, next: Next) => {
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60000;
+const MAX_REQUESTS = 1000;
+
+export const clearRateLimitMap = () => rateLimitMap.clear();
+
+function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
   const ip = ctx.request.ip;
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
@@ -21,18 +23,20 @@ const rateLimitMiddleware = async (ctx: StrapiContext, next: Next) => {
   requestStamps.push(now);
   rateLimitMap.set(ip, requestStamps);
 
-  await next();
-};
+  return next();
+}
 
-const adminPolicies = (action: 'read' | 'update') => ({
-  policies: [
-    'admin::isAuthenticatedAdmin',
-    {
-      name: 'admin::hasPermissions',
-      config: { actions: [`plugin::strapi-plugin-oidc.${action}`] },
-    },
-  ],
-});
+function adminPolicies(action: 'read' | 'update') {
+  return {
+    policies: [
+      'admin::isAuthenticatedAdmin',
+      {
+        name: 'admin::hasPermissions',
+        config: { actions: [`plugin::strapi-plugin-oidc.${action}`] },
+      },
+    ],
+  };
+}
 
 export default {
   admin: {
