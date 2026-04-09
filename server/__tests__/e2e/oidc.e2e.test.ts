@@ -434,4 +434,273 @@ describe('OIDC E2E Tests', () => {
       });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Group-to-role mapping
+  // ---------------------------------------------------------------------------
+  // Run serially to avoid MSW handler stacking from parallel execution
+  describe('Group-to-role mapping', { serial: true }, () => {
+    beforeEach(async () => {
+      // Reset MSW handlers and restore default config before each test
+      // to prevent handler stacking from parallel test execution
+      oidcServer.resetHandlers();
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+      await setSettings(strapi, false, false);
+    });
+
+    afterEach(async () => {
+      // Clean up any test users created in this describe block
+      const emails = [
+        'group-match@test.com',
+        'no-match@test.com',
+        'no-groups@test.com',
+        'whitelist-group@test.com',
+        'existing-group@test.com',
+      ];
+      await Promise.all(
+        emails.map((email) => strapi.db.query('admin::user').deleteMany({ where: { email } })),
+      );
+      await strapi.db
+        .query('plugin::strapi-plugin-oidc.whitelists')
+        .deleteMany({ where: { email: 'whitelist-group@test.com' } });
+    });
+
+    it('new user with matching group → gets group-mapped role', async () => {
+      // Query available roles and use the first one for mapping
+      const availableRoles = await strapi.db.query('admin::role').findMany();
+      expect(availableRoles.length).toBeGreaterThan(0);
+      const targetRole = availableRoles[0];
+
+      // Override userinfo to return a matching group
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'group-match@test.com',
+            family_name: 'Test',
+            given_name: 'User',
+            groups: ['test-group'],
+          }),
+        ),
+      );
+
+      // Configure group-to-role mapping using the role's actual name
+      const config = { ...MOCK_OIDC_CONFIG };
+      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({ 'test-group': [targetRole.name] });
+      strapi.config.set('plugin::strapi-plugin-oidc', config);
+
+      const agent = request.agent(strapi.server.httpServer);
+
+      // Initiate login
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+
+      // Callback
+      await agent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+
+      // Verify user was created with the group-mapped role
+      const user = await strapi.db.query('admin::user').findOne({
+        where: { email: 'group-match@test.com' },
+        populate: ['roles'],
+      });
+
+      expect(user).not.toBeNull();
+      expect(user.roles).toBeDefined();
+      expect(user.roles.length).toBeGreaterThan(0);
+      // The user's role must be one of the available admin roles
+      const userRoleIds = user.roles.map((r: { id: number }) => r.id);
+      expect(userRoleIds).toContain(targetRole.id);
+    });
+
+    it('new user with non-matching group → falls back to default OIDC roles', async () => {
+      // Override userinfo to return a group that won't match
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'no-match@test.com',
+            family_name: 'Test',
+            given_name: 'User',
+            groups: ['unknown-group'],
+          }),
+        ),
+      );
+
+      // Configure with a non-matching map
+      const config = { ...MOCK_OIDC_CONFIG };
+      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({ 'some-other-group': ['SomeFakeRole'] });
+      strapi.config.set('plugin::strapi-plugin-oidc', config);
+
+      const agent = request.agent(strapi.server.httpServer);
+
+      // Initiate login
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+
+      // Callback
+      await agent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+
+      // Should fall back to default OIDC roles (user is created with some roles)
+      const user = await strapi.db.query('admin::user').findOne({
+        where: { email: 'no-match@test.com' },
+        populate: ['roles'],
+      });
+      expect(user).not.toBeNull();
+      expect(user.roles).toBeDefined();
+    });
+
+    it('new user with no groups claim → falls back to default OIDC roles', async () => {
+      // Override userinfo to return no groups
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'no-groups@test.com',
+            family_name: 'Test',
+            given_name: 'User',
+            groups: [],
+          }),
+        ),
+      );
+
+      const config = { ...MOCK_OIDC_CONFIG };
+      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({ 'any-group': ['SomeFakeRole'] });
+      strapi.config.set('plugin::strapi-plugin-oidc', config);
+
+      const agent = request.agent(strapi.server.httpServer);
+
+      // Initiate login
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+
+      // Callback
+      await agent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+
+      // Should fall back to default OIDC roles
+      const user = await strapi.db.query('admin::user').findOne({
+        where: { email: 'no-groups@test.com' },
+        populate: ['roles'],
+      });
+      expect(user).not.toBeNull();
+      expect(user.roles).toBeDefined();
+    });
+
+    it('whitelisted user with no roles + matching group → login succeeds and whitelist entry is updated', async () => {
+      // Get available roles and use the first one
+      const availableRoles = await strapi.db.query('admin::role').findMany();
+      expect(availableRoles.length).toBeGreaterThan(0);
+      const targetRole = availableRoles[0];
+
+      // Add user to whitelist with no explicit roles
+      const whitelistService = strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist') as import('../../types').WhitelistService;
+      await whitelistService.registerUser('whitelist-group@test.com', []);
+
+      // Override userinfo to return the matching group
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'whitelist-group@test.com',
+            family_name: 'Test',
+            given_name: 'User',
+            groups: ['special-group'],
+          }),
+        ),
+      );
+
+      // Configure group-to-role mapping using the role's actual name
+      const config = { ...MOCK_OIDC_CONFIG };
+      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({ 'special-group': [targetRole.name] });
+      strapi.config.set('plugin::strapi-plugin-oidc', config);
+      await setSettings(strapi, true, false); // enable whitelist
+
+      const agent = request.agent(strapi.server.httpServer);
+
+      // Initiate login
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+
+      // Callback - should succeed because user is whitelisted
+      const callbackRes = await agent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+
+      expect(callbackRes.status).toBe(200);
+      expect(callbackRes.text).toContain('jwtToken');
+
+      // Verify whitelist entry was updated with the group-mapped role ID
+      const updatedWhitelist = await strapi.db
+        .query('plugin::strapi-plugin-oidc.whitelists')
+        .findOne({ where: { email: 'whitelist-group@test.com' } });
+      expect(updatedWhitelist.roles).toContain(String(targetRole.id));
+
+      // Verify user has the group-mapped role
+      const user = await strapi.db.query('admin::user').findOne({
+        where: { email: 'whitelist-group@test.com' },
+        populate: ['roles'],
+      });
+      const userRoleIds = user.roles.map((r: { id: number }) => r.id);
+      expect(userRoleIds).toContain(targetRole.id);
+    });
+
+    it('existing user → login succeeds with their existing Strapi roles unchanged', async () => {
+      // Create an existing user with the first available role
+      const availableRoles = await strapi.db.query('admin::role').findMany();
+      expect(availableRoles.length).toBeGreaterThan(0);
+      const existingRole = availableRoles[0];
+      // Use a different role for the group mapping (the last available role)
+      const groupMappedRole = availableRoles[availableRoles.length - 1];
+
+      // Create user directly in the DB with the existing role
+      await strapi.db.query('admin::user').create({
+        data: {
+          email: 'existing-group@test.com',
+          firstname: 'Existing',
+          lastname: 'User',
+          roles: [existingRole.id],
+        },
+      });
+
+      // Override userinfo to return groups that would map to a DIFFERENT role
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'existing-group@test.com',
+            family_name: 'Existing',
+            given_name: 'User',
+            groups: ['some-group'],
+          }),
+        ),
+      );
+
+      // Configure group-to-role mapping to the DIFFERENT role
+      const config = { ...MOCK_OIDC_CONFIG };
+      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({ 'some-group': [groupMappedRole.name] });
+      strapi.config.set('plugin::strapi-plugin-oidc', config);
+
+      const agent = request.agent(strapi.server.httpServer);
+
+      // Initiate login
+      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state');
+
+      // Callback
+      await agent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+
+      // Verify user's roles are UNCHANGED (existing role, not the group-mapped one)
+      const user = await strapi.db.query('admin::user').findOne({
+        where: { email: 'existing-group@test.com' },
+        populate: ['roles'],
+      });
+      const userRoleIds = user.roles.map((r: { id: number }) => r.id);
+      expect(userRoleIds).toContain(existingRole.id);
+      expect(userRoleIds).not.toContain(groupMappedRole.id);
+    });
+  });
 });

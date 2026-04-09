@@ -49,6 +49,8 @@ module.exports = ({ env }) => ({
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
       AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
+      OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
+      OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
     },
   },
 });
@@ -83,6 +85,44 @@ Manage the plugin under **Settings → OIDC Plugin**.
 
 - The toggle is grayed out and locked when `OIDC_ENFORCE` is set in config.
 - **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi. This writes through to the database so removing the variable afterwards keeps the setting.
+
+## Group-to-Role Mapping
+
+When your OIDC provider includes group membership in the userinfo response (e.g. a `groups` claim containing `["strapi-admins", "strapi-editors"]`), you can automatically assign Strapi roles based on group membership.
+
+| Setting               | Default    | Description                                               |
+| --------------------- | ---------- | --------------------------------------------------------- |
+| `OIDC_GROUP_FIELD`    | `'groups'` | OIDC claim field that contains the group membership array |
+| `OIDC_GROUP_ROLE_MAP` | `'{}'`     | JSON map of group names → Strapi role names               |
+
+### Example configuration
+
+```javascript
+module.exports = ({ env }) => ({
+  'strapi-plugin-oidc': {
+    enabled: true,
+    config: {
+      // ... other OIDC config ...
+      OIDC_GROUP_FIELD: 'groups',
+      OIDC_GROUP_ROLE_MAP: JSON.stringify({
+        'strapi-admins': ['Super Admin'],
+        'strapi-editors': ['Editor'],
+        'strapi-authors': ['Editor', 'Author'],
+      }),
+    },
+  },
+});
+```
+
+Role names are the **display names** shown in **Settings → Roles** (e.g. `"Editor"`, `"Super Admin"`, `"Author"`). IDs are not supported — use names for clarity.
+
+### Role assignment precedence (new users only)
+
+1. **Whitelist entry has explicit roles** → use those roles _(unchanged)_
+2. **Whitelist entry has no roles + user matches a group** → use group-mapped roles; the whitelist entry is updated to reflect this for future logins
+3. **No whitelist entry or no group match** → fall back to the default OIDC roles
+
+> **Note:** Existing users' Strapi roles are never changed on login. Only new users are subject to group-to-role mapping.
 
 ## Whitelist API
 

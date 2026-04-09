@@ -65,5 +65,11 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
       }
       return result;
     },
+    async updateWhitelistRoles(id: number, roles: string[]): Promise<void> {
+      await getWhitelistQuery().update({
+        where: { id },
+        data: { roles },
+      });
+    },
   };
 }

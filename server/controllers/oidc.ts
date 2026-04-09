@@ -12,6 +12,9 @@ import type {
   StrapiAdminUser,
   AuditAction,
   AuditLogService,
+  PluginConfig,
+  GroupRoleMap,
+  AdminRole,
 } from '../types';
 
 const REQUIRED_CONFIG_KEYS = [
@@ -27,8 +30,8 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_AUTHORIZATION_ENDPOINT',
 ] as const;
 
-function configValidation(): Record<string, string> {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
+function configValidation(): PluginConfig {
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
 
   if (REQUIRED_CONFIG_KEYS.every((key) => config[key])) {
     return config;
@@ -81,7 +84,7 @@ async function oidcSignIn(ctx: StrapiContext) {
 }
 
 async function exchangeTokenAndFetchUserInfo(
-  config: Record<string, string>,
+  config: PluginConfig,
   params: URLSearchParams,
   expectedNonce: string,
 ): Promise<{ userInfo: OidcUserInfo; accessToken: string }> {
@@ -133,22 +136,62 @@ async function exchangeTokenAndFetchUserInfo(
   return { userInfo, accessToken: tokenData.access_token };
 }
 
+function resolveRolesFromGroups(
+  userInfo: OidcUserInfo,
+  config: PluginConfig,
+  availableRoles: AdminRole[],
+): string[] {
+  const rawGroups = userInfo[config.OIDC_GROUP_FIELD];
+  if (!Array.isArray(rawGroups) || rawGroups.length === 0) return [];
+  const groups = rawGroups.filter((g): g is string => typeof g === 'string');
+
+  let groupRoleMap: GroupRoleMap;
+  try {
+    groupRoleMap = JSON.parse(config.OIDC_GROUP_ROLE_MAP) as GroupRoleMap;
+  } catch {
+    return [];
+  }
+
+  const roleIds: string[] = [];
+  for (const group of groups) {
+    const roleNames = groupRoleMap[group];
+    if (!roleNames) continue;
+    for (const name of roleNames) {
+      const match = availableRoles.find((r) => r.name === name);
+      if (match && !roleIds.includes(String(match.id))) {
+        roleIds.push(String(match.id));
+      }
+    }
+  }
+  return roleIds;
+}
+
 async function registerNewUser(
   userService: AdminUserService,
   oauthService: OAuthService,
   roleService: RoleService,
+  whitelistService: WhitelistService,
   email: string,
   userResponseData: OidcUserInfo,
   whitelistUser: WhitelistEntry | null,
-  config: Record<string, string>,
+  config: PluginConfig,
   ctx: StrapiContext,
 ): Promise<StrapiAdminUser> {
   let roles: string[] = [];
   if (whitelistUser?.roles?.length > 0) {
     roles = whitelistUser.roles;
   } else {
-    const oidcRoles = await roleService.oidcRoles();
-    roles = oidcRoles?.roles || [];
+    const allRoles = await strapi.db.query('admin::role').findMany();
+    const groupRoles = resolveRolesFromGroups(userResponseData, config, allRoles);
+    if (groupRoles.length > 0) {
+      roles = groupRoles;
+      if (whitelistUser) {
+        await whitelistService.updateWhitelistRoles(whitelistUser.id, roles);
+      }
+    } else {
+      const oidcRoles = await roleService.oidcRoles();
+      roles = oidcRoles?.roles || [];
+    }
   }
 
   const defaultLocale = oauthService.localeFindByHeader(
@@ -173,13 +216,16 @@ async function handleUserAuthentication(
   roleService: RoleService,
   whitelistService: WhitelistService,
   userResponseData: OidcUserInfo,
-  config: Record<string, string>,
+  config: PluginConfig,
   ctx: StrapiContext,
 ): Promise<{ activateUser: StrapiAdminUser; jwtToken: string; userCreated: boolean }> {
   const email = String(userResponseData.email).toLowerCase();
 
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);
+  process.stderr.write(
+    `[DEBUG] handleUserAuth: email=${email} whitelistUser=${JSON.stringify(whitelistUser)}\n`,
+  );
 
   let userCreated = false;
   let activateUser = await userService.findOneByEmail(email);
@@ -188,6 +234,7 @@ async function handleUserAuthentication(
       userService,
       oauthService,
       roleService,
+      whitelistService,
       email,
       userResponseData,
       whitelistUser,
@@ -304,7 +351,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 }
 
 async function logout(ctx: StrapiContext) {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, string>;
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
   const auditLog = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;

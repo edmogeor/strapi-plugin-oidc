@@ -13,6 +13,10 @@ export const MOCK_OIDC_CONFIG = {
   OIDC_FAMILY_NAME_FIELD: 'family_name',
   OIDC_GIVEN_NAME_FIELD: 'given_name',
   OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+  OIDC_ENFORCE: null,
+  AUDIT_LOG_RETENTION_DAYS: 90,
+  OIDC_GROUP_FIELD: 'groups',
+  OIDC_GROUP_ROLE_MAP: '{}',
 };
 
 export const setSettings = (
