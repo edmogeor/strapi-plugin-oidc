@@ -218,7 +218,11 @@ async function handleUserAuthentication(
   config: PluginConfig,
   ctx: StrapiContext,
 ): Promise<{ activateUser: StrapiAdminUser; jwtToken: string; userCreated: boolean }> {
-  const email = String(userResponseData.email).toLowerCase();
+  const rawEmail = String(userResponseData.email ?? '');
+  const email = rawEmail.toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Invalid email address received from OIDC provider');
+  }
 
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 
@@ -7,12 +8,21 @@ const MAX_REQUESTS = 1000;
 
 export const clearRateLimitMap = () => rateLimitMap.clear();
 
-function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
+function getRateLimitKey(ctx: StrapiContext): string {
   const ip = ctx.request.ip;
+  const ua = ctx.request.header['user-agent'] ?? '';
+  const uaHash = createHash('sha256').update(ua).digest('hex').slice(0, 16);
+  return `${ip}:${uaHash}`;
+}
+
+function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
+  const key = getRateLimitKey(ctx);
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
-  const requestStamps = (rateLimitMap.get(ip) || []).filter((timestamp) => timestamp > windowStart);
+  const requestStamps = (rateLimitMap.get(key) || []).filter(
+    (timestamp) => timestamp > windowStart,
+  );
 
   if (requestStamps.length >= MAX_REQUESTS) {
     ctx.status = 429;
@@ -21,7 +31,7 @@ function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
   }
 
   requestStamps.push(now);
-  rateLimitMap.set(ip, requestStamps);
+  rateLimitMap.set(key, requestStamps);
 
   return next();
 }
