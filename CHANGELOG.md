@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-10
+
+### Added
+
+- **Audit logging** — All OIDC authentication events (login success/failure, user created, logout, session expired, CSRF/nonce failures) are now recorded in a queryable audit log table with a UI in the plugin settings. Logs can be exported as JSON or accessed via the REST API (`/api/strapi-plugin-oidc/audit-logs`). Records older than `AUDIT_LOG_RETENTION_DAYS` (default: 90) are automatically purged daily.
+- **OIDC group-to-role mapping** — Configure `OIDC_GROUP_FIELD` and `OIDC_GROUP_ROLE_MAP` to automatically assign Strapi roles based on the user's OIDC group membership. Role assignment follows this precedence: (1) group mapping, (2) default OIDC roles.
+- **Pagination** — Whitelist matching and audit log views now paginate with 10 items per page to improve performance with large datasets.
+- **Streaming export** — Export endpoints now use streaming responses for efficient memory usage with large datasets.
+
+### Changed
+
+- Removed per-user role assignment from the whitelist UI. Users now always receive roles from the default OIDC role mapping or their OIDC group membership.
+- Whitelist export now outputs only emails (no roles), and import accepts plain email arrays.
+- Simplified whitelist add form — removed the roles dropdown.
+- Whitelist table no longer shows a roles column.
+
+### Fixed
+
+- Email format validation in whitelist import now properly rejects invalid entries.
+- Logout now correctly checks provider session expiry before attempting end-session redirect.
+
+### Security
+
+- Stricter email format validation prevents CRLF injection in whitelist entries.
+
 ## [1.5.3] - 2026-04-07
 
 ### Changed
