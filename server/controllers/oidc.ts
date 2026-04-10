@@ -1,6 +1,7 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
+import { auditLogDetails, errorMessages, userMessages } from '../error-strings';
 import type {
   StrapiContext,
   OidcUserInfo,
@@ -262,7 +263,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 
   if (!ctx.query.code) {
     await auditLog.log({ action: 'missing_code', ip: ctx.ip });
-    return ctx.send(oauthService.renderSignUpError('code Not Found'));
+    return ctx.send(oauthService.renderSignUpError(errorMessages.missing_code));
   }
   const oidcState = ctx.cookies.get('oidc_state');
   const codeVerifier = ctx.cookies.get('oidc_code_verifier');
@@ -276,7 +277,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: ctx.ip });
-    return ctx.send(oauthService.renderSignUpError('Invalid state'));
+    return ctx.send(oauthService.renderSignUpError(errorMessages.invalid_state));
   }
 
   const params = new URLSearchParams({
@@ -338,24 +339,22 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   } catch (e) {
     const msg = (e as Error).message ?? '';
     let action: AuditAction = 'login_failure';
-    let details = `Unexpected error during authentication: ${msg}`;
+    let details = auditLogDetails.login_failure(msg);
 
     if (msg.includes('whitelist')) {
       action = 'whitelist_rejected';
-      details =
-        'User not in allowlist. Add the user email to the OIDC allowlist in the plugin settings.';
+      details = auditLogDetails.whitelist_rejected;
     } else if (msg === 'Nonce mismatch') {
       action = 'nonce_mismatch';
-      details = 'CSRF token mismatch. Clear cookies and restart the login flow.';
+      details = auditLogDetails.nonce_mismatch;
     } else if (msg === 'Token exchange failed') {
       action = 'token_exchange_failed';
-      details =
-        'Provider token exchange failed. Verify OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URI in plugin configuration.';
+      details = auditLogDetails.token_exchange_failed;
     }
 
     await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, details });
     strapi.log.error('OIDC sign-in error:', e);
-    ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
+    ctx.send(oauthService.renderSignUpError(userMessages.signInError));
   }
 }
 
