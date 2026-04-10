@@ -80,6 +80,10 @@ describe('AuditLog Service', () => {
     const rows = await strapi.db.query(AUDIT_LOG_UID).findMany({});
     expect(rows).toHaveLength(0);
   });
+
+  afterAll(async () => {
+    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
+  });
 });
 
 describe('AuditLog Controller', () => {
