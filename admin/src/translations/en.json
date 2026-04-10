@@ -62,6 +62,7 @@
   "auditlog.table.action": "Action",
   "auditlog.table.email": "Email",
   "auditlog.table.ip": "IP",
+  "auditlog.table.details": "Details",
   "auditlog.table.empty": "No audit log entries",
   "auditlog.clear": "Clear Logs",
   "auditlog.clear.title": "Clear All Logs",

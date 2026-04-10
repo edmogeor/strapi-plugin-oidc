@@ -22,6 +22,7 @@ interface AuditLogRecord {
   action: string;
   email?: string;
   ip?: string;
+  details?: string;
   createdAt: string;
 }
 
@@ -164,19 +165,20 @@ export default function AuditLog() {
         </Flex>
       </Flex>
 
-      <CustomTable colCount={4} rowCount={records.length}>
+      <CustomTable colCount={5} rowCount={records.length}>
         <Thead>
           <Tr>
             <Th>{formatMessage(getTrad('auditlog.table.timestamp'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.action'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.email'))}</Th>
             <Th>{formatMessage(getTrad('auditlog.table.ip'))}</Th>
+            <Th>{formatMessage(getTrad('auditlog.table.details'))}</Th>
           </Tr>
         </Thead>
         <Tbody>
           {loading && (
             <Tr>
-              <Td colSpan={4}>
+              <Td colSpan={5}>
                 <Flex justifyContent="center" padding={4}>
                   <Typography textColor="neutral600">Loading…</Typography>
                 </Flex>
@@ -185,7 +187,7 @@ export default function AuditLog() {
           )}
           {!loading && records.length === 0 && (
             <Tr>
-              <Td colSpan={4}>
+              <Td colSpan={5}>
                 <Flex justifyContent="center" padding={4}>
                   <Typography textColor="neutral600">
                     {formatMessage(getTrad('auditlog.table.empty'))}
@@ -221,6 +223,36 @@ export default function AuditLog() {
                 </Td>
                 <Td>
                   <Typography variant="omega">{record.ip ?? '—'}</Typography>
+                </Td>
+                <Td style={{ maxWidth: '200px' }}>
+                  {record.details ? (
+                    <Tooltip
+                      label={record.details}
+                      textColor="neutral800"
+                      category="secondary"
+                      position="top"
+                      maxWidth="30rem"
+                    >
+                      <Typography
+                        variant="omega"
+                        textColor="neutral600"
+                        style={{
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '180px',
+                          cursor: 'help',
+                        }}
+                      >
+                        {record.details}
+                      </Typography>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="omega" textColor="neutral600">
+                      —
+                    </Typography>
+                  )}
                 </Td>
               </Tr>
             ))}

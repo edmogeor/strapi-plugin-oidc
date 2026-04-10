@@ -338,14 +338,22 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   } catch (e) {
     const msg = (e as Error).message ?? '';
     let action: AuditAction = 'login_failure';
+    let details = `Unexpected error during authentication: ${msg}`;
+
     if (msg.includes('whitelist')) {
       action = 'whitelist_rejected';
+      details =
+        'User not in allowlist. Add the user email to the OIDC allowlist in the plugin settings.';
     } else if (msg === 'Nonce mismatch') {
       action = 'nonce_mismatch';
+      details = 'CSRF token mismatch. Clear cookies and restart the login flow.';
     } else if (msg === 'Token exchange failed') {
       action = 'token_exchange_failed';
+      details =
+        'Provider token exchange failed. Verify OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URI in plugin configuration.';
     }
-    await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip });
+
+    await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, details });
     strapi.log.error('OIDC sign-in error:', e);
     ctx.send(oauthService.renderSignUpError('Authentication failed. Please try again.'));
   }

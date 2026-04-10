@@ -123,6 +123,7 @@ export interface AuditEntry {
   action: AuditAction;
   email?: string;
   ip?: string;
+  details?: string;
 }
 
 export interface AuditLogRecord extends AuditEntry {
