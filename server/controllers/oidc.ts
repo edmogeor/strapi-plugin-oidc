@@ -1,7 +1,7 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
-import { auditLogDetails, errorMessages, userMessages } from '../error-strings';
+import { getAuditLogDetails, errorMessages, userMessages } from '../error-strings';
 import type {
   StrapiContext,
   OidcUserInfo,

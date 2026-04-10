@@ -10,6 +10,7 @@ import {
   clearRateLimitMap,
   initiateLoginAndCallback,
 } from './test-helpers';
+import { errorMessages } from '../../error-strings';
 import type { WhitelistService } from '../../types';
 
 const createAgent = () => request.agent(strapi.server.httpServer);
@@ -36,10 +37,8 @@ describe('OIDC E2E Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up the created mock user from the database
-    await strapi.db.query('admin::user').deleteMany({
-      where: { email: 'test@company.com' },
-    });
+    await strapi.db.query('admin::user').deleteMany({ where: { email: 'test@company.com' } });
+    await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
   });
 
   it('should have initialized the plugin', () => {
@@ -136,7 +135,7 @@ describe('OIDC E2E Tests', () => {
 
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain('code Not Found');
+    expect(callbackRes.text).toContain(errorMessages.missing_code);
   });
 
   it('should fail if callback has invalid state', async () => {
@@ -146,7 +145,7 @@ describe('OIDC E2E Tests', () => {
 
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain('Invalid state');
+    expect(callbackRes.text).toContain(errorMessages.invalid_state);
   });
 
   // ---------------------------------------------------------------------------
@@ -217,7 +216,7 @@ describe('OIDC E2E Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
-      expect(res.text).toContain('Invalid state');
+      expect(res.text).toContain(errorMessages.invalid_state);
     });
   });
 
