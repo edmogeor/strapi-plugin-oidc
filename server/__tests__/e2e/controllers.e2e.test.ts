@@ -201,10 +201,7 @@ describe('Controllers E2E', () => {
 
     it('should sync users successfully', async () => {
       // Create some initial users
-      await strapi
-        .plugin('strapi-plugin-oidc')
-        .service('whitelist')
-        .registerUser('sync1@test.com', [1]);
+      await strapi.plugin('strapi-plugin-oidc').service('whitelist').registerUser('sync1@test.com');
 
       const ctxSync = {
         request: {
@@ -236,11 +233,11 @@ describe('Controllers E2E', () => {
       await strapi
         .plugin('strapi-plugin-oidc')
         .service('whitelist')
-        .registerUser('deleteall1@test.com', []);
+        .registerUser('deleteall1@test.com');
       await strapi
         .plugin('strapi-plugin-oidc')
         .service('whitelist')
-        .registerUser('deleteall2@test.com', []);
+        .registerUser('deleteall2@test.com');
 
       const ctxDeleteAll = { body: null as any };
       await whitelistController.deleteAll(ctxDeleteAll);

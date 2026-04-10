@@ -40,9 +40,9 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
     async getUsers(): Promise<WhitelistEntry[]> {
       return getWhitelistQuery().findMany() as Promise<WhitelistEntry[]>;
     },
-    async registerUser(email: string, roles: string[]): Promise<void> {
+    async registerUser(email: string): Promise<void> {
       await getWhitelistQuery().create({
-        data: { email, roles },
+        data: { email },
       });
     },
     async removeUser(id: number): Promise<void> {
@@ -64,12 +64,6 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
         throw new Error('Not present in whitelist');
       }
       return result;
-    },
-    async updateWhitelistRoles(id: number, roles: string[]): Promise<void> {
-      await getWhitelistQuery().update({
-        where: { id },
-        data: { roles },
-      });
     },
   };
 }

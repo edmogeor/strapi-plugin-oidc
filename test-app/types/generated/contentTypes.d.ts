@@ -607,6 +607,7 @@ export interface PluginStrapiPluginOidcAuditLog extends Struct.CollectionTypeSch
     action: Schema.Attribute.String & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+    details: Schema.Attribute.String;
     email: Schema.Attribute.String;
     ip: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;

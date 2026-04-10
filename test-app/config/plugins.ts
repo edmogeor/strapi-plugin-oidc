@@ -20,6 +20,8 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       OIDC_FAMILY_NAME_FIELD: env('OIDC_FAMILY_NAME_FIELD', 'family_name'),
       OIDC_GIVEN_NAME_FIELD: env('OIDC_GIVEN_NAME_FIELD', 'given_name'),
       OIDC_ENFORCE: env('OIDC_ENFORCE', null),
+      OIDC_GROUP_FIELD: env('OIDC_GROUP_FIELD', 'groups'),
+      OIDC_GROUP_ROLE_MAP: env('OIDC_GROUP_ROLE_MAP', '{}'),
     },
   },
 });

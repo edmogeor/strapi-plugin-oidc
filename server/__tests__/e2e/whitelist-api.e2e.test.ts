@@ -48,10 +48,7 @@ describe('Whitelist Content-API Routes', () => {
   });
 
   it('GET /whitelist — returns whitelist entries', async () => {
-    await strapi
-      .plugin('strapi-plugin-oidc')
-      .service('whitelist')
-      .registerUser('api-get@test.com', []);
+    await strapi.plugin('strapi-plugin-oidc').service('whitelist').registerUser('api-get@test.com');
 
     const res = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
@@ -87,7 +84,7 @@ describe('Whitelist Content-API Routes', () => {
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('whitelist')
-      .registerUser('api-import1@test.com', []);
+      .registerUser('api-import1@test.com');
 
     const res = await request(strapi.server.httpServer)
       .post('/api/strapi-plugin-oidc/whitelist/import')
@@ -116,7 +113,7 @@ describe('Whitelist Content-API Routes', () => {
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('whitelist')
-      .registerUser('api-delete@test.com', []);
+      .registerUser('api-delete@test.com');
 
     const listRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
@@ -144,11 +141,11 @@ describe('Whitelist Content-API Routes', () => {
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('whitelist')
-      .registerUser('api-deleteall1@test.com', []);
+      .registerUser('api-deleteall1@test.com');
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('whitelist')
-      .registerUser('api-deleteall2@test.com', []);
+      .registerUser('api-deleteall2@test.com');
 
     const delRes = await request(strapi.server.httpServer)
       .delete('/api/strapi-plugin-oidc/whitelist')

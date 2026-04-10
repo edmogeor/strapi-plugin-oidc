@@ -226,13 +226,7 @@ export default function AuditLog() {
                 </Td>
                 <Td style={{ maxWidth: '200px' }}>
                   {record.details ? (
-                    <Tooltip
-                      label={record.details}
-                      textColor="neutral800"
-                      category="secondary"
-                      position="top"
-                      maxWidth="30rem"
-                    >
+                    <Tooltip label={record.details} side="top">
                       <Typography
                         variant="omega"
                         textColor="neutral600"
