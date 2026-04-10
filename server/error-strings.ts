@@ -1,33 +1,35 @@
-import type { AuditAction } from './types';
+export const errorCodes = {
+  TOKEN_EXCHANGE_FAILED: 'TOKEN_EXCHANGE_FAILED',
+  USERINFO_FETCH_FAILED: 'USERINFO_FETCH_FAILED',
+  ID_TOKEN_PARSE_FAILED: 'ID_TOKEN_PARSE_FAILED',
+  NONCE_MISMATCH: 'NONCE_MISMATCH',
+  ROLE_RESOLUTION_FAILED: 'ROLE_RESOLUTION_FAILED',
+  ROLE_UPDATE_FAILED: 'ROLE_UPDATE_FAILED',
+  USER_CREATION_FAILED: 'USER_CREATION_FAILED',
+  JWT_GENERATION_FAILED: 'JWT_GENERATION_FAILED',
+  WHITELIST_CHECK_FAILED: 'WHITELIST_CHECK_FAILED',
+  STATE_MISMATCH: 'STATE_MISMATCH',
+  MISSING_CODE: 'MISSING_CODE',
+} as const;
 
-export function getAuditLogDetails(action: AuditAction, msg?: string): string {
-  switch (action) {
-    case 'login_failure':
-      return `Unexpected error during authentication: ${msg ?? 'Unknown error'}`;
-    case 'missing_code':
-      return 'Authorisation code was not received in the OIDC callback. Check your OIDC provider configuration.';
-    case 'state_mismatch':
-      return 'State parameter mismatch. Clear cookies and restart the login flow.';
-    case 'nonce_mismatch':
-      return 'CSRF token mismatch. Clear cookies and restart the login flow.';
+export function getErrorDetail(
+  key: string,
+  params?: Record<string, string | number>,
+): string | undefined {
+  switch (key) {
     case 'token_exchange_failed':
-      return 'Provider token exchange failed. Verify OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URI in plugin configuration.';
-    case 'whitelist_rejected':
-      return 'User not in allowlist. Add the user email to the OIDC allowlist in the plugin settings.';
-    case 'login_success':
-    case 'logout':
-    case 'session_expired':
-    case 'user_created':
-      return '';
+      return `Token exchange failed with HTTP status ${params?.status ?? 'unknown'}`;
+    case 'userinfo_fetch_failed':
+      return `UserInfo endpoint returned HTTP ${params?.status ?? 'unknown'}`;
+    case 'role_update_failed':
+      return `Role update failed for user ${params?.userId}: ${params?.error ?? 'unknown'}`;
+    case 'user_creation_failed':
+      return `User creation failed for ${params?.email}: ${params?.error ?? 'unknown'}`;
+    case 'id_token_parse_failed':
+      return `ID token parse failed: ${params?.error ?? 'unknown'}`;
+    case 'sign_in_unknown':
+      return `Unknown sign-in error: ${params?.error ?? 'unknown'}`;
+    default:
+      return undefined;
   }
 }
-
-export const errorMessages = {
-  missing_code: 'Authorisation code was not received from the OIDC provider.',
-  invalid_state: 'State parameter mismatch. Please restart the login flow.',
-  authentication_failed: 'Authentication failed. Please try again.',
-} as const;
-
-export const userMessages = {
-  signInError: 'Authentication failed. Please try again.',
-} as const;

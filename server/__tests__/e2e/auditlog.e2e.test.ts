@@ -60,12 +60,13 @@ describe('AuditLog Service', () => {
     expect(page2.results).toHaveLength(1);
   });
 
-  it('findAll() returns all records', async () => {
+  it('find() fetches all records across pages', async () => {
     await auditLogService.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
     await auditLogService.log({ action: 'logout', ip: '1.1.1.1' });
 
-    const rows = await auditLogService.findAll();
-    expect(rows.length).toBeGreaterThanOrEqual(2);
+    const { results, pagination } = await auditLogService.find({ page: 1, pageSize: 100 });
+    expect(results.length).toBeGreaterThanOrEqual(2);
+    expect(pagination.total).toBeGreaterThanOrEqual(2);
   });
 
   it('cleanup() deletes records older than retention days', async () => {

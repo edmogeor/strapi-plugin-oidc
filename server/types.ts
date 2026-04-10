@@ -24,7 +24,6 @@ export interface GroupRoleMap {
 export interface WhitelistEntry {
   id: number;
   email: string;
-  roles: string[];
 }
 
 export interface StrapiAdminUser {
@@ -97,10 +96,9 @@ export interface WhitelistService {
   getSettings(): Promise<WhitelistSettings>;
   setSettings(settings: WhitelistSettings): Promise<void>;
   getUsers(): Promise<WhitelistEntry[]>;
-  registerUser(email: string, roles: string[]): Promise<void>;
+  registerUser(email: string): Promise<void>;
   removeUser(id: number): Promise<void>;
   checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null>;
-  updateWhitelistRoles(id: number, roles: string[]): Promise<void>;
 }
 
 export interface AdminUserService {
@@ -123,7 +121,8 @@ export interface AuditEntry {
   action: AuditAction;
   email?: string;
   ip?: string;
-  details?: string;
+  detailsKey?: string;
+  detailsParams?: Record<string, string>;
 }
 
 export interface AuditLogRecord extends AuditEntry {
@@ -135,10 +134,9 @@ export interface AuditLogRecord extends AuditEntry {
 export interface AuditLogService {
   log(entry: AuditEntry): Promise<void>;
   find(opts?: { page?: number; pageSize?: number }): Promise<{
-    results: AuditLogRecord[];
+    results: (Omit<AuditLogRecord, 'detailsKey' | 'detailsParams'> & { details: string | null })[];
     pagination: { page: number; pageSize: number; total: number; pageCount: number };
   }>;
-  findAll(): Promise<AuditLogRecord[]>;
   clearAll(): Promise<void>;
   cleanup(retentionDays: number): Promise<void>;
 }

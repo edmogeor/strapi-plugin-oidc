@@ -1,6 +1,15 @@
 import type { StrapiContext, AuditLogService } from '../types';
 import { formatDatetimeForFilename } from '../utils/datetime';
 
+type AuditLogExportRow = {
+  id: number;
+  createdAt: string;
+  action: string;
+  email: string | null;
+  ip: string | null;
+  details: string | null;
+};
+
 function getAuditLogService(): AuditLogService {
   return strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
 }
@@ -16,12 +25,33 @@ async function exportLogs(ctx: StrapiContext): Promise<void> {
   ctx.set('Content-Type', 'application/json');
   ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-audit-log-${datetime}.json"`);
 
-  const rows = await getAuditLogService().findAll();
-  ctx.body = rows.map((row) => ({
+  const service = getAuditLogService();
+  const PAGE_SIZE = 1000;
+  const allRows: AuditLogExportRow[] = [];
+  let page = 1;
+
+  while (true) {
+    const { results } = await service.find({ page, pageSize: PAGE_SIZE });
+    for (const row of results) {
+      allRows.push({
+        id: row.id,
+        createdAt: row.createdAt,
+        action: row.action,
+        email: row.email ?? null,
+        ip: row.ip ?? null,
+        details: row.details,
+      });
+    }
+    if (results.length < PAGE_SIZE) break;
+    page++;
+  }
+
+  ctx.body = allRows.map((row) => ({
     datetime: row.createdAt,
     action: row.action,
-    email: row.email ?? null,
-    ip: row.ip ?? null,
+    email: row.email,
+    ip: row.ip,
+    details: row.details,
   }));
 }
 
