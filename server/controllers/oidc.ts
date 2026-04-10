@@ -481,20 +481,26 @@ async function logout(ctx: StrapiContext) {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (response.ok) {
-        auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
+        if (userEmail) {
+          auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
+        }
         return ctx.redirect(logoutUrl);
       }
       // Non-ok means the session expired at the provider
-      await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      if (userEmail) {
+        await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      }
       return ctx.redirect(`${adminPanelUrl}/auth/login`);
     } catch {
       // Network error — treat as session expired
-      await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      if (userEmail) {
+        await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
+      }
       return ctx.redirect(`${adminPanelUrl}/auth/login`);
     }
   }
 
-  if (isOidcSession) {
+  if (isOidcSession && userEmail) {
     await auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip });
   }
 

@@ -607,7 +607,8 @@ export interface PluginStrapiPluginOidcAuditLog extends Struct.CollectionTypeSch
     action: Schema.Attribute.String & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
-    details: Schema.Attribute.String;
+    detailsKey: Schema.Attribute.String;
+    detailsParams: Schema.Attribute.JSON;
     email: Schema.Attribute.String;
     ip: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -681,7 +682,6 @@ export interface PluginStrapiPluginOidcWhitelists extends Struct.CollectionTypeS
     localizations: Schema.Attribute.Relation<'oneToMany', 'plugin::strapi-plugin-oidc.whitelists'> &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    roles: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
   };
