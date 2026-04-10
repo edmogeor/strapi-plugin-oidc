@@ -118,11 +118,10 @@ Role names are the **display names** shown in **Settings → Roles** (e.g. `"Edi
 
 ### Role assignment precedence (new users only)
 
-1. **Whitelist entry has explicit roles** → use those roles _(unchanged)_
-2. **Whitelist entry has no roles + user matches a group** → use group-mapped roles; the whitelist entry is updated to reflect this for future logins
-3. **No whitelist entry or no group match** → fall back to the default OIDC roles
+1. **User's OIDC groups match `OIDC_GROUP_ROLE_MAP`** → use the mapped Strapi roles
+2. **No group match or no mapping configured** → use the default OIDC roles
 
-> **Note:** Existing users' Strapi roles are never changed on login. Only new users are subject to group-to-role mapping.
+> **Note:** Existing users' Strapi roles are never changed on login.
 
 ## Whitelist API
 
