@@ -152,18 +152,16 @@ function resolveRolesFromGroups(
     return [];
   }
 
-  const roleIds: string[] = [];
+  const roleIdSet = new Set<string>();
   for (const group of groups) {
     const roleNames = groupRoleMap[group];
     if (!roleNames) continue;
     for (const name of roleNames) {
       const match = availableRoles.find((r) => r.name === name);
-      if (match && !roleIds.includes(String(match.id))) {
-        roleIds.push(String(match.id));
-      }
+      if (match) roleIdSet.add(String(match.id));
     }
   }
-  return roleIds;
+  return [...roleIdSet];
 }
 
 async function registerNewUser(
@@ -223,9 +221,6 @@ async function handleUserAuthentication(
 
   // whitelist check must happen before checking if the user exists
   const whitelistUser = await whitelistService.checkWhitelistForEmail(email);
-  process.stderr.write(
-    `[DEBUG] handleUserAuth: email=${email} whitelistUser=${JSON.stringify(whitelistUser)}\n`,
-  );
 
   let userCreated = false;
   let activateUser = await userService.findOneByEmail(email);

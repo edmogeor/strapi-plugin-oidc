@@ -4,7 +4,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core } from './test-types';
-import { MOCK_OIDC_CONFIG, setSettings } from './test-helpers';
+import { MOCK_OIDC_CONFIG, setSettings, clearRateLimitMap } from './test-helpers';
+import type { WhitelistService } from '../../types';
 
 describe('OIDC E2E Tests', () => {
   let strapi: Core.Strapi;
@@ -14,6 +15,7 @@ describe('OIDC E2E Tests', () => {
     strapi = globalThis.strapiInstance;
     agent = request.agent(strapi.server.httpServer);
 
+    clearRateLimitMap();
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
 
     // Disable whitelist for tests
@@ -226,8 +228,11 @@ describe('OIDC E2E Tests', () => {
 
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
-    const parseCookies = (res: Response): string[] =>
-      ([] as string[]).concat((res.headers['set-cookie'] as string | string[] | undefined) || []);
+    const parseCookies = (res: Response): string[] => {
+      const raw = res.headers['set-cookie'] as string | string[] | undefined;
+      if (!raw) return [];
+      return Array.isArray(raw) ? raw : [raw];
+    };
 
     const isCookieExpired = (cookies: string[], name: string): boolean => {
       const cookie = cookies.find((c) => c.startsWith(`${name}=`));
@@ -444,6 +449,7 @@ describe('OIDC E2E Tests', () => {
       // Reset MSW handlers and restore default config before each test
       // to prevent handler stacking from parallel test execution
       oidcServer.resetHandlers();
+      clearRateLimitMap();
       strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
       await setSettings(strapi, false, false);
     });
@@ -597,7 +603,7 @@ describe('OIDC E2E Tests', () => {
       // Add user to whitelist with no explicit roles
       const whitelistService = strapi
         .plugin('strapi-plugin-oidc')
-        .service('whitelist') as import('../../types').WhitelistService;
+        .service('whitelist') as WhitelistService;
       await whitelistService.registerUser('whitelist-group@test.com', []);
 
       // Override userinfo to return the matching group
@@ -653,7 +659,7 @@ describe('OIDC E2E Tests', () => {
       expect(availableRoles.length).toBeGreaterThan(0);
       const existingRole = availableRoles[0];
       // Use a different role for the group mapping (the last available role)
-      const groupMappedRole = availableRoles[availableRoles.length - 1];
+      const groupMappedRole = availableRoles.at(-1)!;
 
       // Create user directly in the DB with the existing role
       await strapi.db.query('admin::user').create({

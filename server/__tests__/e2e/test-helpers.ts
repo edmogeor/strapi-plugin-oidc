@@ -1,4 +1,5 @@
 import type { Core } from './test-types';
+export { clearRateLimitMap } from '../../routes';
 
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,

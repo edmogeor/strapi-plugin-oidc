@@ -1,12 +1,10 @@
 import {
   Box,
   Button,
-  Dialog,
   Divider,
   Field,
   Flex,
   IconButton,
-  Table,
   Tbody,
   Td,
   Th,
@@ -15,27 +13,14 @@ import {
   Typography,
   MultiSelect,
   MultiSelectOption,
-  Pagination,
-  PreviousLink,
-  NextLink,
-  PageLink,
 } from '@strapi/design-system';
-import styled from 'styled-components';
 import { useCallback, useRef, useState } from 'react';
-import { Download, Plus, Trash, Upload, WarningCircle } from '@strapi/icons';
+import { Download, Plus, Trash, Upload } from '@strapi/icons';
 import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import { OIDCRole, RoleDef } from '../Role';
 import getTrad from '../../utils/getTrad';
-
-const CustomTable = styled(Table)`
-  th,
-  td,
-  th span,
-  td span {
-    font-size: 1.3rem !important;
-  }
-`;
+import { ConfirmDialog, CustomTable, TablePagination } from '../shared';
 
 function LocalizedDate({ date }: { date: string }) {
   const userLocale = navigator.language || 'en-US';
@@ -193,39 +178,25 @@ export default function Whitelist({
                 onChange={handleImport}
               />
               {users.length > 0 && (
-                <Dialog.Root>
-                  <Dialog.Trigger>
+                <ConfirmDialog
+                  trigger={
                     <Button size="S" variant="danger-light" startIcon={<Trash />}>
                       {formatMessage(getTrad('whitelist.delete.all.label'))}
                     </Button>
-                  </Dialog.Trigger>
-                  <Dialog.Content>
-                    <Dialog.Header>
-                      {formatMessage(getTrad('whitelist.delete.all.title'))}
-                    </Dialog.Header>
-                    <Dialog.Body icon={<WarningCircle fill="danger600" />}>
-                      <Flex justifyContent="center">
-                        <Typography textColor="neutral800" textAlign="center">
-                          {formatMessage(getTrad('whitelist.delete.all.description'), {
-                            count: users.length,
-                          })}
-                        </Typography>
-                      </Flex>
-                    </Dialog.Body>
-                    <Dialog.Footer>
-                      <Dialog.Cancel>
-                        <Button fullWidth variant="tertiary">
-                          {formatMessage(getTrad('page.cancel'))}
-                        </Button>
-                      </Dialog.Cancel>
-                      <Dialog.Action>
-                        <Button fullWidth variant="danger" onClick={onDeleteAll}>
-                          {formatMessage(getTrad('whitelist.delete.all.label'))}
-                        </Button>
-                      </Dialog.Action>
-                    </Dialog.Footer>
-                  </Dialog.Content>
-                </Dialog.Root>
+                  }
+                  title={formatMessage(getTrad('whitelist.delete.all.title'))}
+                  body={
+                    <Flex justifyContent="center">
+                      <Typography textColor="neutral800" textAlign="center">
+                        {formatMessage(getTrad('whitelist.delete.all.description'), {
+                          count: users.length,
+                        })}
+                      </Typography>
+                    </Flex>
+                  }
+                  confirmLabel={formatMessage(getTrad('whitelist.delete.all.label'))}
+                  onConfirm={onDeleteAll}
+                />
               )}
             </Flex>
           </Flex>
@@ -328,56 +299,39 @@ export default function Whitelist({
                           onClick={(e) => e.stopPropagation()}
                           style={{ width: '100%' }}
                         >
-                          <Dialog.Root>
-                            <Dialog.Trigger>
+                          <ConfirmDialog
+                            trigger={
                               <IconButton
                                 label={formatMessage(getTrad('whitelist.delete.label'))}
                                 withTooltip={false}
                               >
                                 <Trash />
                               </IconButton>
-                            </Dialog.Trigger>
-                            <Dialog.Content>
-                              <Dialog.Header>
-                                {formatMessage(getTrad('whitelist.delete.title'))}
-                              </Dialog.Header>
-                              <Dialog.Body icon={<WarningCircle fill="danger600" />}>
-                                <Flex direction="column" alignItems="center" gap={2}>
-                                  <Flex justifyContent="center">
-                                    <Typography id="confirm-description">
-                                      {formatMessage(getTrad('whitelist.delete.description'))}
-                                    </Typography>
-                                  </Flex>
-                                  <Flex justifyContent="center">
-                                    <Typography variant="omega" fontWeight="bold">
-                                      {user.email}
-                                    </Typography>
-                                  </Flex>
-                                  <Flex justifyContent="center" marginTop={2}>
-                                    <Typography variant="pi" textColor="neutral600">
-                                      {formatMessage(getTrad('whitelist.delete.note'))}
-                                    </Typography>
-                                  </Flex>
+                            }
+                            title={formatMessage(getTrad('whitelist.delete.title'))}
+                            body={
+                              <Flex direction="column" alignItems="center" gap={2}>
+                                <Flex justifyContent="center">
+                                  <Typography id="confirm-description">
+                                    {formatMessage(getTrad('whitelist.delete.description'))}
+                                  </Typography>
                                 </Flex>
-                              </Dialog.Body>
-                              <Dialog.Footer>
-                                <Dialog.Cancel>
-                                  <Button fullWidth variant="tertiary">
-                                    {formatMessage(getTrad('page.cancel'))}
-                                  </Button>
-                                </Dialog.Cancel>
-                                <Dialog.Action>
-                                  <Button
-                                    fullWidth
-                                    variant="danger-light"
-                                    onClick={() => onDelete(user.email)}
-                                  >
-                                    {formatMessage(getTrad('page.ok'))}
-                                  </Button>
-                                </Dialog.Action>
-                              </Dialog.Footer>
-                            </Dialog.Content>
-                          </Dialog.Root>
+                                <Flex justifyContent="center">
+                                  <Typography variant="omega" fontWeight="bold">
+                                    {user.email}
+                                  </Typography>
+                                </Flex>
+                                <Flex justifyContent="center" marginTop={2}>
+                                  <Typography variant="pi" textColor="neutral600">
+                                    {formatMessage(getTrad('whitelist.delete.note'))}
+                                  </Typography>
+                                </Flex>
+                              </Flex>
+                            }
+                            confirmLabel={formatMessage(getTrad('page.ok'))}
+                            onConfirm={() => onDelete(user.email)}
+                            confirmVariant="danger-light"
+                          />
                         </Flex>
                       </Td>
                     </Tr>
@@ -386,153 +340,8 @@ export default function Whitelist({
               )}
             </Tbody>
           </CustomTable>
-          {pageCount > 1 && (
-            <Box paddingTop={4}>
-              <Flex justifyContent="flex-end">
-                <Pagination activePage={page} pageCount={pageCount}>
-                  <PreviousLink
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.max(1, p - 1));
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.previous'))}
-                  </PreviousLink>
-                  {pageCount <= 10 ? (
-                    Array.from({ length: pageCount }).map((_, i) => (
-                      <PageLink
-                        key={i + 1}
-                        number={i + 1}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(i + 1);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                      </PageLink>
-                    ))
-                  ) : page <= 6 ? (
-                    <>
-                      {Array.from({ length: 9 }).map((_, i) => (
-                        <PageLink
-                          key={i + 1}
-                          number={i + 1}
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setPage(i + 1);
-                          }}
-                        >
-                          {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                        </PageLink>
-                      ))}
-                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                        …
-                      </Typography>
-                      <PageLink
-                        number={pageCount}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(pageCount);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: pageCount })}
-                      </PageLink>
-                    </>
-                  ) : page >= pageCount - 5 ? (
-                    <>
-                      <PageLink
-                        number={1}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(1);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
-                      </PageLink>
-                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                        …
-                      </Typography>
-                      {Array.from({ length: 9 }).map((_, i) => {
-                        const pageNum = pageCount - 8 + i;
-                        return (
-                          <PageLink
-                            key={pageNum}
-                            number={pageNum}
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setPage(pageNum);
-                            }}
-                          >
-                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
-                          </PageLink>
-                        );
-                      })}
-                    </>
-                  ) : (
-                    <>
-                      <PageLink
-                        number={1}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(1);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: 1 })}
-                      </PageLink>
-                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                        …
-                      </Typography>
-                      {Array.from({ length: 7 }).map((_, i) => {
-                        const pageNum = page - 3 + i;
-                        return (
-                          <PageLink
-                            key={pageNum}
-                            number={pageNum}
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setPage(pageNum);
-                            }}
-                          >
-                            {formatMessage(getTrad('pagination.page'), { page: pageNum })}
-                          </PageLink>
-                        );
-                      })}
-                      <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                        …
-                      </Typography>
-                      <PageLink
-                        number={pageCount}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setPage(pageCount);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: pageCount })}
-                      </PageLink>
-                    </>
-                  )}
-                  <NextLink
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage((p) => Math.min(pageCount, p + 1));
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.next'))}
-                  </NextLink>
-                </Pagination>
-              </Flex>
-            </Box>
-          )}
+
+          <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}
     </Box>

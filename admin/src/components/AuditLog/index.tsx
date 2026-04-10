@@ -1,9 +1,7 @@
 import {
   Box,
   Button,
-  Dialog,
   Flex,
-  Table,
   Tbody,
   Td,
   Th,
@@ -11,26 +9,13 @@ import {
   Tooltip,
   Tr,
   Typography,
-  Pagination,
-  PreviousLink,
-  NextLink,
-  PageLink,
 } from '@strapi/design-system';
-import styled from 'styled-components';
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Information, Trash, WarningCircle } from '@strapi/icons';
+import { Download, Information, Trash } from '@strapi/icons';
 import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
-
-const CustomTable = styled(Table)`
-  th,
-  td,
-  th span,
-  td span {
-    font-size: 1.3rem !important;
-  }
-`;
+import { ConfirmDialog, CustomTable, TablePagination } from '../shared';
 
 interface AuditLogRecord {
   id: number;
@@ -164,8 +149,8 @@ export default function AuditLog() {
           >
             {formatMessage(getTrad('auditlog.export'))}
           </Button>
-          <Dialog.Root>
-            <Dialog.Trigger>
+          <ConfirmDialog
+            trigger={
               <Button
                 size="S"
                 variant="danger-light"
@@ -174,32 +159,20 @@ export default function AuditLog() {
               >
                 {formatMessage(getTrad('auditlog.clear'))}
               </Button>
-            </Dialog.Trigger>
-            <Dialog.Content>
-              <Dialog.Header>{formatMessage(getTrad('auditlog.clear.title'))}</Dialog.Header>
-              <Dialog.Body icon={<WarningCircle fill="danger600" />}>
-                <Flex justifyContent="center">
-                  <Typography textColor="neutral800" textAlign="center">
-                    {formatMessage(getTrad('auditlog.clear.description'), {
-                      count: pagination.total,
-                    })}
-                  </Typography>
-                </Flex>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.Cancel>
-                  <Button fullWidth variant="tertiary">
-                    {formatMessage(getTrad('page.cancel'))}
-                  </Button>
-                </Dialog.Cancel>
-                <Dialog.Action>
-                  <Button fullWidth variant="danger" onClick={handleClearAll}>
-                    {formatMessage(getTrad('auditlog.clear'))}
-                  </Button>
-                </Dialog.Action>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Root>
+            }
+            title={formatMessage(getTrad('auditlog.clear.title'))}
+            body={
+              <Flex justifyContent="center">
+                <Typography textColor="neutral800" textAlign="center">
+                  {formatMessage(getTrad('auditlog.clear.description'), {
+                    count: pagination.total,
+                  })}
+                </Typography>
+              </Flex>
+            }
+            confirmLabel={formatMessage(getTrad('auditlog.clear'))}
+            onConfirm={handleClearAll}
+          />
         </Flex>
       </Flex>
 
@@ -266,153 +239,7 @@ export default function AuditLog() {
         </Tbody>
       </CustomTable>
 
-      {pagination.pageCount > 1 && (
-        <Box paddingTop={4}>
-          <Flex justifyContent="flex-end">
-            <Pagination activePage={page} pageCount={pagination.pageCount}>
-              <PreviousLink
-                href="#"
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  setPage((p) => Math.max(1, p - 1));
-                }}
-              >
-                {formatMessage(getTrad('pagination.previous'))}
-              </PreviousLink>
-              {pagination.pageCount <= 10 ? (
-                Array.from({ length: pagination.pageCount }).map((_, i) => (
-                  <PageLink
-                    key={i + 1}
-                    number={i + 1}
-                    href="#"
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setPage(i + 1);
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                  </PageLink>
-                ))
-              ) : page <= 6 ? (
-                <>
-                  {Array.from({ length: 9 }).map((_, i) => (
-                    <PageLink
-                      key={i + 1}
-                      number={i + 1}
-                      href="#"
-                      onClick={(e: React.MouseEvent) => {
-                        e.preventDefault();
-                        setPage(i + 1);
-                      }}
-                    >
-                      {formatMessage(getTrad('pagination.page'), { page: i + 1 })}
-                    </PageLink>
-                  ))}
-                  <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                    …
-                  </Typography>
-                  <PageLink
-                    number={pagination.pageCount}
-                    href="#"
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setPage(pagination.pageCount);
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.page'), { page: pagination.pageCount })}
-                  </PageLink>
-                </>
-              ) : page >= pagination.pageCount - 5 ? (
-                <>
-                  <PageLink
-                    number={1}
-                    href="#"
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setPage(1);
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.page'), { page: 1 })}
-                  </PageLink>
-                  <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                    …
-                  </Typography>
-                  {Array.from({ length: 9 }).map((_, i) => {
-                    const pageNum = pagination.pageCount - 8 + i;
-                    return (
-                      <PageLink
-                        key={pageNum}
-                        number={pageNum}
-                        href="#"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          setPage(pageNum);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: pageNum })}
-                      </PageLink>
-                    );
-                  })}
-                </>
-              ) : (
-                <>
-                  <PageLink
-                    number={1}
-                    href="#"
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setPage(1);
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.page'), { page: 1 })}
-                  </PageLink>
-                  <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                    …
-                  </Typography>
-                  {Array.from({ length: 7 }).map((_, i) => {
-                    const pageNum = page - 3 + i;
-                    return (
-                      <PageLink
-                        key={pageNum}
-                        number={pageNum}
-                        href="#"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          setPage(pageNum);
-                        }}
-                      >
-                        {formatMessage(getTrad('pagination.page'), { page: pageNum })}
-                      </PageLink>
-                    );
-                  })}
-                  <Typography textColor="neutral600" paddingLeft={2} paddingRight={2}>
-                    …
-                  </Typography>
-                  <PageLink
-                    number={pagination.pageCount}
-                    href="#"
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      setPage(pagination.pageCount);
-                    }}
-                  >
-                    {formatMessage(getTrad('pagination.page'), { page: pagination.pageCount })}
-                  </PageLink>
-                </>
-              )}
-              <NextLink
-                href="#"
-                onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
-                  setPage((p) => Math.min(pagination.pageCount, p + 1));
-                }}
-              >
-                {formatMessage(getTrad('pagination.next'))}
-              </NextLink>
-            </Pagination>
-          </Flex>
-        </Box>
-      )}
+      <TablePagination page={page} pageCount={pagination.pageCount} onPageChange={setPage} />
     </Box>
   );
 }
