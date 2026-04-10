@@ -15,7 +15,7 @@ import { Download, Information, Trash } from '@strapi/icons';
 import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
-import { ConfirmDialog, CustomTable, TablePagination } from '../shared';
+import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
 
 interface AuditLogRecord {
   id: number;
@@ -30,18 +30,6 @@ interface PaginationInfo {
   pageSize: number;
   total: number;
   pageCount: number;
-}
-
-function LocalizedDate({ date }: { date: string }) {
-  const userLocale = navigator.language || 'en-US';
-  return new Intl.DateTimeFormat(userLocale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(new Date(date));
 }
 
 const PAGE_SIZE = 10;
@@ -211,7 +199,7 @@ export default function AuditLog() {
               <Tr key={record.id}>
                 <Td>
                   <Typography variant="omega">
-                    <LocalizedDate date={record.createdAt} />
+                    <LocalizedDate date={record.createdAt} options={{ second: '2-digit' }} />
                   </Typography>
                 </Td>
                 <Td>

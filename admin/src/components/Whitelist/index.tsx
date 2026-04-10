@@ -20,18 +20,7 @@ import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import { OIDCRole, RoleDef } from '../Role';
 import getTrad from '../../utils/getTrad';
-import { ConfirmDialog, CustomTable, TablePagination } from '../shared';
-
-function LocalizedDate({ date }: { date: string }) {
-  const userLocale = navigator.language || 'en-US';
-  return new Intl.DateTimeFormat(userLocale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
-}
+import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
 
 export interface WhitelistUser {
   email: string;
@@ -291,7 +280,7 @@ export default function Whitelist({
                         )}
                       </Td>
                       <Td>
-                        <LocalizedDate date={user.createdAt} />
+                        <LocalizedDate date={user.createdAt} options={{ month: 'long' }} />
                       </Td>
                       <Td style={{ paddingRight: 0 }}>
                         <Flex

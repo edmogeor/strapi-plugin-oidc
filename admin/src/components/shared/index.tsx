@@ -16,6 +16,24 @@ import styled from 'styled-components';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 
+export function LocalizedDate({
+  date,
+  options,
+}: {
+  date: string;
+  options?: Intl.DateTimeFormatOptions;
+}) {
+  const userLocale = navigator.language || 'en-US';
+  return new Intl.DateTimeFormat(userLocale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    ...options,
+  }).format(new Date(date));
+}
+
 export const CustomTable = styled(Table)`
   th,
   td,

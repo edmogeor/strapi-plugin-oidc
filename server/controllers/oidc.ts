@@ -68,15 +68,16 @@ async function oidcSignIn(ctx: StrapiContext) {
   ctx.cookies.set('oidc_state', state, cookieOptions);
   ctx.cookies.set('oidc_nonce', nonce, cookieOptions);
 
-  const params = new URLSearchParams();
-  params.append('response_type', 'code');
-  params.append('client_id', OIDC_CLIENT_ID);
-  params.append('redirect_uri', OIDC_REDIRECT_URI);
-  params.append('scope', OIDC_SCOPE);
-  params.append('code_challenge', codeChallenge);
-  params.append('code_challenge_method', 'S256');
-  params.append('state', state);
-  params.append('nonce', nonce);
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: OIDC_CLIENT_ID,
+    redirect_uri: OIDC_REDIRECT_URI,
+    scope: OIDC_SCOPE,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    state,
+    nonce,
+  });
 
   const authorizationUrl = `${OIDC_AUTHORIZATION_ENDPOINT}?${params.toString()}`;
   ctx.set('Location', authorizationUrl);
@@ -274,13 +275,14 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     return ctx.send(oauthService.renderSignUpError('Invalid state'));
   }
 
-  const params = new URLSearchParams();
-  params.append('code', ctx.query.code as string);
-  params.append('client_id', config.OIDC_CLIENT_ID);
-  params.append('client_secret', config.OIDC_CLIENT_SECRET);
-  params.append('redirect_uri', config.OIDC_REDIRECT_URI);
-  params.append('grant_type', config.OIDC_GRANT_TYPE);
-  params.append('code_verifier', codeVerifier ?? '');
+  const params = new URLSearchParams({
+    code: ctx.query.code as string,
+    client_id: config.OIDC_CLIENT_ID,
+    client_secret: config.OIDC_CLIENT_SECRET,
+    redirect_uri: config.OIDC_REDIRECT_URI,
+    grant_type: config.OIDC_GRANT_TYPE,
+    code_verifier: codeVerifier ?? '',
+  });
 
   let userInfo: OidcUserInfo | undefined;
   try {
