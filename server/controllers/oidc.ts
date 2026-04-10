@@ -339,19 +339,16 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   } catch (e) {
     const msg = (e as Error).message ?? '';
     let action: AuditAction = 'login_failure';
-    let details = auditLogDetails.login_failure(msg);
 
     if (msg.includes('whitelist')) {
       action = 'whitelist_rejected';
-      details = auditLogDetails.whitelist_rejected;
     } else if (msg === 'Nonce mismatch') {
       action = 'nonce_mismatch';
-      details = auditLogDetails.nonce_mismatch;
     } else if (msg === 'Token exchange failed') {
       action = 'token_exchange_failed';
-      details = auditLogDetails.token_exchange_failed;
     }
 
+    const details = getAuditLogDetails(action, action === 'login_failure' ? msg : undefined);
     await auditLog.log({ action, email: userInfo?.email, ip: ctx.ip, details });
     strapi.log.error('OIDC sign-in error:', e);
     ctx.send(oauthService.renderSignUpError(userMessages.signInError));
