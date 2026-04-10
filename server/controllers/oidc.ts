@@ -278,6 +278,71 @@ async function handleUserAuthentication(
   return { activateUser, jwtToken, userCreated, rolesUpdated, resolvedRoleNames };
 }
 
+type OidcErrorInfo = {
+  action: AuditAction;
+  code: (typeof errorCodes)[keyof typeof errorCodes];
+  key?: string;
+  params?: Record<string, string | number>;
+};
+
+function classifyOidcError(msg: string, userInfo?: OidcUserInfo): OidcErrorInfo {
+  const errorMap: Array<{ test: (m: string) => boolean; result: OidcErrorInfo }> = [
+    {
+      test: (m) => m.includes('whitelist'),
+      result: {
+        action: 'whitelist_rejected',
+        code: errorCodes.WHITELIST_CHECK_FAILED,
+        key: 'whitelist_rejected',
+      },
+    },
+    {
+      test: (m) => m === 'Nonce mismatch',
+      result: { action: 'nonce_mismatch', code: errorCodes.NONCE_MISMATCH },
+    },
+    {
+      test: (m) => m === 'Token exchange failed',
+      result: { action: 'token_exchange_failed', code: errorCodes.TOKEN_EXCHANGE_FAILED },
+    },
+    {
+      test: (m) => m === 'Failed to fetch user info',
+      result: {
+        action: 'login_failure',
+        code: errorCodes.USERINFO_FETCH_FAILED,
+        key: 'userinfo_fetch_failed',
+      },
+    },
+    {
+      test: (m) => m === 'Failed to parse ID token',
+      result: {
+        action: 'login_failure',
+        code: errorCodes.ID_TOKEN_PARSE_FAILED,
+        key: 'id_token_parse_failed',
+        params: { error: msg },
+      },
+    },
+    {
+      test: (m) => m === 'User creation failed' || m.includes('createUser'),
+      result: {
+        action: 'login_failure',
+        code: errorCodes.USER_CREATION_FAILED,
+        key: 'user_creation_failed',
+        params: userInfo?.email ? { email: userInfo.email, error: msg } : undefined,
+      },
+    },
+  ];
+
+  for (const { test, result } of errorMap) {
+    if (test(msg)) return result;
+  }
+
+  return {
+    action: 'login_failure',
+    code: errorCodes.TOKEN_EXCHANGE_FAILED,
+    key: 'sign_in_unknown',
+    params: { error: msg || 'unknown' },
+  };
+}
+
 async function oidcSignInCallback(ctx: StrapiContext) {
   const config = configValidation();
   const userService = strapi.service('admin::user') as AdminUserService;
@@ -374,54 +439,20 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     ctx.send(html);
   } catch (e) {
     const msg = (e as Error).message ?? '';
-    let action: AuditAction = 'login_failure';
-    let errorCode: (typeof errorCodes)[keyof typeof errorCodes] = errorCodes.TOKEN_EXCHANGE_FAILED;
-    let errorKey: string | undefined;
-    let errorParams: Record<string, string | number> | undefined;
-
-    if (msg.includes('whitelist')) {
-      action = 'whitelist_rejected';
-      errorCode = errorCodes.WHITELIST_CHECK_FAILED;
-      errorKey = 'whitelist_rejected';
-    } else if (msg === 'Nonce mismatch') {
-      action = 'nonce_mismatch';
-      errorCode = errorCodes.NONCE_MISMATCH;
-    } else if (msg === 'Token exchange failed') {
-      action = 'token_exchange_failed';
-      errorCode = errorCodes.TOKEN_EXCHANGE_FAILED;
-    } else if (msg === 'Failed to fetch user info') {
-      action = 'login_failure';
-      errorCode = errorCodes.USERINFO_FETCH_FAILED;
-      errorKey = 'userinfo_fetch_failed';
-    } else if (msg === 'Failed to parse ID token') {
-      action = 'login_failure';
-      errorCode = errorCodes.ID_TOKEN_PARSE_FAILED;
-      errorKey = 'id_token_parse_failed';
-      errorParams = { error: (e as Error).message };
-    } else if (msg === 'User creation failed' || msg.includes('createUser')) {
-      action = 'login_failure';
-      errorCode = errorCodes.USER_CREATION_FAILED;
-      errorKey = 'user_creation_failed';
-      if (userInfo?.email) {
-        errorParams = { email: userInfo.email, error: (e as Error).message };
-      }
-    } else {
-      errorKey = 'sign_in_unknown';
-      errorParams = { error: msg || 'unknown' };
-    }
+    const errorInfo = classifyOidcError(msg, userInfo);
 
     await auditLog.log({
-      action,
+      action: errorInfo.action,
       email: userInfo?.email,
       ip: ctx.ip,
-      detailsKey: action,
-      detailsParams: action === 'login_failure' ? { message: msg } : undefined,
+      detailsKey: errorInfo.action,
+      detailsParams: errorInfo.action === 'login_failure' ? { message: msg } : undefined,
     });
     strapi.log.error({
-      code: errorCode,
+      code: errorInfo.code,
       phase: 'oidc_callback',
       message: msg || 'Unknown sign-in error',
-      detail: errorKey ? getErrorDetail(errorKey, errorParams) : undefined,
+      detail: errorInfo.key ? getErrorDetail(errorInfo.key, errorInfo.params) : undefined,
       email: userInfo?.email,
     });
     ctx.send(oauthService.renderSignUpError(userFacingMessages.signInError));

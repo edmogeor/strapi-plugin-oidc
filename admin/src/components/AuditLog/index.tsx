@@ -35,6 +35,15 @@ interface PaginationInfo {
 
 const PAGE_SIZE = 10;
 
+const DETAILS_TEXT_STYLE = {
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  maxWidth: '180px',
+  cursor: 'help',
+} as const;
+
 export default function AuditLog() {
   const { formatMessage } = useIntl();
   const { get, del } = useFetchClient();
@@ -227,18 +236,7 @@ export default function AuditLog() {
                 <Td style={{ maxWidth: '200px' }}>
                   {record.details ? (
                     <Tooltip label={record.details} side="top">
-                      <Typography
-                        variant="omega"
-                        textColor="neutral600"
-                        style={{
-                          display: 'block',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '180px',
-                          cursor: 'help',
-                        }}
-                      >
+                      <Typography variant="omega" textColor="neutral600" style={DETAILS_TEXT_STYLE}>
                         {record.details}
                       </Typography>
                     </Tooltip>
