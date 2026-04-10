@@ -11,40 +11,32 @@ import {
   Thead,
   Tr,
   Typography,
-  MultiSelect,
-  MultiSelectOption,
 } from '@strapi/design-system';
 import { useCallback, useRef, useState } from 'react';
 import { Download, Plus, Trash, Upload } from '@strapi/icons';
 import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
-import { OIDCRole, RoleDef } from '../Role';
 import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
 
 export interface WhitelistUser {
   email: string;
-  roles?: string[];
   createdAt: string;
 }
 
 interface WhitelistProps {
   users: WhitelistUser[];
-  roles: RoleDef[];
-  oidcRoles?: OIDCRole[];
   useWhitelist: boolean;
   loading: boolean;
-  onSave: (email: string, roles: string[]) => void;
+  onSave: (email: string) => void;
   onDelete: (email: string) => void;
   onDeleteAll: () => void;
-  onImport: (entries: { email: string; roles: string[] }[]) => Promise<number>;
+  onImport: (emails: string[]) => Promise<number>;
   onExport: () => void;
 }
 
 export default function Whitelist({
   users,
-  roles,
-  oidcRoles = [],
   useWhitelist,
   loading,
   onSave,
@@ -54,7 +46,6 @@ export default function Whitelist({
   onExport,
 }: WhitelistProps) {
   const [email, setEmail] = useState('');
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const { formatMessage } = useIntl();
   const { toggleNotification } = useNotification();
@@ -63,16 +54,6 @@ export default function Whitelist({
 
   const pageCount = Math.ceil(users.length / PAGE_SIZE) || 1;
   const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const getRoleNames = (roleIds: string[]): string =>
-    roleIds
-      .map((roleId) => {
-        const r = roles.find((ro) => String(ro.id) === String(roleId));
-        return r ? r.name : roleId;
-      })
-      .join(', ');
-
-  const defaultRoleNames = getRoleNames(oidcRoles.flatMap((oidc) => oidc.role ?? []));
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isValidEmail = emailRegex.test(email);
@@ -85,11 +66,10 @@ export default function Whitelist({
         message: formatMessage(getTrad('whitelist.error.unique')),
       });
     } else {
-      onSave(emailText, selectedRoles);
+      onSave(emailText);
       setEmail('');
-      setSelectedRoles([]);
     }
-  }, [email, selectedRoles, users, onSave, formatMessage, toggleNotification]);
+  }, [email, users, onSave, formatMessage, toggleNotification]);
 
   const handleImport = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,13 +81,11 @@ export default function Whitelist({
         const text = await file.text();
         const parsed = JSON.parse(text);
         if (!Array.isArray(parsed)) throw new Error();
-        const entries = parsed
+        const emails = parsed
           .filter((item: any) => item?.email)
-          .map((item: any) => ({
-            email: String(item.email),
-            roles: Array.isArray(item.roles) ? item.roles : [],
-          }));
-        const count = await onImport(entries);
+          .map((item: any) => String(item.email).trim().toLowerCase())
+          .filter((email: string) => emailRegex.test(email));
+        const count = await onImport(emails);
         if (count === 0) {
           toggleNotification({
             type: 'info',
@@ -202,24 +180,6 @@ export default function Whitelist({
                 />
               </Field.Root>
             </Box>
-            <Box style={{ flex: 1 }}>
-              <Field.Root>
-                <MultiSelect
-                  withTags
-                  placeholder={formatMessage(getTrad('whitelist.roles.placeholder'))}
-                  value={selectedRoles}
-                  onChange={(value) => {
-                    setSelectedRoles(value || []);
-                  }}
-                >
-                  {roles.map((role) => (
-                    <MultiSelectOption key={role.id} value={role.id.toString()}>
-                      {role.name}
-                    </MultiSelectOption>
-                  ))}
-                </MultiSelect>
-              </Field.Root>
-            </Box>
             <Box>
               <Button
                 size="L"
@@ -234,12 +194,11 @@ export default function Whitelist({
           </Flex>
 
           <Divider />
-          <CustomTable colCount={5} rowCount={users.length}>
+          <CustomTable colCount={4} rowCount={users.length}>
             <Thead>
               <Tr>
                 <Th>{formatMessage(getTrad('whitelist.table.no'))}</Th>
                 <Th>{formatMessage(getTrad('whitelist.table.email'))}</Th>
-                <Th>{formatMessage(getTrad('whitelist.table.roles'))}</Th>
                 <Th>{formatMessage(getTrad('whitelist.table.created'))}</Th>
                 <Th style={{ paddingRight: 0 }}>&nbsp;</Th>
               </Tr>
@@ -247,7 +206,7 @@ export default function Whitelist({
             <Tbody>
               {users.length === 0 ? (
                 <Tr>
-                  <Td colSpan={5}>
+                  <Td colSpan={4}>
                     <Flex justifyContent="center" padding={4}>
                       <Typography textColor="neutral600">
                         {formatMessage(getTrad('whitelist.table.empty'))}
@@ -256,76 +215,56 @@ export default function Whitelist({
                   </Td>
                 </Tr>
               ) : (
-                paginatedUsers.map((user, index) => {
-                  const explicitRoleNames = getRoleNames(user.roles || []);
-                  const isDefault = !explicitRoleNames && Boolean(defaultRoleNames);
-                  const userRolesNames = explicitRoleNames || defaultRoleNames;
-
-                  return (
-                    <Tr key={user.email}>
-                      <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
-                      <Td>{user.email}</Td>
-                      <Td>
-                        {userRolesNames ? (
-                          <Flex gap={2} alignItems="center">
-                            <span>{userRolesNames}</span>
-                            {isDefault && (
-                              <Typography variant="pi" textColor="neutral500">
-                                {formatMessage(getTrad('whitelist.table.roles.default'))}
-                              </Typography>
-                            )}
-                          </Flex>
-                        ) : (
-                          '-'
-                        )}
-                      </Td>
-                      <Td>
-                        <LocalizedDate date={user.createdAt} options={{ month: 'long' }} />
-                      </Td>
-                      <Td style={{ paddingRight: 0 }}>
-                        <Flex
-                          justifyContent="flex-end"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ width: '100%' }}
-                        >
-                          <ConfirmDialog
-                            trigger={
-                              <IconButton
-                                label={formatMessage(getTrad('whitelist.delete.label'))}
-                                withTooltip={false}
-                              >
-                                <Trash />
-                              </IconButton>
-                            }
-                            title={formatMessage(getTrad('whitelist.delete.title'))}
-                            body={
-                              <Flex direction="column" alignItems="center" gap={2}>
-                                <Flex justifyContent="center">
-                                  <Typography id="confirm-description">
-                                    {formatMessage(getTrad('whitelist.delete.description'))}
-                                  </Typography>
-                                </Flex>
-                                <Flex justifyContent="center">
-                                  <Typography variant="omega" fontWeight="bold">
-                                    {user.email}
-                                  </Typography>
-                                </Flex>
-                                <Flex justifyContent="center" marginTop={2}>
-                                  <Typography variant="pi" textColor="neutral600">
-                                    {formatMessage(getTrad('whitelist.delete.note'))}
-                                  </Typography>
-                                </Flex>
+                paginatedUsers.map((user, index) => (
+                  <Tr key={user.email}>
+                    <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
+                    <Td>{user.email}</Td>
+                    <Td>
+                      <LocalizedDate date={user.createdAt} options={{ month: 'long' }} />
+                    </Td>
+                    <Td style={{ paddingRight: 0 }}>
+                      <Flex
+                        justifyContent="flex-end"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%' }}
+                      >
+                        <ConfirmDialog
+                          trigger={
+                            <IconButton
+                              label={formatMessage(getTrad('whitelist.delete.label'))}
+                              withTooltip={false}
+                            >
+                              <Trash />
+                            </IconButton>
+                          }
+                          title={formatMessage(getTrad('whitelist.delete.title'))}
+                          body={
+                            <Flex direction="column" alignItems="center" gap={2}>
+                              <Flex justifyContent="center">
+                                <Typography id="confirm-description">
+                                  {formatMessage(getTrad('whitelist.delete.description'))}
+                                </Typography>
                               </Flex>
-                            }
-                            confirmLabel={formatMessage(getTrad('page.ok'))}
-                            onConfirm={() => onDelete(user.email)}
-                            confirmVariant="danger-light"
-                          />
-                        </Flex>
-                      </Td>
-                    </Tr>
-                  );
-                })
+                              <Flex justifyContent="center">
+                                <Typography variant="omega" fontWeight="bold">
+                                  {user.email}
+                                </Typography>
+                              </Flex>
+                              <Flex justifyContent="center" marginTop={2}>
+                                <Typography variant="pi" textColor="neutral600">
+                                  {formatMessage(getTrad('whitelist.delete.note'))}
+                                </Typography>
+                              </Flex>
+                            </Flex>
+                          }
+                          confirmLabel={formatMessage(getTrad('page.ok'))}
+                          onConfirm={() => onDelete(user.email)}
+                          confirmVariant="danger-light"
+                        />
+                      </Flex>
+                    </Td>
+                  </Tr>
+                ))
               )}
             </Tbody>
           </CustomTable>

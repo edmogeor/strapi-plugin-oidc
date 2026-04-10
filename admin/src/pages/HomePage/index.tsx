@@ -8,11 +8,7 @@ import getTrad from '../../utils/getTrad';
 import Role from '../../components/Role';
 import Whitelist from '../../components/Whitelist';
 import AuditLog from '../../components/AuditLog';
-import {
-  ErrorAlertMessage,
-  SuccessAlertMessage,
-  MatchedUserAlertMessage,
-} from '../../components/AlertMessage';
+import { ErrorAlertMessage, SuccessAlertMessage } from '../../components/AlertMessage';
 import CustomSwitch from '../../components/CustomSwitch';
 import { useOidcSettings } from './useOidcSettings';
 
@@ -29,9 +25,6 @@ function HomePage() {
       />
       {state.showSuccess && <SuccessAlertMessage onClose={() => actions.setSuccess(false)} />}
       {state.showError && <ErrorAlertMessage onClose={() => actions.setError(false)} />}
-      {state.showMatched > 0 && (
-        <MatchedUserAlertMessage count={state.showMatched} onClose={() => actions.setMatched(0)} />
-      )}
       <Layouts.Content>
         <Flex direction="column" alignItems="stretch" gap={6}>
           <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
@@ -64,8 +57,6 @@ function HomePage() {
             <Whitelist
               loading={state.loading}
               users={state.users}
-              roles={state.roles}
-              oidcRoles={state.oidcRoles}
               useWhitelist={state.useWhitelist}
               onSave={actions.onRegisterWhitelist}
               onDelete={actions.onDeleteWhitelist}
