@@ -116,12 +116,12 @@ module.exports = ({ env }) => ({
 
 Role names are the **display names** shown in **Settings → Roles** (e.g. `"Editor"`, `"Super Admin"`, `"Author"`). IDs are not supported — use names for clarity.
 
-### Role assignment precedence (new users only)
+### Role assignment precedence
 
 1. **User's OIDC groups match `OIDC_GROUP_ROLE_MAP`** → use the mapped Strapi roles
 2. **No group match or no mapping configured** → use the default OIDC roles
 
-> **Note:** Existing users' Strapi roles are never changed on login.
+> **Note:** Existing users' roles are updated on every login to reflect current group membership.
 
 ## Whitelist API
 
