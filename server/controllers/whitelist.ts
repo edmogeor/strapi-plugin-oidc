@@ -125,18 +125,13 @@ async function importUsers(ctx) {
   const roleNameToId = new Map(allRoles.map((r) => [r.name, String(r.id)]));
   const resolveRole = (nameOrId: string) => roleNameToId.get(nameOrId) ?? nameOrId;
 
-  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
   const normalized = users
     .filter((u) => u?.email)
-    .map((u) => {
-      const email = String(u.email).trim().toLowerCase();
-      return {
-        email: isValidEmail(email) ? email : null,
-        roles: (Array.isArray(u.roles) ? u.roles : []).map(resolveRole),
-      };
-    })
-    .filter((u) => u.email !== null);
+    .map((u) => ({
+      email: String(u.email).trim().toLowerCase(),
+      roles: (Array.isArray(u.roles) ? u.roles : []).map(resolveRole),
+    }))
+    .filter((u) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u.email));
 
   // Deduplicate within the import payload itself
   const seen = new Set<string>();
