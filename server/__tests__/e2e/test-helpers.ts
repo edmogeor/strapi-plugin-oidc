@@ -1,3 +1,4 @@
+import type { SuperAgentTest } from 'supertest';
 import type { Core } from './test-types';
 export { clearRateLimitMap } from '../../routes';
 
@@ -29,3 +30,12 @@ export const setSettings = (
     .plugin('strapi-plugin-oidc')
     .service('whitelist')
     .setSettings({ useWhitelist, enforceOIDC });
+
+export async function initiateLoginAndCallback(
+  agent: SuperAgentTest,
+): Promise<{ state: string | null }> {
+  const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  const state = new URL(loginRes.headers.location).searchParams.get('state');
+  await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
+  return { state };
+}
