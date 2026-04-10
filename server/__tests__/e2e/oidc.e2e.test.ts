@@ -216,7 +216,7 @@ describe('OIDC E2E Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
-      expect(res.text).toContain(errorMessages.invalid_state);
+      expect(res.text).toContain(userFacingMessages.invalid_state);
     });
   });
 
