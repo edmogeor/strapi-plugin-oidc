@@ -29,7 +29,7 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should register a new user in whitelist', async () => {
-      await whitelistService.registerUser('e2e-test@whitelist.com', [1]);
+      await whitelistService.registerUser('e2e-test@whitelist.com');
 
       const user = await whitelistService.checkWhitelistForEmail('e2e-test@whitelist.com');
       expect(user).toBeDefined();

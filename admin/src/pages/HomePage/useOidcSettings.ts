@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { OIDCRole, RoleDef } from '../../components/Role';
 import { WhitelistUser } from '../../components/Whitelist';
+import { formatDatetimeForFilename } from '../../utils/datetime';
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -13,7 +14,6 @@ export function useOidcSettings() {
   const [loading, setLoading] = useState(false);
   const [showSuccess, setSuccess] = useState(false);
   const [showError, setError] = useState(false);
-  const [showMatched, setMatched] = useState(0);
 
   // Roles
   const [initialOidcRoles, setInitialOIDCRoles] = useState<OIDCRole[]>([]);
@@ -28,6 +28,7 @@ export function useOidcSettings() {
   const [enforceOIDCConfig, setEnforceOIDCConfig] = useState<boolean | null>(null);
   const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([]);
   const [users, setUsers] = useState<WhitelistUser[]>([]);
+  const [whitelistResponse, setWhitelistResponse] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
@@ -38,6 +39,7 @@ export function useOidcSettings() {
       setRoles(response.data.data);
     });
     get('/strapi-plugin-oidc/whitelist').then((response) => {
+      setWhitelistResponse(response.data);
       setUsers(response.data.whitelistUsers);
       setInitialUsers(deepClone(response.data.whitelistUsers));
       setUseWhitelist(response.data.useWhitelist);
@@ -55,8 +57,8 @@ export function useOidcSettings() {
     setOIDCRoles(updatedRoles);
   };
 
-  const onRegisterWhitelist = (email: string, selectedRoles: string[]) => {
-    const newUser = { email, roles: selectedRoles, createdAt: new Date().toISOString() };
+  const onRegisterWhitelist = (email: string) => {
+    const newUser = { email, createdAt: new Date().toISOString() };
     setUsers([...users, newUser]);
   };
 
@@ -73,8 +75,10 @@ export function useOidcSettings() {
     if (useWhitelist) setEnforceOIDC(false);
   };
 
-  const onImport = async (entries: { email: string; roles: string[] }[]): Promise<number> => {
-    const response = await post('/strapi-plugin-oidc/whitelist/import', { users: entries });
+  const onImport = async (emails: string[]): Promise<number> => {
+    const response = await post('/strapi-plugin-oidc/whitelist/import', {
+      users: emails.map((e) => ({ email: e })),
+    });
     // Refresh from server
     const refreshed = await get('/strapi-plugin-oidc/whitelist');
     setUsers(refreshed.data.whitelistUsers);
@@ -82,14 +86,10 @@ export function useOidcSettings() {
     return response.data.importedCount as number;
   };
 
-  const onExport = () => {
-    const roleMap = new Map(roles.map((r) => [String(r.id), r.name]));
-    const data = users.map(({ email, roles: userRoles }) => ({
-      email,
-      roles: (userRoles || []).map((id) => roleMap.get(String(id)) ?? id),
-    }));
-    const now = new Date();
-    const datetime = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+  const onExport = async () => {
+    const response = await get('/strapi-plugin-oidc/whitelist/export');
+    const data = response.data as Array<{ email: string }>;
+    const datetime = formatDatetimeForFilename(new Date());
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -126,8 +126,8 @@ export function useOidcSettings() {
           role: role.role,
         })),
       });
-      const syncResponse = await put('/strapi-plugin-oidc/whitelist/sync', {
-        users: users.map((u) => ({ email: u.email, roles: u.roles })),
+      await put('/strapi-plugin-oidc/whitelist/sync', {
+        users: users.map((u) => ({ email: u.email })),
       });
       await put('/strapi-plugin-oidc/whitelist/settings', {
         useWhitelist,
@@ -139,17 +139,13 @@ export function useOidcSettings() {
       setInitialEnforceOIDC(enforceOIDC);
 
       get('/strapi-plugin-oidc/whitelist').then((getResponse) => {
+        setWhitelistResponse(getResponse.data);
         setUsers(getResponse.data.whitelistUsers);
         setInitialUsers(deepClone(getResponse.data.whitelistUsers));
       });
 
-      if (syncResponse.data?.matchedExistingUsersCount > 0) {
-        setMatched(syncResponse.data.matchedExistingUsersCount);
-        setTimeout(() => setMatched(0), 3000);
-      } else {
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-      }
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (e) {
       console.error(e);
       setError(true);
@@ -164,7 +160,6 @@ export function useOidcSettings() {
       loading,
       showSuccess,
       showError,
-      showMatched,
       oidcRoles,
       roles,
       useWhitelist,
@@ -173,11 +168,11 @@ export function useOidcSettings() {
       initialEnforceOIDC,
       users,
       isDirty,
+      auditLogEnabled: (whitelistResponse.auditLogEnabled as boolean) ?? true,
     },
     actions: {
       setSuccess,
       setError,
-      setMatched,
       onChangeRole,
       onRegisterWhitelist,
       onDeleteWhitelist,

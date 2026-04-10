@@ -584,6 +584,42 @@ export interface PluginReviewWorkflowsWorkflowStage extends Struct.CollectionTyp
   };
 }
 
+export interface PluginStrapiPluginOidcAuditLog extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi-plugin-oidc_audit-log';
+  info: {
+    collectionName: 'audit_logs';
+    displayName: 'OIDC Audit Log';
+    pluralName: 'audit-logs';
+    singularName: 'audit-log';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+    detailsKey: Schema.Attribute.String;
+    detailsParams: Schema.Attribute.JSON;
+    email: Schema.Attribute.String;
+    ip: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'plugin::strapi-plugin-oidc.audit-log'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+  };
+}
+
 export interface PluginStrapiPluginOidcRoles extends Struct.CollectionTypeSchema {
   collectionName: 'strapi-plugin-oidc_roles';
   info: {
@@ -646,7 +682,6 @@ export interface PluginStrapiPluginOidcWhitelists extends Struct.CollectionTypeS
     localizations: Schema.Attribute.Relation<'oneToMany', 'plugin::strapi-plugin-oidc.whitelists'> &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    roles: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
   };
@@ -889,6 +924,7 @@ declare module '@strapi/strapi' {
       'plugin::i18n.locale': PluginI18NLocale;
       'plugin::review-workflows.workflow': PluginReviewWorkflowsWorkflow;
       'plugin::review-workflows.workflow-stage': PluginReviewWorkflowsWorkflowStage;
+      'plugin::strapi-plugin-oidc.audit-log': PluginStrapiPluginOidcAuditLog;
       'plugin::strapi-plugin-oidc.roles': PluginStrapiPluginOidcRoles;
       'plugin::strapi-plugin-oidc.whitelists': PluginStrapiPluginOidcWhitelists;
       'plugin::upload.file': PluginUploadFile;

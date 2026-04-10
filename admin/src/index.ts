@@ -195,7 +195,7 @@ export default {
           return Promise.resolve({ data: transformKeys(en), locale });
         }
         // Additional locale files live in translations/locales/ (e.g. fr.json, de.json)
-        return import(`./translations/locales/${locale}.json`)
+        return import(`../translations/locales/${locale}.json`)
           .then(({ default: data }) => ({ data: transformKeys(data), locale }))
           .catch(() => ({ data: {}, locale }));
       }),

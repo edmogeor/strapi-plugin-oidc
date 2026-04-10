@@ -1,0 +1,20 @@
+{
+  "info": {
+    "singularName": "audit-log",
+    "pluralName": "audit-logs",
+    "collectionName": "audit_logs",
+    "displayName": "OIDC Audit Log"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "action": { "type": "string", "required": true },
+    "email": { "type": "string" },
+    "ip": { "type": "string" },
+    "detailsKey": { "type": "string" },
+    "detailsParams": { "type": "json" }
+  }
+}

@@ -1,3 +1,1 @@
-export default function register() {
-    // registration phase
-}
+export default function register() {}

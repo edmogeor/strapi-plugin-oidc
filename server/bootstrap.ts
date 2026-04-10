@@ -1,20 +1,20 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
+import { getRetentionDays } from './utils/pluginConfig';
 
 export default async function bootstrap({ strapi }) {
+  const adminUrl = strapi.config.get('admin.url', '/admin') as string;
+  const authRoutes = [
+    `${adminUrl}/login`,
+    `${adminUrl}/register`,
+    `${adminUrl}/register-admin`,
+    `${adminUrl}/forgot-password`,
+    `${adminUrl}/reset-password`,
+  ];
+  const tokenRefreshPath = `${adminUrl}/token/refresh`;
+
   const enforceOidcMiddleware = async (ctx, next) => {
-    const adminUrl = strapi.config.get('admin.url', '/admin');
-
-    const authRoutes = [
-      `${adminUrl}/login`,
-      `${adminUrl}/register`,
-      `${adminUrl}/register-admin`,
-      `${adminUrl}/forgot-password`,
-      `${adminUrl}/reset-password`,
-    ];
-
     const isPostAuth = authRoutes.includes(ctx.request.path) && ctx.request.method === 'POST';
-    const isTokenRefresh =
-      ctx.request.path === `${adminUrl}/token/refresh` && ctx.request.method === 'POST';
+    const isTokenRefresh = ctx.request.path === tokenRefreshPath && ctx.request.method === 'POST';
 
     if (isPostAuth || isTokenRefresh) {
       try {
@@ -126,28 +126,19 @@ export default async function bootstrap({ strapi }) {
     strapi.log.warn('Could not initialize default OIDC role:', err.message);
   }
 
-  strapi.db.lifecycles.subscribe({
-    models: ['admin::user'],
-    async afterUpdate(event) {
-      const { result } = event;
-      if (!result?.email) return;
-
-      const query = strapi.query('plugin::strapi-plugin-oidc.whitelists');
-      const whitelistEntry = await query.findOne({ where: { email: result.email } });
-      if (!whitelistEntry) return;
-
-      const userWithRoles = await strapi.query('admin::user').findOne({
-        where: { id: result.id },
-        populate: ['roles'],
-      });
-
-      if (userWithRoles?.roles) {
-        const roleIds = userWithRoles.roles.map((r) => r.id.toString());
-        await query.update({
-          where: { id: whitelistEntry.id },
-          data: { roles: roleIds },
-        });
-      }
+  // Schedule daily audit log cleanup at midnight rather than running it once on startup,
+  // so long-running servers stay clean without needing a restart.
+  strapi.cron.add({
+    'strapi-plugin-oidc-audit-log-cleanup': {
+      task: async () => {
+        try {
+          const retentionDays = getRetentionDays();
+          await strapi.plugin('strapi-plugin-oidc').service('auditLog').cleanup(retentionDays);
+        } catch (err) {
+          strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
+        }
+      },
+      options: { rule: '0 0 * * *' }, // daily at midnight
     },
   });
 }

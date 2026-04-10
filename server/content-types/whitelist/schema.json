@@ -23,10 +23,6 @@
       "configurable": false,
       "required": true,
       "unique": true
-    },
-    "roles": {
-      "type": "json",
-      "configurable": false
     }
   }
 }

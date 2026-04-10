@@ -1,19 +1,22 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
+import { isAuditLogEnabled } from '../utils/pluginConfig';
+import { formatDatetimeForFilename } from '../utils/datetime';
+import type { WhitelistService, StrapiContext } from '../types';
 
-function getWhitelistService() {
-  return strapi.plugin('strapi-plugin-oidc').service('whitelist');
+function getWhitelistService(): WhitelistService {
+  return strapi.plugin('strapi-plugin-oidc').service('whitelist') as WhitelistService;
 }
 
 async function info(ctx) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
   const whitelistUsers = await whitelistService.getUsers();
-
   ctx.body = {
     useWhitelist: settings.useWhitelist,
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     enforceOIDCConfig: getEnforceOIDCConfig(strapi),
     whitelistUsers,
+    auditLogEnabled: isAuditLogEnabled(),
   };
 }
 
@@ -44,7 +47,7 @@ async function publicSettings(ctx) {
 }
 
 async function register(ctx) {
-  const { email, roles } = ctx.request.body;
+  const { email } = ctx.request.body;
   if (!email) {
     ctx.body = { message: 'Please enter a valid email address' };
     return;
@@ -54,31 +57,21 @@ async function register(ctx) {
   const rawEmails = Array.isArray(email) ? email : email.split(',');
   const emailList = rawEmails.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
 
-  const existingUsers = await strapi.query('admin::user').findMany({
-    where: { email: { $in: emailList } },
-    populate: ['roles'],
-  });
-  const existingUsersByEmail = new Map(existingUsers.map((u) => [u.email, u]));
-
   const whitelistService = getWhitelistService();
   let matchedExistingUsersCount = 0;
 
   for (const singleEmail of emailList) {
-    const existingUser = existingUsersByEmail.get(singleEmail);
-    let finalRoles = roles;
+    const existingUser = await strapi.query('admin::user').findOne({
+      where: { email: singleEmail },
+    });
+    if (existingUser) matchedExistingUsersCount++;
 
-    if (existingUser?.roles) {
-      finalRoles = existingUser.roles.map((r) => String(r.id));
-      matchedExistingUsersCount++;
-    }
-
-    // Only register if not already in whitelist to prevent duplicates
     const alreadyWhitelisted = await strapi.query('plugin::strapi-plugin-oidc.whitelists').findOne({
       where: { email: singleEmail },
     });
 
     if (!alreadyWhitelisted) {
-      await whitelistService.registerUser(singleEmail, finalRoles);
+      await whitelistService.registerUser(singleEmail);
     }
   }
 
@@ -97,55 +90,40 @@ async function deleteAll(ctx) {
   ctx.body = {};
 }
 
+async function exportWhitelist(ctx: StrapiContext): Promise<void> {
+  const datetime = formatDatetimeForFilename(new Date());
+  ctx.set('Content-Type', 'application/json');
+  ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-whitelist-${datetime}.json"`);
+
+  const whitelistService = getWhitelistService();
+  const users = await whitelistService.getUsers();
+  ctx.body = users.map((u) => ({ email: u.email }));
+}
+
 async function importUsers(ctx) {
   const { users } = ctx.request.body;
   if (!Array.isArray(users)) {
     ctx.status = 400;
-    ctx.body = { error: 'Expected { users: [{email, roles}] }' };
+    ctx.body = { error: 'Expected { users: [{email}] }' };
     return;
   }
 
-  // Build a name→id map so the JSON can use human-readable role names.
-  // Falls back to treating the value as an ID if no matching name is found,
-  // which preserves backwards compatibility with ID-based exports.
-  const allRoles = await strapi.query('admin::role').findMany({});
-  const roleNameToId = new Map(allRoles.map((r) => [r.name, String(r.id)]));
-  const resolveRole = (nameOrId: string) => roleNameToId.get(nameOrId) ?? nameOrId;
-
   const normalized = users
     .filter((u) => u?.email)
-    .map((u) => ({
-      email: String(u.email).trim().toLowerCase(),
-      roles: (Array.isArray(u.roles) ? u.roles : []).map(resolveRole),
-    }));
+    .map((u) => String(u.email).trim().toLowerCase())
+    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 
   // Deduplicate within the import payload itself
-  const seen = new Set<string>();
-  const deduped = normalized.filter((u) => {
-    if (seen.has(u.email)) return false;
-    seen.add(u.email);
-    return true;
-  });
-
-  // If a Strapi admin user already exists, use their current roles (same behaviour as register)
-  const strapiUsers = await strapi.query('admin::user').findMany({
-    where: { email: { $in: deduped.map((u) => u.email) } },
-    populate: ['roles'],
-  });
-  const strapiUserMap = new Map(strapiUsers.map((u) => [u.email, u]));
+  const deduped = [...new Set(normalized)];
 
   const whitelistService = getWhitelistService();
   const existing = await whitelistService.getUsers();
   const existingEmails = new Set(existing.map((u) => u.email));
 
   let importedCount = 0;
-  for (const user of deduped) {
-    if (existingEmails.has(user.email)) continue;
-    const strapiUser = strapiUserMap.get(user.email);
-    const finalRoles = strapiUser?.roles?.length
-      ? strapiUser.roles.map((r) => String(r.id))
-      : user.roles;
-    await whitelistService.registerUser(user.email, finalRoles);
+  for (const email of deduped) {
+    if (existingEmails.has(email)) continue;
+    await whitelistService.registerUser(email);
     importedCount++;
   }
 
@@ -155,21 +133,15 @@ async function importUsers(ctx) {
 async function syncUsers(ctx) {
   const { users: rawUsers } = ctx.request.body;
 
-  const users = rawUsers.map((u) => ({ ...u, email: String(u.email).toLowerCase() }));
+  const emails = rawUsers
+    .map((u) => String(u.email).toLowerCase())
+    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
 
   const whitelistService = getWhitelistService();
   const currentUsers = await whitelistService.getUsers();
-  let matchedExistingUsersCount = 0;
 
-  const emailsToSync = users.map((u) => u.email);
-  const existingStrapiUsers = await strapi.query('admin::user').findMany({
-    where: { email: { $in: emailsToSync } },
-    populate: ['roles'],
-  });
-
-  const syncEmailSet = new Set(emailsToSync);
+  const syncEmailSet = new Set(emails);
   const currentUsersByEmail = new Map(currentUsers.map((u) => [u.email, u]));
-  const strapiUsersByEmail = new Map(existingStrapiUsers.map((u) => [u.email, u]));
 
   // Remove whitelist entries not present in the incoming list
   for (const currUser of currentUsers) {
@@ -178,27 +150,14 @@ async function syncUsers(ctx) {
     }
   }
 
-  // Upsert incoming entries
-  for (const user of users) {
-    const currUser = currentUsersByEmail.get(user.email);
-    let finalRoles = user.roles;
-
-    if (!currUser) {
-      const existingStrapiUser = strapiUsersByEmail.get(user.email);
-      if (existingStrapiUser?.roles) {
-        finalRoles = existingStrapiUser.roles.map((r) => String(r.id));
-        matchedExistingUsersCount++;
-      }
-      await whitelistService.registerUser(user.email, finalRoles);
-    } else {
-      await strapi.query('plugin::strapi-plugin-oidc.whitelists').update({
-        where: { id: currUser.id },
-        data: { roles: finalRoles },
-      });
+  // Add new entries
+  for (const email of emails) {
+    if (!currentUsersByEmail.has(email)) {
+      await whitelistService.registerUser(email);
     }
   }
 
-  ctx.body = { matchedExistingUsersCount };
+  ctx.body = { matchedExistingUsersCount: 0 };
 }
 
 export default {
@@ -210,4 +169,5 @@ export default {
   deleteAll,
   syncUsers,
   importUsers,
+  exportWhitelist,
 };

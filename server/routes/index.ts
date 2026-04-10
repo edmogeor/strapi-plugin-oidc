@@ -1,16 +1,28 @@
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS = 20;
-
+import { createHash } from 'node:crypto';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 
-const rateLimitMiddleware = async (ctx: StrapiContext, next: Next) => {
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60000;
+const MAX_REQUESTS = 1000;
+
+export const clearRateLimitMap = () => rateLimitMap.clear();
+
+function getRateLimitKey(ctx: StrapiContext): string {
   const ip = ctx.request.ip;
+  const ua = ctx.request.header['user-agent'] ?? '';
+  const uaHash = createHash('sha256').update(ua).digest('hex').slice(0, 16);
+  return `${ip}:${uaHash}`;
+}
+
+function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
+  const key = getRateLimitKey(ctx);
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
-  const requestStamps = (rateLimitMap.get(ip) || []).filter((timestamp) => timestamp > windowStart);
+  const requestStamps = (rateLimitMap.get(key) || []).filter(
+    (timestamp) => timestamp > windowStart,
+  );
 
   if (requestStamps.length >= MAX_REQUESTS) {
     ctx.status = 429;
@@ -19,20 +31,22 @@ const rateLimitMiddleware = async (ctx: StrapiContext, next: Next) => {
   }
 
   requestStamps.push(now);
-  rateLimitMap.set(ip, requestStamps);
+  rateLimitMap.set(key, requestStamps);
 
-  await next();
-};
+  return next();
+}
 
-const adminPolicies = (action: 'read' | 'update') => ({
-  policies: [
-    'admin::isAuthenticatedAdmin',
-    {
-      name: 'admin::hasPermissions',
-      config: { actions: [`plugin::strapi-plugin-oidc.${action}`] },
-    },
-  ],
-});
+function adminPolicies(action: 'read' | 'update') {
+  return {
+    policies: [
+      'admin::isAuthenticatedAdmin',
+      {
+        name: 'admin::hasPermissions',
+        config: { actions: [`plugin::strapi-plugin-oidc.${action}`] },
+      },
+    ],
+  };
+}
 
 export default {
   admin: {
@@ -116,6 +130,30 @@ export default {
         handler: 'whitelist.deleteAll',
         config: adminPolicies('update'),
       },
+      {
+        method: 'GET',
+        path: '/whitelist/export',
+        handler: 'whitelist.exportWhitelist',
+        config: adminPolicies('read'),
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs',
+        handler: 'auditLog.find',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs/export',
+        handler: 'auditLog.export',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
+      {
+        method: 'DELETE',
+        path: '/audit-logs',
+        handler: 'auditLog.clearAll',
+        config: { policies: ['admin::isAuthenticatedAdmin'] },
+      },
     ],
   },
 
@@ -149,6 +187,26 @@ export default {
         method: 'DELETE',
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
+      },
+      {
+        method: 'GET',
+        path: '/whitelist/export',
+        handler: 'whitelist.exportWhitelist',
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs',
+        handler: 'auditLog.find',
+      },
+      {
+        method: 'GET',
+        path: '/audit-logs/export',
+        handler: 'auditLog.export',
+      },
+      {
+        method: 'DELETE',
+        path: '/audit-logs',
+        handler: 'auditLog.clearAll',
       },
     ],
   },

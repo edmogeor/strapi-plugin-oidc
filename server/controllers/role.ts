@@ -20,7 +20,7 @@ async function update(ctx) {
     await roleService.update(roles);
     ctx.send({}, 204);
   } catch (e) {
-    console.error(e);
+    strapi.log.error(e);
     ctx.send({}, 400);
   }
 }

@@ -4,11 +4,15 @@
     "rootDir": ".",
     "module": "esnext",
     "target": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "strict": false,
     "sourceMap": false,
-    "inlineSourceMap": false
+    "inlineSourceMap": false,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
   },
   "include": ["./server", "./admin/src"],
   "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]

@@ -15,6 +15,9 @@ export default {
     OIDC_END_SESSION_ENDPOINT: '',
     OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
     OIDC_ENFORCE: null, // null = use DB setting; true/false = override DB (useful for lockout recovery)
+    AUDIT_LOG_RETENTION_DAYS: 90,
+    OIDC_GROUP_FIELD: 'groups',
+    OIDC_GROUP_ROLE_MAP: '{}',
   },
   validator() {},
 };

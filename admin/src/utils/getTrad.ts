@@ -1,5 +1,5 @@
 import pluginId from '../pluginId';
-import en from '../translations/en.json';
+import en from '../../../translations/locales/en.json';
 
 export { en };
 
