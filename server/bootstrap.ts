@@ -109,15 +109,15 @@ export default async function bootstrap({ strapi }) {
     });
 
     if (oidcRoleCount === 0) {
-      const editorRole = await strapi.query('admin::role').findOne({
-        where: { code: 'strapi-editor' },
-      });
+      const defaultRole =
+        (await strapi.query('admin::role').findOne({ where: { code: 'strapi-editor' } })) ??
+        (await strapi.query('admin::role').findOne({}));
 
-      if (editorRole) {
+      if (defaultRole) {
         await strapi.query('plugin::strapi-plugin-oidc.roles').create({
           data: {
             oauth_type: '4',
-            roles: [editorRole.id.toString()],
+            roles: [defaultRole.id.toString()],
           },
         });
       }

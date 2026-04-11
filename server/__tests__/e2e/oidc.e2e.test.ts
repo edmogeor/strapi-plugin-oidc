@@ -435,6 +435,33 @@ describe('OIDC E2E Tests', () => {
   // ---------------------------------------------------------------------------
   // Run serially to avoid MSW handler stacking from parallel execution
   describe('Group-to-role mapping', { serial: true }, () => {
+    beforeAll(async () => {
+      // Ensure the default OIDC role record exists with at least one valid role,
+      // so tests that rely on it are not dependent on pre-seeded database state.
+      const existing = await strapi
+        .query('plugin::strapi-plugin-oidc.roles')
+        .findOne({ where: { oauth_type: '4' } });
+
+      if (!existing?.roles?.length) {
+        const defaultRole =
+          (await strapi.db.query('admin::role').findOne({ where: { code: 'strapi-editor' } })) ??
+          (await strapi.db.query('admin::role').findMany({ limit: 1 }))[0];
+
+        if (defaultRole) {
+          if (existing) {
+            await strapi.query('plugin::strapi-plugin-oidc.roles').update({
+              where: { oauth_type: '4' },
+              data: { roles: [defaultRole.id.toString()] },
+            });
+          } else {
+            await strapi.query('plugin::strapi-plugin-oidc.roles').create({
+              data: { oauth_type: '4', roles: [defaultRole.id.toString()] },
+            });
+          }
+        }
+      }
+    });
+
     beforeEach(async () => {
       // Reset MSW handlers and restore default config before each test
       // to prevent handler stacking from parallel test execution
