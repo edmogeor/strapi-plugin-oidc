@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-04-11
+
+### Fixed
+
+- `DELETE /whitelist/:id` changed to `DELETE /whitelist/:email` — the route now correctly accepts an email address rather than an internal ID.
+
+### Changed
+
+- README whitelist API documentation updated to reflect current behavior: import/add operations no longer accept per-user roles.
+
 ## [1.6.0] - 2026-04-10
 
 ### Added

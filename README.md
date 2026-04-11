@@ -140,14 +140,10 @@ API calls write directly to the database — there is no unsaved state.
 
 ### Import format
 
-Accepted by both the API import endpoint and the Admin UI import button. `roles` is optional and accepts role **names** (recommended) or numeric IDs. If the email already exists as a Strapi admin user, their current roles are used automatically.
+Accepted by both the API import endpoint and the Admin UI import button. If the email already exists as a Strapi admin user, their current roles are used automatically.
 
 ```json
-[
-  { "email": "alice@example.com", "roles": ["Editor"] },
-  { "email": "bob@example.com", "roles": ["Editor", "Author"] },
-  { "email": "carol@example.com" }
-]
+[{ "email": "alice@example.com" }, { "email": "bob@example.com" }]
 ```
 
 Duplicate emails within the payload and emails already in the whitelist are silently skipped.
@@ -166,12 +162,12 @@ curl -H "Authorization: Bearer <token>" \
 
 # Add
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "roles": ["Editor"]}' \
+  -d '{"email": "user@example.com"}' \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist
 
 # Bulk import
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"users": [{"email": "a@example.com", "roles": ["Editor"]}, {"email": "b@example.com"}]}' \
+  -d '{"users": [{"email": "a@example.com"}, {"email": "b@example.com"}]}' \
   http://localhost:1337/api/strapi-plugin-oidc/whitelist/import
 
 # Delete one (by email)

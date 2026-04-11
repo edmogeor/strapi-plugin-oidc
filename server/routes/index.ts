@@ -120,7 +120,7 @@ export default {
       },
       {
         method: 'DELETE',
-        path: '/whitelist/:id',
+        path: '/whitelist/:email',
         handler: 'whitelist.removeEmail',
         config: adminPolicies('update'),
       },
@@ -180,7 +180,7 @@ export default {
       },
       {
         method: 'DELETE',
-        path: '/whitelist/:id',
+        path: '/whitelist/:email',
         handler: 'whitelist.removeEmail',
       },
       {

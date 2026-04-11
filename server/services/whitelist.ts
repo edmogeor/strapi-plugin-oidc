@@ -45,9 +45,9 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
         data: { email },
       });
     },
-    async removeUser(id: number): Promise<void> {
+    async removeUser(email: string): Promise<void> {
       await getWhitelistQuery().delete({
-        where: { id },
+        where: { email },
       });
     },
     async checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null> {

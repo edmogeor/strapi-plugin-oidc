@@ -79,9 +79,9 @@ async function register(ctx) {
 }
 
 async function removeEmail(ctx) {
-  const { id } = ctx.params;
+  const { email } = ctx.params;
   const whitelistService = getWhitelistService();
-  await whitelistService.removeUser(id);
+  await whitelistService.removeUser(email);
   ctx.body = {};
 }
 
