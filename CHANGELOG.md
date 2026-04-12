@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-04-12
+
+### Fixed
+
+- **Role reset on login** — Existing users' roles were incorrectly reset to the configured default OIDC roles on every login when no OIDC group mapping matched. Default OIDC roles now only apply when creating a new user. Roles for existing users are only updated when an active group-to-role mapping resolves their groups.
+
 ## [1.6.2] - 2026-04-12
 
 ### Fixed
