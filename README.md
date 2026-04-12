@@ -121,7 +121,12 @@ Role names are the **display names** shown in **Settings → Roles** (e.g. `"Edi
 1. **User's OIDC groups match `OIDC_GROUP_ROLE_MAP`** → use the mapped Strapi roles
 2. **No group match or no mapping configured** → use the default OIDC roles
 
-> **Note:** Existing users' roles are updated on every login to reflect current group membership.
+### Role updates on subsequent logins
+
+- **New users** — OIDC roles are always assigned on first login.
+- **Existing users with manually unchanged roles** — If a user's current roles still match the roles assigned by OIDC on their previous login (i.e., an administrator has not manually changed their roles), their roles are updated to reflect the current group mapping. This ensures that when the group-to-role mapping changes, returning users pick up the new roles automatically.
+- **Existing users with manually changed roles** — If an administrator has manually assigned the user different roles since their last OIDC login, the user's roles are left unchanged. OIDC will not overwrite a manual role assignment.
+- **Mapping removed or user's groups don't map** — If the `OIDC_GROUP_ROLE_MAP` is removed, a user's groups no longer match any mapping, or there are no default OIDC roles configured, the user keeps their last known roles.
 
 ## Whitelist API
 
