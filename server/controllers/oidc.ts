@@ -175,11 +175,11 @@ async function resolveRoles(
   config: PluginConfig,
   roleService: RoleService,
   availableRoles: AdminRole[],
-): Promise<string[]> {
+): Promise<{ roles: string[]; fromGroupMapping: boolean }> {
   const groupRoles = resolveRolesFromGroups(userInfo, config, availableRoles);
-  if (groupRoles.length > 0) return groupRoles;
+  if (groupRoles.length > 0) return { roles: groupRoles, fromGroupMapping: true };
   const oidcRoles = await roleService.oidcRoles();
-  return oidcRoles?.roles || [];
+  return { roles: oidcRoles?.roles || [], fromGroupMapping: false };
 }
 
 async function registerNewUser(
@@ -258,7 +258,12 @@ async function handleUserAuthentication(
   await whitelistService.checkWhitelistForEmail(email);
 
   const allRoles = await strapi.db.query('admin::role').findMany();
-  const roles = await resolveRoles(userResponseData, config, roleService, allRoles);
+  const { roles, fromGroupMapping } = await resolveRoles(
+    userResponseData,
+    config,
+    roleService,
+    allRoles,
+  );
   const resolvedRoleNames = allRoles.filter((r) => roles.includes(String(r.id))).map((r) => r.name);
 
   let userCreated = false;
@@ -269,20 +274,11 @@ async function handleUserAuthentication(
     user = await registerNewUser(oauthService, email, userResponseData, config, ctx, roles);
     userCreated = true;
     rolesUpdated = true;
-  } else if (roles.length > 0) {
-    const defaultRoleIds = new Set(user.roles.map((r) => String(r.id)));
+  } else if (fromGroupMapping && roles.length > 0) {
     const currentRoleIds = new Set(user.roles.map((r) => String(r.id)));
-    const newRoleIds = new Set(roles);
-
-    if (rolesChanged(currentRoleIds, newRoleIds)) {
-      const isOnDefaultRoles =
-        currentRoleIds.size === defaultRoleIds.size &&
-        [...currentRoleIds].every((id) => defaultRoleIds.has(id));
-
-      if (isOnDefaultRoles) {
-        await updateUserRoles(user, currentRoleIds, roles);
-        rolesUpdated = true;
-      }
+    if (rolesChanged(currentRoleIds, new Set(roles))) {
+      await updateUserRoles(user, currentRoleIds, roles);
+      rolesUpdated = true;
     }
   }
 
