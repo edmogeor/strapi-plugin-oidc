@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Role preservation on mapping changes** — When OIDC group-to-role mapping changes or a user's groups change, manually assigned roles are now preserved. Previously, OIDC would overwrite any role changes made by administrators. Now, only users who are currently on OIDC-assigned roles will have their roles updated on login.
 - TypeScript type definitions updated to reflect that `removeUser` accepts an email address, not an internal ID.
 - Fixed type error in test helpers where `SuperAgentTest` was used instead of the base `Agent` type.
 
