@@ -125,7 +125,7 @@ describe('Controllers E2E', () => {
 
       // Remove it
       const ctxRemove = {
-        params: { id: addedUser.id },
+        params: { email: addedUser.email },
         body: null,
       };
       await whitelistController.removeEmail(ctxRemove);

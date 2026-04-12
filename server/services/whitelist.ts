@@ -46,7 +46,7 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
       });
     },
     async removeUser(email: string): Promise<void> {
-      await getWhitelistQuery().delete({
+      await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
         where: { email },
       });
     },

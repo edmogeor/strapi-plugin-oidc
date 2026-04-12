@@ -124,7 +124,7 @@ describe('Whitelist Content-API Routes', () => {
     expect(entry).toBeDefined();
 
     const delRes = await request(strapi.server.httpServer)
-      .delete(`/api/strapi-plugin-oidc/whitelist/${entry.id}`)
+      .delete(`/api/strapi-plugin-oidc/whitelist/${encodeURIComponent(entry.email)}`)
       .set('Authorization', `Bearer ${apiToken}`);
     expect(delRes.status).toBe(200);
 
@@ -132,9 +132,15 @@ describe('Whitelist Content-API Routes', () => {
     const afterRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);
-    expect(
-      afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === 'api-delete@test.com'),
-    ).toBe(false);
+    expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
+      false,
+    );
+    expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
+      false,
+    );
+    expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
+      false,
+    );
   });
 
   it('DELETE /whitelist — removes all entries', async () => {

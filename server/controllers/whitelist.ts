@@ -146,7 +146,7 @@ async function syncUsers(ctx) {
   // Remove whitelist entries not present in the incoming list
   for (const currUser of currentUsers) {
     if (!syncEmailSet.has(currUser.email)) {
-      await whitelistService.removeUser(currUser.id);
+      await whitelistService.removeUser(currUser.email);
     }
   }
 
