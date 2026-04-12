@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-04-12
+
+### Fixed
+
+- TypeScript type definitions updated to reflect that `removeUser` accepts an email address, not an internal ID.
+- Fixed type error in test helpers where `SuperAgentTest` was used instead of the base `Agent` type.
+
+### Refactored
+
+- Removed dead code in OIDC controller (empty `else if` branch).
+- Whitelist service now uses `getWhitelistQuery()` helper consistently instead of direct `strapi.db.query()` calls.
+
 ## [1.6.1] - 2026-04-11
 
 ### Fixed
