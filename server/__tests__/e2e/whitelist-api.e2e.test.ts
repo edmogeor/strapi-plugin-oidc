@@ -135,12 +135,6 @@ describe('Whitelist Content-API Routes', () => {
     expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
       false,
     );
-    expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
-      false,
-    );
-    expect(afterRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === entry.email)).toBe(
-      false,
-    );
   });
 
   it('DELETE /whitelist — removes all entries', async () => {

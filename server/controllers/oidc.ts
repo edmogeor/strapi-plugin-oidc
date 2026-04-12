@@ -204,6 +204,36 @@ async function registerNewUser(
   return activateUser;
 }
 
+function rolesChanged(current: Set<string>, next: Set<string>): boolean {
+  return current.size !== next.size || [...next].some((id) => !current.has(id));
+}
+
+async function updateUserRoles(
+  user: StrapiAdminUser,
+  currentRoleIds: Set<string>,
+  newRoleIds: string[],
+): Promise<void> {
+  try {
+    strapi.log.info(
+      `[OIDC] Roles updated for user ${user.id}: [${[...currentRoleIds].join(',')}] -> [${newRoleIds.join(',')}]`,
+    );
+    await strapi.db.query('admin::user').update({
+      where: { id: user.id },
+      data: { roles: newRoleIds },
+    });
+  } catch (updateErr) {
+    strapi.log.error({
+      code: errorCodes.ROLE_UPDATE_FAILED,
+      userId: user.id,
+      detail: getErrorDetail('role_update_failed', {
+        userId: user.id,
+        error: (updateErr as Error).message,
+      }),
+    });
+    throw updateErr;
+  }
+}
+
 async function handleUserAuthentication(
   userService: AdminUserService,
   oauthService: OAuthService,
@@ -225,10 +255,8 @@ async function handleUserAuthentication(
     throw new Error('Invalid email address received from OIDC provider');
   }
 
-  // Whitelist check — throws if whitelist is enabled and user is absent
   await whitelistService.checkWhitelistForEmail(email);
 
-  // Resolve roles from group mapping, falling back to the configured default
   const allRoles = await strapi.db.query('admin::role').findMany();
   const roles = await resolveRoles(userResponseData, config, roleService, allRoles);
   const resolvedRoleNames = allRoles.filter((r) => roles.includes(String(r.id))).map((r) => r.name);
@@ -244,12 +272,11 @@ async function handleUserAuthentication(
     userCreated = true;
     rolesUpdated = true;
   } else if (roles.length === 0) {
-    // No resolved roles (mapping removed or user's groups don't map) — leave them on their current roles
   } else {
     const currentRoleIds = new Set(user.roles.map((r) => String(r.id)));
     const newRoleIds = new Set(roles);
 
-    if (hasRoleIdsChanged(currentRoleIds, newRoleIds)) {
+    if (rolesChanged(currentRoleIds, newRoleIds)) {
       const isOnDefaultRoles =
         currentRoleIds.size === defaultRoleIds.size &&
         [...currentRoleIds].every((id) => defaultRoleIds.has(id));
@@ -265,36 +292,6 @@ async function handleUserAuthentication(
   oauthService.triggerSignInSuccess(user);
 
   return { activateUser: user, jwtToken, userCreated, rolesUpdated, resolvedRoleNames };
-
-  function hasRoleIdsChanged(current: Set<string>, next: Set<string>): boolean {
-    return current.size !== next.size || [...next].some((id) => !current.has(id));
-  }
-
-  async function updateUserRoles(
-    user: StrapiAdminUser,
-    currentRoleIds: Set<string>,
-    newRoleIds: string[],
-  ): Promise<void> {
-    try {
-      strapi.log.info(
-        `[OIDC] Roles updated for user ${user.id}: [${[...currentRoleIds].join(',')}] -> [${newRoleIds.join(',')}]`,
-      );
-      await strapi.db.query('admin::user').update({
-        where: { id: user.id },
-        data: { roles: newRoleIds },
-      });
-    } catch (updateErr) {
-      strapi.log.error({
-        code: errorCodes.ROLE_UPDATE_FAILED,
-        userId: user.id,
-        detail: getErrorDetail('role_update_failed', {
-          userId: user.id,
-          error: (updateErr as Error).message,
-        }),
-      });
-      throw updateErr;
-    }
-  }
 }
 
 type OidcErrorInfo = {
