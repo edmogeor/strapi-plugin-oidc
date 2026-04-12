@@ -97,7 +97,7 @@ export interface WhitelistService {
   setSettings(settings: WhitelistSettings): Promise<void>;
   getUsers(): Promise<WhitelistEntry[]>;
   registerUser(email: string): Promise<void>;
-  removeUser(id: number): Promise<void>;
+  removeUser(email: string): Promise<void>;
   checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null>;
 }
 

@@ -265,14 +265,12 @@ async function handleUserAuthentication(
   let rolesUpdated = false;
   let user = await userService.findOneByEmail(email);
 
-  const defaultRoleIds = new Set((user?.roles ?? []).map((r) => String(r.id)));
-
   if (!user) {
     user = await registerNewUser(oauthService, email, userResponseData, config, ctx, roles);
     userCreated = true;
     rolesUpdated = true;
-  } else if (roles.length === 0) {
-  } else {
+  } else if (roles.length > 0) {
+    const defaultRoleIds = new Set(user.roles.map((r) => String(r.id)));
     const currentRoleIds = new Set(user.roles.map((r) => String(r.id)));
     const newRoleIds = new Set(roles);
 

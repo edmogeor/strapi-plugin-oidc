@@ -1,5 +1,4 @@
-import request from 'supertest';
-import type { SuperAgentTest } from 'supertest';
+import request, { Agent } from 'supertest';
 import type { Core } from './test-types';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
@@ -35,9 +34,7 @@ export const setSettings = (
     .service('whitelist')
     .setSettings({ useWhitelist, enforceOIDC });
 
-export async function initiateLoginAndCallback(
-  agent: SuperAgentTest,
-): Promise<{ state: string | null }> {
+export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: string | null }> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
   const state = new URL(loginRes.headers.location).searchParams.get('state');
   await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
