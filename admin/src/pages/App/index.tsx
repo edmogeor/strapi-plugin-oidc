@@ -1,10 +1,3 @@
-/**
- *
- * This component is the skeleton around the actual pages, and should only
- * contain code that should be seen on all pages. (e.g. navigation bar)
- *
- */
-
 import { Routes, Route } from 'react-router-dom';
 import { Page } from '@strapi/strapi/admin';
 import HomePage from '../HomePage';
@@ -20,5 +13,4 @@ function App() {
   );
 }
 
-// fallow-ignore-next-line unused-export
 export default App;

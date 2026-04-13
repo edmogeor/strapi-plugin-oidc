@@ -1,3 +1,1 @@
-export default function destroy() {
-  // destroy phase
-}
+export default function destroy() {}
