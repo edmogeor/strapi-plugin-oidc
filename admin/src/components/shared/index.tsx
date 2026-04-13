@@ -94,16 +94,13 @@ export function TablePagination({ page, pageCount, onPageChange }: TablePaginati
   const { formatMessage } = useIntl();
   if (pageCount <= 1) return null;
 
+  const handleClick = (e: MouseEvent, num: number) => {
+    e.preventDefault();
+    onPageChange(num);
+  };
+
   const pageLink = (num: number) => (
-    <PageLink
-      key={num}
-      number={num}
-      href="#"
-      onClick={(e: MouseEvent) => {
-        e.preventDefault();
-        onPageChange(num);
-      }}
-    >
+    <PageLink key={num} number={num} href="#" onClick={(e) => handleClick(e, num)}>
       {formatMessage(getTrad('pagination.page'), { page: num })}
     </PageLink>
   );
@@ -149,23 +146,11 @@ export function TablePagination({ page, pageCount, onPageChange }: TablePaginati
     <Box paddingTop={4}>
       <Flex justifyContent="flex-end">
         <Pagination activePage={page} pageCount={pageCount}>
-          <PreviousLink
-            href="#"
-            onClick={(e: MouseEvent) => {
-              e.preventDefault();
-              onPageChange(Math.max(1, page - 1));
-            }}
-          >
+          <PreviousLink href="#" onClick={(e) => handleClick(e, Math.max(1, page - 1))}>
             {formatMessage(getTrad('pagination.previous'))}
           </PreviousLink>
           {pages}
-          <NextLink
-            href="#"
-            onClick={(e: MouseEvent) => {
-              e.preventDefault();
-              onPageChange(Math.min(pageCount, page + 1));
-            }}
-          >
+          <NextLink href="#" onClick={(e) => handleClick(e, Math.min(pageCount, page + 1))}>
             {formatMessage(getTrad('pagination.next'))}
           </NextLink>
         </Pagination>

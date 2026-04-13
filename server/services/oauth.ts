@@ -3,6 +3,7 @@ import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
 import type { Core } from '@strapi/types';
 import type { StrapiContext } from '../types';
+import { errorMessages } from '../error-strings';
 
 function renderHtmlTemplate(title: string, content: string): string {
   return `
@@ -125,13 +126,10 @@ function renderHtmlTemplate(title: string, content: string): string {
 export default function oauthService({ strapi }) {
   return {
     async createUser(email, lastname, firstname, locale, roles = []) {
-      // If the email has uppercase letters, check if a lowercase version already exists
       const userService = strapi.service('admin::user');
       if (/[A-Z]/.test(email)) {
         const dbUser = await userService.findOneByEmail(email.toLocaleLowerCase());
-        if (dbUser) {
-          return dbUser;
-        }
+        if (dbUser) return dbUser;
       }
 
       const createdUser = await userService.create({
@@ -148,7 +146,7 @@ export default function oauthService({ strapi }) {
           firstname: firstname || 'unset',
           lastname: lastname || 'user',
           password: generator.generate({
-            length: 43, // 256 bits (https://en.wikipedia.org/wiki/Password_strength#Random_passwords)
+            length: 43,
             numbers: true,
             lowercase: true,
             uppercase: true,
@@ -158,17 +156,13 @@ export default function oauthService({ strapi }) {
         },
       });
     },
-    addGmailAlias(baseEmail, baseAlias) {
-      if (!baseAlias) {
-        return baseEmail;
-      }
+    addGmailAlias(baseEmail: string, baseAlias: string): string {
+      if (!baseAlias) return baseEmail;
       const alias = baseAlias.replace(/\+/g, '');
-      const beforePosition = baseEmail.indexOf('@');
-      const origin = baseEmail.substring(0, beforePosition);
-      const domain = baseEmail.substring(beforePosition);
-      return `${origin}+${alias}${domain}`;
+      const atIndex = baseEmail.indexOf('@');
+      return `${baseEmail.slice(0, atIndex)}+${alias}${baseEmail.slice(atIndex)}`;
     },
-    localeFindByHeader(headers) {
+    localeFindByHeader(headers: Record<string, string>): string {
       return headers['accept-language']?.includes('ja') ? 'ja' : 'en';
     },
     async triggerWebHook(user) {
@@ -255,9 +249,7 @@ export default function oauthService({ strapi }) {
     async generateToken(user, ctx) {
       const sessionManager = strapi.sessionManager;
       if (!sessionManager) {
-        throw new Error(
-          'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
-        );
+        throw new Error(errorMessages.SESSION_MANAGER_UNSUPPORTED);
       }
       const userId = String(user.id);
       // TODO: A deviceId is generated each time you log in.

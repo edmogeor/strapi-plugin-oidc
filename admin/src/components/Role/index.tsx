@@ -33,9 +33,7 @@ export default function Role({ oidcRoles, roles, onChangeRole }: RoleProps) {
               placeholder={formatMessage(getTrad('roles.placeholder'))}
               value={oidcRole.role ? oidcRole.role.map((r) => String(r)) : []}
               onChange={(value: string[]) => {
-                if (value && value.length > 0) {
-                  onChangeRole(value, oidcRole.oauth_type);
-                }
+                if (value && value.length > 0) onChangeRole(value, oidcRole.oauth_type);
               }}
             >
               {roles.map((role) => (

@@ -13,4 +13,5 @@ function App() {
   );
 }
 
+// fallow-ignore-next-line unused-export
 export default App;

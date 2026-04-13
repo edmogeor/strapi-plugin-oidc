@@ -53,7 +53,6 @@ async function register(ctx) {
     return;
   }
 
-  // Handle both comma-separated strings and arrays of emails
   const rawEmails = Array.isArray(email) ? email : email.split(',');
   const emailList = rawEmails.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
 
@@ -61,15 +60,14 @@ async function register(ctx) {
   let matchedExistingUsersCount = 0;
 
   for (const singleEmail of emailList) {
-    const existingUser = await strapi.query('admin::user').findOne({
-      where: { email: singleEmail },
-    });
+    const existingUser = await strapi
+      .query('admin::user')
+      .findOne({ where: { email: singleEmail } });
     if (existingUser) matchedExistingUsersCount++;
 
-    const alreadyWhitelisted = await strapi.query('plugin::strapi-plugin-oidc.whitelists').findOne({
-      where: { email: singleEmail },
-    });
-
+    const alreadyWhitelisted = await strapi
+      .query('plugin::strapi-plugin-oidc.whitelists')
+      .findOne({ where: { email: singleEmail } });
     if (!alreadyWhitelisted) {
       await whitelistService.registerUser(singleEmail);
     }

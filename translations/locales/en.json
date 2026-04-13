@@ -62,6 +62,7 @@
   "auditlog.table.ip": "IP",
   "auditlog.table.details": "Details",
   "auditlog.table.empty": "No audit log entries",
+  "auditlog.loading": "Loading…",
   "auditlog.clear": "Clear Logs",
   "auditlog.clear.title": "Clear All Logs",
   "auditlog.clear.description": "This will permanently delete all {count, plural, one {# audit log entry} other {# audit log entries}}. This action cannot be undone.",
@@ -80,5 +81,7 @@
   "auditlog.action.whitelist_rejected": "The user's email address is not on the whitelist. Access was denied.",
   "user.missing_code": "Authorisation code was not received from the OIDC provider.",
   "user.invalid_state": "State parameter mismatch. Please restart the login flow.",
-  "user.signInError": "Authentication failed. Please try again."
+  "user.signInError": "Authentication failed. Please try again.",
+  "settings.section": "OIDC",
+  "settings.configuration": "Configuration"
 }

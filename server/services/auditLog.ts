@@ -74,9 +74,9 @@ export default function auditLogService({ strapi }) {
 
     async cleanup(retentionDays: number): Promise<void> {
       const cutoff = new Date(Date.now() - retentionDays * 86_400_000);
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({
-        where: { createdAt: { $lt: cutoff } },
-      });
+      await strapi.db
+        .query('plugin::strapi-plugin-oidc.audit-log')
+        .deleteMany({ where: { createdAt: { $lt: cutoff } } });
     },
   };
 }

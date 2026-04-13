@@ -3,10 +3,10 @@ import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 
 const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60000;
-const MAX_REQUESTS = 1000;
+const RATE_LIMIT_WINDOW = 60_000;
+const MAX_REQUESTS = 1_000;
 
-export const clearRateLimitMap = () => rateLimitMap.clear();
+export const clearRateLimitMap = (): void => rateLimitMap.clear();
 
 function getRateLimitKey(ctx: StrapiContext): string {
   const ip = ctx.request.ip;
@@ -15,14 +15,12 @@ function getRateLimitKey(ctx: StrapiContext): string {
   return `${ip}:${uaHash}`;
 }
 
-function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
+function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
   const key = getRateLimitKey(ctx);
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
-  const requestStamps = (rateLimitMap.get(key) || []).filter(
-    (timestamp) => timestamp > windowStart,
-  );
+  const requestStamps = (rateLimitMap.get(key) ?? []).filter((ts) => ts > windowStart);
 
   if (requestStamps.length >= MAX_REQUESTS) {
     ctx.status = 429;
@@ -36,7 +34,7 @@ function rateLimitMiddleware(ctx: StrapiContext, next: Next) {
   return next();
 }
 
-function adminPolicies(action: 'read' | 'update') {
+function adminPolicies(action: 'read' | 'update'): { policies: unknown[] } {
   return {
     policies: [
       'admin::isAuthenticatedAdmin',

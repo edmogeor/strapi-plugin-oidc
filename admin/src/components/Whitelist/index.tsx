@@ -35,6 +35,9 @@ interface WhitelistProps {
   onExport: () => void;
 }
 
+const PAGE_SIZE = 10;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function Whitelist({
   users,
   useWhitelist,
@@ -50,13 +53,9 @@ export default function Whitelist({
   const { formatMessage } = useIntl();
   const { toggleNotification } = useNotification();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const PAGE_SIZE = 10;
 
   const pageCount = Math.ceil(users.length / PAGE_SIZE) || 1;
   const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isValidEmail = emailRegex.test(email);
 
   const onSaveEmail = useCallback(() => {
     const emailText = email.trim();
@@ -74,17 +73,20 @@ export default function Whitelist({
   const handleImport = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!fileInputRef.current) return;
+      if (!fileInputRef.current || !file) return;
       fileInputRef.current.value = '';
-      if (!file) return;
       try {
         const text = await file.text();
         const parsed = JSON.parse(text);
         if (!Array.isArray(parsed)) throw new Error();
         const emails = parsed
-          .filter((item: any) => item?.email)
-          .map((item: any) => String(item.email).trim().toLowerCase())
-          .filter((email: string) => emailRegex.test(email));
+          .filter((item: unknown) => (item as { email?: string })?.email)
+          .map((item: unknown) =>
+            String((item as { email: string }).email)
+              .trim()
+              .toLowerCase(),
+          )
+          .filter((email: string) => EMAIL_REGEX.test(email));
         const count = await onImport(emails);
         if (count === 0) {
           toggleNotification({
@@ -174,7 +176,7 @@ export default function Whitelist({
                   type="text"
                   disabled={loading}
                   value={email}
-                  hasError={Boolean(email && !isValidEmail)}
+                  hasError={Boolean(email && !EMAIL_REGEX.test(email))}
                   onChange={(e) => setEmail(e.currentTarget.value)}
                   placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
                 />
@@ -184,7 +186,7 @@ export default function Whitelist({
               <Button
                 size="L"
                 startIcon={<Plus />}
-                disabled={loading || email.trim() === '' || !isValidEmail}
+                disabled={loading || email.trim() === '' || !EMAIL_REGEX.test(email)}
                 loading={loading}
                 onClick={onSaveEmail}
               >

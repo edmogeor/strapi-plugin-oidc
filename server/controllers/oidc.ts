@@ -1,7 +1,7 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
-import { errorCodes, getErrorDetail } from '../error-strings';
+import { errorCodes, getErrorDetail, errorMessages } from '../error-strings';
 import { userFacingMessages } from '../audit-error-strings';
 import type {
   StrapiContext,
@@ -34,12 +34,11 @@ const REQUIRED_CONFIG_KEYS = [
 function configValidation(): PluginConfig {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
 
-  if (REQUIRED_CONFIG_KEYS.every((key) => config[key])) {
+  const missing = REQUIRED_CONFIG_KEYS.filter((key) => !config[key]);
+  if (missing.length === 0) {
     return config;
   }
-  throw new Error(
-    `The following configuration keys are required: ${REQUIRED_CONFIG_KEYS.join(', ')}`,
-  );
+  throw new Error(errorMessages.MISSING_CONFIG(missing.join(', ')));
 }
 
 async function oidcSignIn(ctx: StrapiContext) {
@@ -99,7 +98,7 @@ async function exchangeTokenAndFetchUserInfo(
   });
 
   if (!response.ok) {
-    throw new Error('Token exchange failed');
+    throw new Error(errorMessages.TOKEN_EXCHANGE_FAILED);
   }
 
   const tokenData = (await response.json()) as {
@@ -116,11 +115,11 @@ async function exchangeTokenAndFetchUserInfo(
         nonce?: string;
       };
       if (idTokenPayload.nonce !== expectedNonce) {
-        throw new Error('Nonce mismatch');
+        throw new Error(errorMessages.NONCE_MISMATCH);
       }
     } catch (e) {
       if ((e as Error).message === 'Nonce mismatch') throw e;
-      throw new Error('Failed to parse ID token');
+      throw new Error(errorMessages.ID_TOKEN_PARSE_FAILED);
     }
   }
 
@@ -131,7 +130,7 @@ async function exchangeTokenAndFetchUserInfo(
   });
 
   if (!userResponse.ok) {
-    throw new Error('Failed to fetch user info');
+    throw new Error(errorMessages.USERINFO_FETCH_FAILED);
   }
 
   const userInfo = (await userResponse.json()) as OidcUserInfo;
@@ -205,7 +204,11 @@ async function registerNewUser(
 }
 
 function rolesChanged(current: Set<string>, next: Set<string>): boolean {
-  return current.size !== next.size || [...next].some((id) => !current.has(id));
+  if (current.size !== next.size) return true;
+  for (const id of next) {
+    if (!current.has(id)) return true;
+  }
+  return false;
 }
 
 async function updateUserRoles(
@@ -252,7 +255,7 @@ async function handleUserAuthentication(
   const rawEmail = String(userResponseData.email ?? '');
   const email = rawEmail.toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('Invalid email address received from OIDC provider');
+    throw new Error(errorMessages.INVALID_EMAIL);
   }
 
   await whitelistService.checkWhitelistForEmail(email);
@@ -268,7 +271,7 @@ async function handleUserAuthentication(
 
   let userCreated = false;
   let rolesUpdated = false;
-  let user = await userService.findOneByEmail(email, ['roles']);
+  let user = await userService.findOneByEmail(email);
 
   if (!user) {
     user = await registerNewUser(oauthService, email, userResponseData, config, ctx, roles);
@@ -296,55 +299,40 @@ type OidcErrorInfo = {
 };
 
 function classifyOidcError(msg: string, userInfo?: OidcUserInfo): OidcErrorInfo {
-  const errorMap: Array<{ test: (m: string) => boolean; result: OidcErrorInfo }> = [
-    {
-      test: (m) => m.includes('whitelist'),
-      result: {
-        action: 'whitelist_rejected',
-        code: errorCodes.WHITELIST_CHECK_FAILED,
-        key: 'whitelist_rejected',
-      },
-    },
-    {
-      test: (m) => m === 'Nonce mismatch',
-      result: { action: 'nonce_mismatch', code: errorCodes.NONCE_MISMATCH },
-    },
-    {
-      test: (m) => m === 'Token exchange failed',
-      result: { action: 'token_exchange_failed', code: errorCodes.TOKEN_EXCHANGE_FAILED },
-    },
-    {
-      test: (m) => m === 'Failed to fetch user info',
-      result: {
-        action: 'login_failure',
-        code: errorCodes.USERINFO_FETCH_FAILED,
-        key: 'userinfo_fetch_failed',
-      },
-    },
-    {
-      test: (m) => m === 'Failed to parse ID token',
-      result: {
-        action: 'login_failure',
-        code: errorCodes.ID_TOKEN_PARSE_FAILED,
-        key: 'id_token_parse_failed',
-        params: { error: msg },
-      },
-    },
-    {
-      test: (m) => m === 'User creation failed' || m.includes('createUser'),
-      result: {
-        action: 'login_failure',
-        code: errorCodes.USER_CREATION_FAILED,
-        key: 'user_creation_failed',
-        params: userInfo?.email ? { email: userInfo.email, error: msg } : undefined,
-      },
-    },
-  ];
-
-  for (const { test, result } of errorMap) {
-    if (test(msg)) return result;
+  if (msg.includes('whitelist')) {
+    return {
+      action: 'whitelist_rejected',
+      code: errorCodes.WHITELIST_CHECK_FAILED,
+      key: 'whitelist_rejected',
+    };
   }
-
+  if (msg === 'Nonce mismatch')
+    return { action: 'nonce_mismatch', code: errorCodes.NONCE_MISMATCH };
+  if (msg === 'Token exchange failed')
+    return { action: 'token_exchange_failed', code: errorCodes.TOKEN_EXCHANGE_FAILED };
+  if (msg === 'Failed to fetch user info') {
+    return {
+      action: 'login_failure',
+      code: errorCodes.USERINFO_FETCH_FAILED,
+      key: 'userinfo_fetch_failed',
+    };
+  }
+  if (msg === 'Failed to parse ID token') {
+    return {
+      action: 'login_failure',
+      code: errorCodes.ID_TOKEN_PARSE_FAILED,
+      key: 'id_token_parse_failed',
+      params: { error: msg },
+    };
+  }
+  if (msg === 'User creation failed' || msg.includes('createUser')) {
+    return {
+      action: 'login_failure',
+      code: errorCodes.USER_CREATION_FAILED,
+      key: 'user_creation_failed',
+      params: userInfo?.email ? { email: userInfo.email, error: msg } : undefined,
+    };
+  }
   return {
     action: 'login_failure',
     code: errorCodes.TOKEN_EXCHANGE_FAILED,

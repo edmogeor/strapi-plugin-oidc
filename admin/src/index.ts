@@ -12,7 +12,7 @@ export default {
       {
         id: 'oidc',
         intlLabel: {
-          id: `${pluginId}.settings.section`,
+          id: 'settings.section',
           defaultMessage: 'OIDC',
         },
       },
@@ -20,7 +20,7 @@ export default {
         id: 'configuration',
         to: `/settings/${pluginId}`,
         intlLabel: {
-          id: `${pluginId}.settings.configuration`,
+          id: 'settings.configuration',
           defaultMessage: 'Configuration',
         },
         Component: async () => {
@@ -145,34 +145,21 @@ export default {
     };
     applySettings();
 
-    // Intercept logout to route through the plugin endpoint.
-    // The server reads oidc_authenticated and decides whether to call the OIDC
-    // provider's logout URL. sessionStorage.oidc_logout prevents the enforcement
-    // redirect from looping the user back into OIDC after logout.
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
-      const isLogout =
-        url && url.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
+      const isLogout = url?.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
 
       const response = await originalFetch(...args);
 
       if (isLogout && response.ok) {
-        // Manually clear Strapi's local tokens since we are halting the normal logout flow
         window.localStorage.removeItem('jwtToken');
         window.localStorage.removeItem('isLoggedIn');
         window.sessionStorage.removeItem('jwtToken');
         window.sessionStorage.removeItem('isLoggedIn');
-
-        // Clear the jwtToken cookie (not httpOnly, so JS can remove it)
-        // strapi_admin_refresh and oidc_authenticated are httpOnly — cleared server-side
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
-
-        // Always route through the plugin logout endpoint — the server decides whether
-        // to redirect to the OIDC provider based on the oidc_authenticated cookie.
         window.location.href = '/strapi-plugin-oidc/logout';
-        // Return a pending promise to prevent Strapi from completing the logout redirect
         return new Promise(() => {});
       }
 
