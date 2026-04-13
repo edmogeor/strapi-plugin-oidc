@@ -102,7 +102,7 @@ export interface WhitelistService {
 }
 
 export interface AdminUserService {
-  findOneByEmail(email: string): Promise<StrapiAdminUser | null>;
+  findOneByEmail(email: string, populate?: string[]): Promise<StrapiAdminUser | null>;
 }
 
 export type AuditAction =

@@ -271,7 +271,7 @@ async function handleUserAuthentication(
 
   let userCreated = false;
   let rolesUpdated = false;
-  let user = await userService.findOneByEmail(email);
+  let user = await userService.findOneByEmail(email, ['roles']);
 
   if (!user) {
     user = await registerNewUser(oauthService, email, userResponseData, config, ctx, roles);
