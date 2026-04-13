@@ -41,11 +41,48 @@ export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: s
   return { state };
 }
 
+export function getStateFromLoginRes(loginRes: { headers: { location: string } }): string | null {
+  return new URL(loginRes.headers.location).searchParams.get('state');
+}
+
+export function performCallback(agent: Agent, state: string | null): ReturnType<Agent['get']> {
+  return agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
+}
+
+export function createOidcAgent(strapi: Core.Strapi): ReturnType<typeof request.agent> {
+  return request.agent(strapi.server.httpServer);
+}
+
 export async function getDefaultOidcRoleIds(strapi: Core.Strapi): Promise<string[]> {
   const record = await strapi
     .query('plugin::strapi-plugin-oidc.roles')
     .findOne({ where: { oauth_type: '4' } });
   return record?.roles ?? [];
+}
+
+export async function queryAuditLog(
+  strapi: Core.Strapi,
+  action: string,
+  uid = 'plugin::strapi-plugin-oidc.audit-log',
+) {
+  return strapi.db.query(uid).findMany({ where: { action } });
+}
+
+export async function assertGenericAuthError(
+  agent: ReturnType<typeof request.agent>,
+  callbackUrl: string,
+) {
+  const res = await agent.get(callbackUrl).redirects(0);
+  expect(res.status).toBe(200);
+  expect(res.text).toContain('Authentication Failed');
+  expect(res.text).toContain('Authentication failed. Please try again.');
+  expect(res.text).not.toContain('mock-oidc.com');
+  return res;
+}
+
+export async function initiateLogin(agent: ReturnType<typeof request.agent>): Promise<string> {
+  const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${new URL(loginRes.headers.location).searchParams.get('state')}`;
 }
 
 export async function loginWithGroups(
@@ -109,4 +146,54 @@ export function mswUserInfoHandler(
       groups,
     }),
   );
+}
+
+export function makeLogoutCtx(initialCookies: Record<string, string> = {}) {
+  const cookieCalls: Array<{ name: string; value: string; opts?: Record<string, unknown> }> = [];
+  return {
+    request: { secure: false },
+    redirectedTo: undefined as string | undefined,
+    cookies: {
+      get(name: string) {
+        return initialCookies[name];
+      },
+      set(name: string, value: string, opts?: Record<string, unknown>) {
+        cookieCalls.push({ name, value, opts });
+      },
+      calls: cookieCalls,
+    },
+    redirect(url: string) {
+      (this as { redirectedTo: string | undefined }).redirectedTo = url;
+    },
+  };
+}
+
+export function expectCookieCleared(ctx: ReturnType<typeof makeLogoutCtx>, name: string) {
+  return expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
+}
+
+export async function setupGroupRoleMapping(
+  strapi: Core.Strapi,
+  groupRoleMap: Record<string, string[]>,
+) {
+  const config = { ...MOCK_OIDC_CONFIG };
+  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
+  strapi.config.set('plugin::strapi-plugin-oidc', config);
+}
+
+export async function fetchUserWithRoles(strapi: Core.Strapi, email: string) {
+  return strapi.db.query('admin::user').findOne({
+    where: { email },
+    populate: ['roles'],
+  });
+}
+
+export function assertUserHasRole(user: { roles: Array<{ id: number }> }, roleId: number) {
+  const userRoleIds = user.roles.map((r: { id: number }) => r.id);
+  expect(userRoleIds).toContain(roleId);
+}
+
+export async function getFirstAvailableRole(strapi: Core.Strapi) {
+  const availableRoles = await strapi.db.query('admin::role').findMany();
+  return availableRoles[0];
 }

@@ -3,16 +3,14 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core, AuditLogService } from './test-types';
-import { MOCK_OIDC_CONFIG, setSettings } from './test-helpers';
+import {
+  MOCK_OIDC_CONFIG,
+  setSettings,
+  initiateLoginAndCallback,
+  queryAuditLog,
+} from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
-
-async function initiateLoginAndCallback(agent: ReturnType<typeof request.agent>): Promise<void> {
-  const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
-  const locationUrl = new URL(loginRes.headers.location);
-  const state = locationUrl.searchParams.get('state');
-  await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`);
-}
 
 describe('AuditLog Service', () => {
   let strapi: Core.Strapi;
@@ -156,21 +154,16 @@ describe('AuditLog E2E Integration', () => {
   it('successful login creates a login_success audit log entry', async () => {
     await initiateLoginAndCallback(agent);
 
-    const rows = await strapi.db
-      .query(AUDIT_LOG_UID)
-      .findMany({ where: { action: 'login_success' } });
+    const rows = await queryAuditLog(strapi, 'login_success');
     expect(rows.length).toBeGreaterThan(0);
     expect(rows[0].email).toBe('test@company.com');
   });
 
   it('state mismatch creates a state_mismatch audit log entry', async () => {
-    // Initiate login to set cookies, then send wrong state
     await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
     await agent.get('/strapi-plugin-oidc/oidc/callback?code=mock-code&state=wrong-state');
 
-    const rows = await strapi.db
-      .query(AUDIT_LOG_UID)
-      .findMany({ where: { action: 'state_mismatch' } });
+    const rows = await queryAuditLog(strapi, 'state_mismatch');
     expect(rows.length).toBeGreaterThan(0);
   });
 
@@ -184,15 +177,12 @@ describe('AuditLog E2E Integration', () => {
     const state = locationUrl.searchParams.get('state');
     await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`);
 
-    const rows = await strapi.db
-      .query(AUDIT_LOG_UID)
-      .findMany({ where: { action: 'token_exchange_failed' } });
+    const rows = await queryAuditLog(strapi, 'token_exchange_failed');
     expect(rows.length).toBeGreaterThan(0);
   });
 
   it('whitelist rejection creates a whitelist_rejected audit log entry', async () => {
     await setSettings(strapi, true, false);
-    // Ensure test@company.com is NOT in the whitelist
     await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
       where: { email: 'test@company.com' },
     });
@@ -201,23 +191,17 @@ describe('AuditLog E2E Integration', () => {
 
     await setSettings(strapi, false, false);
 
-    const rows = await strapi.db
-      .query(AUDIT_LOG_UID)
-      .findMany({ where: { action: 'whitelist_rejected' } });
+    const rows = await queryAuditLog(strapi, 'whitelist_rejected');
     expect(rows.length).toBeGreaterThan(0);
   });
 
   it('logout creates a logout audit log entry', async () => {
-    // Login first
     await initiateLoginAndCallback(agent);
     await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
 
-    // MSW: userinfo returns 200 so we get a full logout redirect
     await agent.get('/strapi-plugin-oidc/logout').redirects(0);
 
-    const rows = await strapi.db.query(AUDIT_LOG_UID).findMany({});
+    const rows = await queryAuditLog(strapi, 'logout');
     expect(rows.length).toBeGreaterThan(0);
-    const actions = rows.map((r) => r.action);
-    expect(actions.some((a) => a === 'logout' || a === 'session_expired')).toBe(true);
   });
 });
