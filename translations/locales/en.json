@@ -28,8 +28,6 @@
   "whitelist.toggle.enabled": "Enabled",
   "whitelist.toggle.disabled": "Disabled",
   "whitelist.email.placeholder": "Email address",
-  "whitelist.roles.placeholder": "Select specific role(s)",
-  "whitelist.table.roles": "Role(s)",
   "whitelist.table.empty": "No email addresses",
   "whitelist.delete.label": "Delete",
   "page.title.oidc": "OIDC",
@@ -53,7 +51,7 @@
   "unsaved.description": "You have unsaved changes that will be lost if you leave. Do you want to continue?",
   "unsaved.confirm": "Leave",
   "unsaved.cancel": "Stay",
-  "whitelist.table.roles.default": "(Default)",
+
   "auditlog.title": "Audit Logs",
   "auditlog.export": "Download",
   "auditlog.table.timestamp": "Timestamp",

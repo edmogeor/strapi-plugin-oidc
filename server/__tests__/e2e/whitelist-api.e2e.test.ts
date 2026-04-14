@@ -65,7 +65,7 @@ describe('Whitelist Content-API Routes', () => {
     const res = await request(strapi.server.httpServer)
       .post('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`)
-      .send({ email: 'api-register@test.com', roles: [] });
+      .send({ email: 'api-register@test.com' });
 
     expect(res.status).toBe(200);
     expect(res.body.matchedExistingUsersCount).toBeGreaterThanOrEqual(0);
@@ -91,8 +91,8 @@ describe('Whitelist Content-API Routes', () => {
       .set('Authorization', `Bearer ${apiToken}`)
       .send({
         users: [
-          { email: 'api-import1@test.com', roles: [] }, // duplicate — skipped
-          { email: 'api-import2@test.com', roles: [] }, // new
+          { email: 'api-import1@test.com' }, // duplicate — skipped
+          { email: 'api-import2@test.com' }, // new
         ],
       });
 
