@@ -11,7 +11,7 @@ import type {
 } from './test-types';
 import { makeLogoutCtx, expectCookieCleared } from './test-helpers';
 
-const whitelistFixture: { email: string; roles: string[] }[] = JSON.parse(
+const whitelistFixture: { email: string }[] = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/whitelist-import.json'), 'utf-8'),
 );
 
@@ -98,7 +98,7 @@ describe('Controllers E2E', () => {
     it('should register and remove whitelist users via controller', async () => {
       const ctxRegister = {
         request: {
-          body: { email: 'controller-test@whitelist.com', roles: [1] },
+          body: { email: 'controller-test@whitelist.com' },
         },
         body: null as any,
       };
@@ -109,7 +109,7 @@ describe('Controllers E2E', () => {
       // Verify it fails without an email
       const ctxRegisterFail = {
         request: {
-          body: { email: '', roles: [1] },
+          body: { email: '' },
         },
         body: null as any,
       };
@@ -152,7 +152,7 @@ describe('Controllers E2E', () => {
         // Pre-insert one fixture entry so it counts as a duplicate
         const [duplicate] = whitelistFixture;
         await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').create({
-          data: { email: duplicate.email, roles: [] },
+          data: { email: duplicate.email },
         });
 
         const ctx = {
@@ -184,9 +184,9 @@ describe('Controllers E2E', () => {
           request: {
             body: {
               users: [
-                { email: '', roles: [] },
-                { roles: [] }, // no email
-                { email: null, roles: [] },
+                { email: '' },
+                {}, // no email
+                { email: null },
               ],
             },
           },
@@ -207,10 +207,7 @@ describe('Controllers E2E', () => {
       const ctxSync = {
         request: {
           body: {
-            users: [
-              { email: 'sync2@test.com', roles: [2] },
-              { email: 'sync3@test.com', roles: [1, 2] },
-            ],
+            users: [{ email: 'sync2@test.com' }, { email: 'sync3@test.com' }],
           },
         },
         body: null as any,
