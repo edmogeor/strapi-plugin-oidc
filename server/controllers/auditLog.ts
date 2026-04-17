@@ -2,9 +2,7 @@ import { Readable } from 'node:stream';
 import type { StrapiContext, AuditLogService } from '../types';
 import { getAuditLogService } from '../utils/services';
 import { setNdjsonAttachmentHeaders } from '../utils/http';
-import { parseAuditLogFilters } from '../audit-log-filters';
-
-import type { AuditLogFilters } from '../types';
+import { parseAuditLogFilters, type AuditLogFilters } from '../audit-log-filters';
 
 const EXPORT_PAGE_SIZE = 500;
 

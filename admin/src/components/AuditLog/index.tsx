@@ -20,7 +20,7 @@ import { useIntl } from 'react-intl';
 import qs from 'qs';
 import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
-import { AUDIT_ACTIONS } from '../../../../server/audit-log-filters';
+import { AUDIT_ACTIONS } from './constants';
 
 interface AuditLogRecord {
   id: number;

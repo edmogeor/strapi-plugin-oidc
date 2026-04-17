@@ -1,7 +1,7 @@
 import { errorCodes, type ErrorCode } from './error-strings';
 import type { AuditAction } from './types';
 
-export type OidcErrorKind =
+type OidcErrorKind =
   | 'nonce_mismatch'
   | 'token_exchange_failed'
   | 'id_token_parse_failed'

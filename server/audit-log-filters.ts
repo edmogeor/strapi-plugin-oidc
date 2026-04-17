@@ -1,8 +1,4 @@
-// fallow-ignore-next-line unused-type
 import type { AuditAction } from './types';
-
-// fallow-ignore-next-line unused-type
-export type { AuditAction } from './types';
 
 export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'login_success',
@@ -83,7 +79,83 @@ class ValidationError extends Error {
   }
 }
 
-// fallow-ignore-next-line complexity
+function requireType(field: string, op: string, value: unknown, check: boolean, expected: string) {
+  if (!check) {
+    throw new ValidationError(`Operator "${op}" for field "${field}" requires ${expected}`);
+  }
+  return value;
+}
+
+function parseActionOperator(op: string, opValue: unknown): unknown {
+  if (!isEnumOperator(op)) {
+    throw new ValidationError(`Unknown operator "${op}" for field "action"`);
+  }
+  if (op === '$in' || op === '$notIn') {
+    requireType('action', op, opValue, Array.isArray(opValue), 'an array value');
+    for (const v of opValue as unknown[]) {
+      if (!isAuditAction(v)) {
+        throw new ValidationError(
+          `Invalid action value "${v}" — must be one of: ${AUDIT_ACTIONS.join(', ')}`,
+        );
+      }
+    }
+    return opValue;
+  }
+  if (!isAuditAction(opValue)) {
+    throw new ValidationError(
+      `Invalid action value "${opValue}" — must be one of: ${AUDIT_ACTIONS.join(', ')}`,
+    );
+  }
+  return opValue;
+}
+
+function parseCreatedAtOperator(op: string, opValue: unknown): unknown {
+  if (!isDateOperator(op)) {
+    throw new ValidationError(`Unknown operator "${op}" for field "createdAt"`);
+  }
+  if (op === '$between') {
+    const isTuple = Array.isArray(opValue) && opValue.length === 2;
+    requireType('createdAt', op, opValue, isTuple, 'a tuple [start, end]');
+    const [a, b] = opValue as unknown[];
+    requireType(
+      'createdAt',
+      op,
+      opValue,
+      typeof a === 'string' && typeof b === 'string',
+      'string values in the tuple',
+    );
+    return opValue as [string, string];
+  }
+  return requireType('createdAt', op, opValue, typeof opValue === 'string', 'a string value');
+}
+
+function parseStringFieldOperator(field: string, op: string, opValue: unknown): unknown {
+  if (!isStringOperator(op)) {
+    throw new ValidationError(`Unknown operator "${op}" for field "${field}"`);
+  }
+  if (op === '$null' || op === '$notNull') {
+    return requireType(field, op, opValue, typeof opValue === 'boolean', 'a boolean value');
+  }
+  return requireType(field, op, opValue, typeof opValue === 'string', 'a string value');
+}
+
+function parseFieldOperators(field: string, fieldValue: unknown): Record<string, unknown> | null {
+  if (!isPlainObject(fieldValue)) {
+    throw new ValidationError(
+      `Filter field "${field}" must be an object of operators, got ${typeof fieldValue}`,
+    );
+  }
+
+  const parsed: Record<string, unknown> = {};
+  for (const [op, opValue] of Object.entries(fieldValue)) {
+    if (field === 'action') parsed[op] = parseActionOperator(op, opValue);
+    else if (field === 'createdAt') parsed[op] = parseCreatedAtOperator(op, opValue);
+    else parsed[op] = parseStringFieldOperator(field, op, opValue);
+  }
+
+  return Object.keys(parsed).length > 0 ? parsed : null;
+}
+
 export function parseAuditLogFilters(query: unknown): AuditLogFilters {
   if (!isPlainObject(query)) return {};
 
@@ -102,93 +174,8 @@ export function parseAuditLogFilters(query: unknown): AuditLogFilters {
       continue;
     }
 
-    if (!isPlainObject(fieldValue)) {
-      throw new ValidationError(
-        `Filter field "${field}" must be an object of operators, got ${typeof fieldValue}`,
-      );
-    }
-
-    const operatorEntries = Object.entries(fieldValue);
-    if (operatorEntries.length === 0) continue;
-
-    const parsedOperators: Record<string, unknown> = {};
-
-    for (const [op, opValue] of operatorEntries) {
-      if (field === 'action') {
-        if (!isEnumOperator(op)) {
-          throw new ValidationError(`Unknown operator "${op}" for field "${field}"`);
-        }
-        if (op === '$in' || op === '$notIn') {
-          if (!Array.isArray(opValue)) {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires an array value`,
-            );
-          }
-          for (const v of opValue) {
-            if (!isAuditAction(v)) {
-              throw new ValidationError(
-                `Invalid action value "${v}" — must be one of: ${AUDIT_ACTIONS.join(', ')}`,
-              );
-            }
-          }
-          parsedOperators[op] = opValue;
-        } else {
-          if (!isAuditAction(opValue)) {
-            throw new ValidationError(
-              `Invalid action value "${opValue}" — must be one of: ${AUDIT_ACTIONS.join(', ')}`,
-            );
-          }
-          parsedOperators[op] = opValue;
-        }
-      } else if (field === 'createdAt') {
-        if (!isDateOperator(op)) {
-          throw new ValidationError(`Unknown operator "${op}" for field "${field}"`);
-        }
-        if (op === '$between') {
-          if (!Array.isArray(opValue) || opValue.length !== 2) {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires a tuple [start, end]`,
-            );
-          }
-          if (typeof opValue[0] !== 'string' || typeof opValue[1] !== 'string') {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires string values in the tuple`,
-            );
-          }
-          parsedOperators[op] = opValue as [string, string];
-        } else {
-          if (typeof opValue !== 'string') {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires a string value`,
-            );
-          }
-          parsedOperators[op] = opValue;
-        }
-      } else {
-        if (!isStringOperator(op)) {
-          throw new ValidationError(`Unknown operator "${op}" for field "${field}"`);
-        }
-        if (op === '$null' || op === '$notNull') {
-          if (typeof opValue !== 'boolean') {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires a boolean value`,
-            );
-          }
-          parsedOperators[op] = opValue;
-        } else {
-          if (typeof opValue !== 'string') {
-            throw new ValidationError(
-              `Operator "${op}" for field "${field}" requires a string value`,
-            );
-          }
-          parsedOperators[op] = opValue;
-        }
-      }
-    }
-
-    if (Object.keys(parsedOperators).length > 0) {
-      (filters as Record<string, unknown>)[field] = parsedOperators;
-    }
+    const parsed = parseFieldOperators(field, fieldValue);
+    if (parsed) (filters as Record<string, unknown>)[field] = parsed;
   }
 
   return filters;

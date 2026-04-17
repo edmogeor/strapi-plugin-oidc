@@ -1,5 +1,6 @@
 import type { Core } from '@strapi/types';
-import type { AuditEntry, AuditLogRecord, AuditLogFilters } from '../types';
+import type { AuditEntry, AuditLogRecord } from '../types';
+import type { AuditLogFilters } from '../audit-log-filters';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
 import en from '../../translations/locales/en.json';
 
@@ -21,49 +22,54 @@ interface AuditLogResult {
 
 type StrapiWhereClause = Record<string, unknown>;
 
-type StringFieldFilter = Partial<Record<string, string | boolean>>;
+const STRING_OP_MAP: Record<string, (v: unknown) => unknown> = {
+  $eq: (v) => v,
+  $ne: (v) => ({ $ne: v }),
+  $contains: (v) => ({ $containsi: v }),
+  $notContains: (v) => ({ $notContainsi: v }),
+  $startsWith: (v) => ({ $startsWith: v }),
+  $endsWith: (v) => ({ $endsWith: v }),
+  $null: (v) => (v === true ? null : undefined),
+  $notNull: (v) => (v === true ? { $notNull: true } : undefined),
+};
 
-function addStringFieldConditions(
+const DATE_OP_MAP: Record<string, (v: unknown) => unknown> = {
+  $eq: (v) => v,
+  $gt: (v) => ({ $gt: v }),
+  $gte: (v) => ({ $gte: v }),
+  $lt: (v) => ({ $lt: v }),
+  $lte: (v) => ({ $lte: v }),
+  $between: (v) => ({ $between: v }),
+};
+
+const ACTION_OP_MAP: Record<string, (v: unknown) => unknown> = {
+  $eq: (v) => v,
+  $ne: (v) => ({ $ne: v }),
+  $in: (v) => ({ $in: v }),
+  $notIn: (v) => ({ $notIn: v }),
+};
+
+function mapFieldFilter(
   conditions: StrapiWhereClause[],
   field: string,
-  filter: StringFieldFilter,
+  filter: Record<string, unknown>,
+  opMap: Record<string, (v: unknown) => unknown>,
 ): void {
-  if ('$eq' in filter) conditions.push({ [field]: filter.$eq });
-  if ('$ne' in filter) conditions.push({ [field]: { $ne: filter.$ne } });
-  if ('$contains' in filter) conditions.push({ [field]: { $containsi: filter.$contains } });
-  if ('$notContains' in filter)
-    conditions.push({ [field]: { $notContainsi: filter.$notContains } });
-  if ('$startsWith' in filter) conditions.push({ [field]: { $startsWith: filter.$startsWith } });
-  if ('$endsWith' in filter) conditions.push({ [field]: { $endsWith: filter.$endsWith } });
-  if ('$null' in filter && filter.$null === true) conditions.push({ [field]: null });
-  if ('$notNull' in filter && filter.$notNull === true)
-    conditions.push({ [field]: { $notNull: true } });
+  for (const [op, value] of Object.entries(filter)) {
+    const transform = opMap[op];
+    if (!transform) continue;
+    const result = transform(value);
+    if (result !== undefined) conditions.push({ [field]: result });
+  }
 }
 
-// fallow-ignore-next-line complexity
 function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
   const conditions: StrapiWhereClause[] = [];
 
-  if (filters.action) {
-    const af = filters.action;
-    if ('$eq' in af) conditions.push({ action: af.$eq });
-    if ('$ne' in af) conditions.push({ action: { $ne: af.$ne } });
-    if ('$in' in af) conditions.push({ action: { $in: af.$in } });
-    if ('$notIn' in af) conditions.push({ action: { $notIn: af.$notIn } });
-  }
-
-  if (filters.email) addStringFieldConditions(conditions, 'email', filters.email);
-  if (filters.ip) addStringFieldConditions(conditions, 'ip', filters.ip);
-
-  if (filters.createdAt) {
-    const cf = filters.createdAt;
-    if ('$eq' in cf) conditions.push({ createdAt: cf.$eq });
-    if ('$gt' in cf) conditions.push({ createdAt: { $gt: cf.$gt } });
-    if ('$gte' in cf) conditions.push({ createdAt: { $gte: cf.$gte } });
-    if ('$lt' in cf) conditions.push({ createdAt: { $lt: cf.$lt } });
-    if ('$lte' in cf) conditions.push({ createdAt: { $lte: cf.$lte } });
-    if ('$between' in cf) conditions.push({ createdAt: { $between: cf.$between } });
-  }
+  if (filters.action) mapFieldFilter(conditions, 'action', filters.action, ACTION_OP_MAP);
+  if (filters.email) mapFieldFilter(conditions, 'email', filters.email, STRING_OP_MAP);
+  if (filters.ip) mapFieldFilter(conditions, 'ip', filters.ip, STRING_OP_MAP);
+  if (filters.createdAt) mapFieldFilter(conditions, 'createdAt', filters.createdAt, DATE_OP_MAP);
 
   if (filters.q) {
     conditions.push({

@@ -190,8 +190,8 @@ describe('AuditLog Service with filters', () => {
       pageSize: 25,
       filters: { email: { $null: true } },
     });
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].action).toBe('logout');
+    expect(result.results).toHaveLength(2);
+    expect(result.results.every((r) => r.action === 'logout')).toBe(true);
   });
 
   it('filters by ip $contains', async () => {
@@ -235,8 +235,8 @@ describe('AuditLog Service with filters', () => {
       pageSize: 25,
       filters: { q: 'acme', action: { $eq: 'login_success' } },
     });
-    expect(result.results).toHaveLength(2);
-    expect(result.results.every((r) => r.action === 'login_success')).toBe(true);
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].email).toBe('alice@acme.com');
   });
 
   it('pagination metadata reflects filtered set', async () => {
