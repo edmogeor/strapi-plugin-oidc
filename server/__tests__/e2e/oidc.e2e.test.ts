@@ -470,6 +470,27 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).toBe('/admin/auth/login');
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
+
+      // Task 3: Logout userinfo fetch timeout
+      it('logout with unreachable IdP completes within 5s and redirects to admin login', async () => {
+        oidcServer.use(http.get('https://mock-oidc.com/userinfo', () => new Promise(() => {})));
+
+        const startTime = Date.now();
+
+        const res = await request(strapi.server.httpServer)
+          .get('/strapi-plugin-oidc/logout')
+          .set(
+            'Cookie',
+            'oidc_authenticated=1; oidc_access_token=test-token; oidc_user_email=test@test.com',
+          )
+          .redirects(0);
+
+        const elapsed = Date.now() - startTime;
+
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe('/admin/auth/login');
+        expect(elapsed).toBeLessThan(5000);
+      });
     });
   });
 
