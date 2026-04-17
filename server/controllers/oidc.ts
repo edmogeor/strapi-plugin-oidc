@@ -460,8 +460,7 @@ async function logout(ctx: StrapiContext) {
   clearAuthCookies(strapi, ctx);
 
   if (logoutUrl && isOidcSession && accessToken) {
-    // Check if provider session is still active before redirecting to end-session.
-    // Skip provider logout if token is expired to avoid a bare redirect page.
+    // Check if provider session is still active before redirecting to end-session. Skip provider logout if token is expired to avoid a bare redirect page.
     try {
       const response = await fetch(config.OIDC_USERINFO_ENDPOINT, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -477,7 +476,7 @@ async function logout(ctx: StrapiContext) {
         await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
       return ctx.redirect(`${adminPanelUrl}/auth/login`);
     } catch {
-      // Network error — treat as session expired.
+      // Network error - treat as session expired.
       if (userEmail)
         await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
       return ctx.redirect(`${adminPanelUrl}/auth/login`);

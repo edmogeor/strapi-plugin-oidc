@@ -90,10 +90,8 @@ export default {
       ssoButtonInjected = true;
     };
 
-    // Remove standard login elements when enforcement is on.
-    // Uses stable semantic selectors that survive Strapi's hashed class names.
+    // Remove standard login elements when enforcement is on. Uses stable semantic selectors that survive Strapi's hashed class names.
     const removeEnforcedElements = () => {
-      // Form field wrappers (email, password, remember-me) and the login submit button.
       [
         'form > div > div:has(input[name="email"])',
         'form > div > div:has(input[name="password"])',
