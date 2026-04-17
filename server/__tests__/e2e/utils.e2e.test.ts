@@ -131,22 +131,37 @@ describe('cookies utils', () => {
   });
 
   it('clearAuthCookies clears all OIDC and admin cookies', () => {
-    const ctx = makeCookieTestCtx(false) as unknown as Parameters<
-      typeof cookiesUtils.clearAuthCookies
-    >[1];
+    interface CookieCall {
+      name: string;
+      value: string;
+      opts?: Record<string, unknown>;
+    }
+    type CookieCallArray = Array<CookieCall>;
+    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
+      cookies: { calls: CookieCallArray };
+    };
+    const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
     expect(
-      ctx.cookies.calls.some((c) => c.name === 'strapi_admin_refresh' && c.opts.maxAge === 0),
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
+      ),
     ).toBe(true);
     expect(
-      ctx.cookies.calls.some((c) => c.name === 'oidc_authenticated' && c.opts.path === '/'),
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === 'oidc_authenticated' && c.opts?.path === '/',
+      ),
     ).toBe(true);
     expect(
-      ctx.cookies.calls.some((c) => c.name === 'oidc_access_token' && c.opts.path === '/'),
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === 'oidc_access_token' && c.opts?.path === '/',
+      ),
     ).toBe(true);
-    expect(ctx.cookies.calls.some((c) => c.name === 'oidc_user_email' && c.opts.path === '/')).toBe(
-      true,
-    );
+    expect(
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === 'oidc_user_email' && c.opts?.path === '/',
+      ),
+    ).toBe(true);
   });
 
   it('clearAuthCookies uses secure cookie in production when request is secure', () => {
@@ -154,9 +169,15 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    const ctx = makeCookieTestCtx(true) as unknown as Parameters<
-      typeof cookiesUtils.clearAuthCookies
-    >[1];
+    interface CookieCall {
+      name: string;
+      opts?: Record<string, unknown>;
+    }
+    type CookieCallArray = Array<CookieCall>;
+    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
+      cookies: { calls: CookieCallArray };
+    };
+    const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
 
     const adminCall = findAdminRefreshCookieCall(ctx);
@@ -169,9 +190,15 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    const ctx = makeCookieTestCtx(false) as unknown as Parameters<
-      typeof cookiesUtils.clearAuthCookies
-    >[1];
+    interface CookieCall {
+      name: string;
+      opts?: Record<string, unknown>;
+    }
+    type CookieCallArray = Array<CookieCall>;
+    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
+      cookies: { calls: CookieCallArray };
+    };
+    const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
 
     expectAdminCookieSecure(ctx, false);

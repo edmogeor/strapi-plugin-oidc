@@ -288,7 +288,7 @@ async function handleUserAuthentication(
     userCreated = true;
     rolesUpdated = true;
   } else if (fromGroupMapping && roles.length > 0) {
-    const currentRoleIds = new Set(user.roles.map((r) => String(r.id)));
+    const currentRoleIds = new Set((user.roles ?? []).map((r) => String(r.id)));
     if (rolesChanged(currentRoleIds, new Set(roles))) {
       await updateUserRoles(user, currentRoleIds, roles);
       rolesUpdated = true;

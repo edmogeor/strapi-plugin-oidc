@@ -1,5 +1,10 @@
 import type { Core } from '@strapi/types';
 
+interface OidcRoleInput {
+  oauth_type: string;
+  role: number[];
+}
+
 export default function roleService({ strapi }: { strapi: Core.Strapi }) {
   return {
     OIDC_TYPE: '4',
@@ -21,10 +26,10 @@ export default function roleService({ strapi }: { strapi: Core.Strapi }) {
     async find() {
       return strapi.query('plugin::strapi-plugin-oidc.roles').findMany();
     },
-    async update(roles) {
+    async update(roles: OidcRoleInput[]) {
       const query = strapi.query('plugin::strapi-plugin-oidc.roles');
       await Promise.all(
-        roles.map(async (role) => {
+        roles.map(async (role: OidcRoleInput) => {
           const oidcRole = await query.findOne({ where: { oauth_type: role.oauth_type } });
           if (oidcRole) {
             await query.update({

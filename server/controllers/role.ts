@@ -1,6 +1,11 @@
+import type { Context } from 'koa';
 import { getRoleService } from '../utils/services';
 
-async function find(ctx) {
+interface RoleUpdateBody {
+  roles: Array<{ oauth_type: string; role: number[] }>;
+}
+
+async function find(ctx: Context) {
   const roleService = getRoleService();
   const roles = await roleService.find();
   const oidcConstants = roleService.getOidcRoles();
@@ -15,9 +20,9 @@ async function find(ctx) {
   ctx.send(oidcConstants);
 }
 
-async function update(ctx) {
+async function update(ctx: Context) {
   try {
-    const { roles } = ctx.request.body;
+    const { roles } = ctx.request.body as RoleUpdateBody;
     const roleService = getRoleService();
     await roleService.update(roles);
     ctx.send({}, 204);

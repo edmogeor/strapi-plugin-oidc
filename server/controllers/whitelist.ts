@@ -1,3 +1,4 @@
+import type { Context } from 'koa';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
 import { isValidEmail } from '../utils/email';
@@ -5,7 +6,11 @@ import { getWhitelistService } from '../utils/services';
 import { setJsonAttachmentHeaders } from '../utils/http';
 import type { StrapiContext } from '../types';
 
-async function info(ctx) {
+interface EmailUser {
+  email: string;
+}
+
+async function info(ctx: Context) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
   const whitelistUsers = await whitelistService.getUsers();
@@ -18,9 +23,9 @@ async function info(ctx) {
   };
 }
 
-async function updateSettings(ctx) {
-  const { useWhitelist } = ctx.request.body;
-  let { enforceOIDC } = ctx.request.body;
+async function updateSettings(ctx: Context) {
+  const { useWhitelist } = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
+  let { enforceOIDC } = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
   const whitelistService = getWhitelistService();
 
   if (useWhitelist && enforceOIDC) {
@@ -34,25 +39,25 @@ async function updateSettings(ctx) {
   ctx.body = { useWhitelist, enforceOIDC };
 }
 
-async function publicSettings(ctx) {
+async function publicSettings(ctx: Context) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, any>;
+  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
   };
 }
 
-async function register(ctx) {
-  const { email } = ctx.request.body;
+async function register(ctx: Context) {
+  const { email } = ctx.request.body as { email: string | string[] };
   if (!email) {
     ctx.body = { message: 'Please enter a valid email address' };
     return;
   }
 
   const rawEmails = Array.isArray(email) ? email : email.split(',');
-  const emailList = rawEmails.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
+  const emailList = rawEmails.map((e: string) => String(e).trim().toLowerCase()).filter(Boolean);
 
   const whitelistService = getWhitelistService();
   const matchedExistingUsersCount = await whitelistService.countAdminUsersByEmails(emailList);
@@ -67,14 +72,14 @@ async function register(ctx) {
   ctx.body = { matchedExistingUsersCount };
 }
 
-async function removeEmail(ctx) {
-  const { email } = ctx.params;
+async function removeEmail(ctx: Context) {
+  const { email } = ctx.params as { email: string };
   const whitelistService = getWhitelistService();
   await whitelistService.removeUser(email);
   ctx.body = {};
 }
 
-async function deleteAll(ctx) {
+async function deleteAll(ctx: Context) {
   const whitelistService = getWhitelistService();
   await whitelistService.deleteAllUsers();
   ctx.body = {};
@@ -88,8 +93,8 @@ async function exportWhitelist(ctx: StrapiContext): Promise<void> {
   ctx.body = users.map((u) => ({ email: u.email }));
 }
 
-async function importUsers(ctx) {
-  const { users } = ctx.request.body;
+async function importUsers(ctx: Context) {
+  const { users } = ctx.request.body as { users: EmailUser[] };
   if (!Array.isArray(users)) {
     ctx.status = 400;
     ctx.body = { error: 'Expected { users: [{email}] }' };
@@ -117,8 +122,8 @@ async function importUsers(ctx) {
   ctx.body = { importedCount };
 }
 
-async function syncUsers(ctx) {
-  const { users: rawUsers } = ctx.request.body;
+async function syncUsers(ctx: Context) {
+  const { users: rawUsers } = ctx.request.body as { users: EmailUser[] };
 
   const emails = rawUsers.map((u) => String(u.email).toLowerCase()).filter(isValidEmail);
 

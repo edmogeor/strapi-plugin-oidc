@@ -1,3 +1,4 @@
+import type { Core } from '@strapi/types';
 import type { AuditEntry, AuditLogRecord } from '../types';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
 import en from '../../translations/locales/en.json';
@@ -13,7 +14,12 @@ function translateDetails(key: string, params?: Record<string, string>): string 
   return interpolate(translation, params);
 }
 
-export default function auditLogService({ strapi }) {
+interface AuditLogResult {
+  results: Array<AuditLogRecord & { details: string | null }>;
+  pagination: { page: number; pageSize: number; total: number; pageCount: number };
+}
+
+export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
   return {
     async log({ action, email, ip, detailsKey, detailsParams }: AuditEntry): Promise<void> {
       if (!isAuditLogEnabled()) return;
@@ -28,7 +34,14 @@ export default function auditLogService({ strapi }) {
         },
       });
 
-      const eventHub = strapi.serviceMap?.get?.('eventHub') ?? strapi.eventHub;
+      const eventHub =
+        (
+          strapi as Core.Strapi & {
+            serviceMap?: {
+              get: (name: string) => { emit: (event: string, data: unknown) => void };
+            };
+          }
+        ).serviceMap?.get?.('eventHub') ?? strapi.eventHub;
       if (eventHub) {
         eventHub.emit(`strapi-plugin-oidc::auth.${action}`, {
           email,
@@ -38,19 +51,30 @@ export default function auditLogService({ strapi }) {
       }
     },
 
-    async find({ page = 1, pageSize = 25 }: { page?: number; pageSize?: number } = {}): Promise<{
-      results: (Omit<AuditLogRecord, 'detailsKey' | 'detailsParams'> & {
-        details: string | null;
-      })[];
-      pagination: { page: number; pageSize: number; total: number; pageCount: number };
-    }> {
-      const result = await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').findPage({
+    async find({
+      page = 1,
+      pageSize = 25,
+    }: { page?: number; pageSize?: number } = {}): Promise<AuditLogResult> {
+      const result = await (
+        strapi.db.query('plugin::strapi-plugin-oidc.audit-log') as ReturnType<
+          typeof strapi.db.query
+        > & {
+          findPage: (opts: {
+            sort: { createdAt: string };
+            page: number;
+            pageSize: number;
+          }) => Promise<{
+            results: AuditLogRecord[];
+            pagination: { page: number; pageSize: number; total: number; pageCount: number };
+          }>;
+        }
+      ).findPage({
         sort: { createdAt: 'desc' },
         page,
         pageSize,
       });
 
-      const results = result.results.map((row) => ({
+      const results = result.results.map((row: AuditLogRecord) => ({
         ...row,
         details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
       }));

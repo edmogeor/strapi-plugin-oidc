@@ -1,14 +1,16 @@
+import type { Core } from '@strapi/types';
+import type { Context, Next } from 'koa';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
-export default async function bootstrap({ strapi }) {
+export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   const adminUrl = strapi.config.get('admin.url', '/admin') as string;
   const tokenRefreshPath = `${adminUrl}/token/refresh`;
 
-  const enforceOidcMiddleware = async (ctx, next) => {
+  const enforceOidcMiddleware = async (ctx: Context, next: Next) => {
     const path = ctx.request.path;
     const isPost = ctx.request.method === 'POST';
     const isAuthRoute = AUTH_ROUTES.some((r) => path.includes(r));
@@ -101,7 +103,7 @@ export default async function bootstrap({ strapi }) {
       }
     }
   } catch (err) {
-    strapi.log.warn('Could not initialize default OIDC role:', err.message);
+    strapi.log.warn('Could not initialize default OIDC role:', (err as Error).message);
   }
 
   strapi.cron.add({
@@ -111,7 +113,7 @@ export default async function bootstrap({ strapi }) {
           const retentionDays = getRetentionDays();
           await getAuditLogService().cleanup(retentionDays);
         } catch (err) {
-          strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
+          strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', (err as Error).message);
         }
       },
       options: { rule: '0 0 * * *' },

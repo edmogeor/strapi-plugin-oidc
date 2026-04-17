@@ -2,7 +2,7 @@ import strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
 import type { Core } from '@strapi/types';
-import type { StrapiContext } from '../types';
+import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
 
 function renderHtmlTemplate(title: string, content: string): string {
@@ -26,7 +26,7 @@ function renderHtmlTemplate(title: string, content: string): string {
       --icon-color: #d02b20;
       --success-bg: #eafbe7;
       --success-color: #328048;
-      --shadow: 0 1px 4px rgba(33, 33, 52, 0.1);
+      --shadow: 0 1px 4 rgba(33, 33, 52, 0.1);
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -41,7 +41,7 @@ function renderHtmlTemplate(title: string, content: string): string {
         --icon-color: #f23628;
         --success-bg: #1c3523;
         --success-color: #55ca76;
-        --shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+        --shadow: 0 1px 4 rgba(0, 0, 0, 0.5);
       }
     }
     body {
@@ -123,9 +123,15 @@ function renderHtmlTemplate(title: string, content: string): string {
 </html>`;
 }
 
-export default function oauthService({ strapi }) {
+export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
   return {
-    async createUser(email, lastname, firstname, locale, roles = []) {
+    async createUser(
+      email: string,
+      lastname: string,
+      firstname: string,
+      locale: string,
+      roles: string[] = [],
+    ) {
       const userService = strapi.service('admin::user');
       const normalizedEmail = email.toLowerCase();
 
@@ -162,38 +168,54 @@ export default function oauthService({ strapi }) {
     localeFindByHeader(headers: Record<string, string>): string {
       return headers['accept-language']?.includes('ja') ? 'ja' : 'en';
     },
-    async triggerWebHook(user) {
-      let ENTRY_CREATE;
-      const webhookStore = strapi.serviceMap.get('webhookStore');
-      const eventHub = strapi.serviceMap.get('eventHub');
+    async triggerWebHook(user: StrapiAdminUser) {
+      let ENTRY_CREATE: string | undefined;
+      const webhookStore = (
+        strapi as Core.Strapi & {
+          serviceMap?: {
+            get: (name: string) => { allowedEvents: { get: (event: string) => string } };
+          };
+        }
+      ).serviceMap?.get('webhookStore');
+      const eventHub = (
+        strapi as Core.Strapi & {
+          serviceMap?: { get: (name: string) => { emit: (event: string, data: unknown) => void } };
+        }
+      ).serviceMap?.get('eventHub');
 
       if (webhookStore) {
         ENTRY_CREATE = webhookStore.allowedEvents.get('ENTRY_CREATE');
       }
       const modelDef = strapi.getModel('admin::user');
-      const sanitizedEntity = await strapiUtils.sanitize.sanitizers.defaultSanitizeOutput(
-        {
-          schema: modelDef,
-          getModel: (uid2) => strapi.getModel(uid2),
-        },
-        user,
-      );
-      eventHub.emit(ENTRY_CREATE, {
+      const sanitizedEntity = (await strapiUtils.sanitize.sanitizers.defaultSanitizeOutput(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        { schema: modelDef, getModel: (uid2: any) => strapi.getModel(uid2) } as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        user as any,
+      )) as unknown as StrapiAdminUser;
+      eventHub?.emit(ENTRY_CREATE ?? 'entry.create', {
         model: modelDef.modelName,
         entry: sanitizedEntity,
       });
     },
-    triggerSignInSuccess(user) {
-      delete user.password;
-      const eventHub = strapi.serviceMap.get('eventHub');
-      eventHub.emit('admin.auth.success', {
-        user,
+    triggerSignInSuccess(user: StrapiAdminUser) {
+      const userCopy = { ...user };
+      delete userCopy.password;
+      const eventHub = (
+        strapi as Core.Strapi & {
+          serviceMap?: { get: (name: string) => { emit: (event: string, data: unknown) => void } };
+        }
+      ).serviceMap?.get('eventHub');
+      eventHub?.emit('admin.auth.success', {
+        user: userCopy,
         provider: 'strapi-plugin-oidc',
       });
     },
-    renderSignUpSuccess(jwtToken, user, nonce) {
-      const config = strapi.config.get('plugin::strapi-plugin-oidc');
-      const isRememberMe = !!config['REMEMBER_ME'];
+    renderSignUpSuccess(jwtToken: string, user: StrapiAdminUser, nonce: string) {
+      const config = strapi.config.get('plugin::strapi-plugin-oidc') as
+        | { REMEMBER_ME?: boolean }
+        | undefined;
+      const isRememberMe = !!config?.REMEMBER_ME;
 
       const content = `
     <noscript>
@@ -221,7 +243,7 @@ export default function oauthService({ strapi }) {
 
       return renderHtmlTemplate('Authenticating...', content);
     },
-    renderSignUpError(message) {
+    renderSignUpError(message: string) {
       const safeMessage = String(message)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -243,28 +265,51 @@ export default function oauthService({ strapi }) {
   </div>`;
       return renderHtmlTemplate('Authentication Failed', content);
     },
-    async generateToken(user, ctx) {
-      const sessionManager = strapi.sessionManager;
+    async generateToken(user: StrapiAdminUser, ctx: StrapiContext) {
+      const sessionManager = (
+        strapi as Core.Strapi & { sessionManager?: (...args: unknown[]) => unknown }
+      ).sessionManager;
       if (!sessionManager) {
         throw new Error(errorMessages.SESSION_MANAGER_UNSUPPORTED);
       }
       const userId = String(user.id);
       const deviceId = randomUUID();
 
-      const config = strapi.config.get('plugin::strapi-plugin-oidc');
-      const rememberMe = !!config['REMEMBER_ME'];
+      const config = strapi.config.get('plugin::strapi-plugin-oidc') as
+        | { REMEMBER_ME?: boolean }
+        | undefined;
+      const rememberMe = !!config?.REMEMBER_ME;
 
-      const { token: refreshToken, absoluteExpiresAt } = await sessionManager(
-        'admin',
-      ).generateRefreshToken(userId, deviceId, {
-        type: rememberMe ? 'refresh' : 'session',
-      });
+      const smAdmin = sessionManager('admin') as {
+        generateRefreshToken: (
+          userId: string,
+          deviceId: string,
+          opts: { type: 'refresh' | 'session' },
+        ) => Promise<{ token: string; absoluteExpiresAt: string }>;
+        generateAccessToken: (
+          refreshToken: string,
+        ) => Promise<{ token: string } | { error: string }>;
+      };
+
+      const { token: refreshToken, absoluteExpiresAt } = await smAdmin.generateRefreshToken(
+        userId,
+        deviceId,
+        {
+          type: rememberMe ? 'refresh' : 'session',
+        },
+      );
 
       const isProduction = strapi.config.get('environment') === 'production';
       const domain =
-        strapi.config.get('admin.auth.cookie.domain') || strapi.config.get('admin.auth.domain');
-      const path = strapi.config.get('admin.auth.cookie.path', '/admin');
-      const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax');
+        (strapi.config.get('admin.auth.cookie.domain') as string | undefined) ||
+        (strapi.config.get('admin.auth.domain') as string | undefined);
+      const path = strapi.config.get('admin.auth.cookie.path', '/admin') as string;
+      const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax') as
+        | 'lax'
+        | 'strict'
+        | 'none'
+        | boolean
+        | undefined;
 
       const cookieOptions: Parameters<StrapiContext['cookies']['set']>[2] = {
         httpOnly: true,
@@ -279,7 +324,7 @@ export default function oauthService({ strapi }) {
         const idleLifespanSec = strapi.config.get(
           'admin.auth.sessions.idleRefreshTokenLifespan',
           1_209_600,
-        );
+        ) as number;
         const idleMs = idleLifespanSec * 1000;
         const absoluteMs = new Date(absoluteExpiresAt).getTime() - Date.now();
         const ms = Math.min(idleMs, absoluteMs);
@@ -290,7 +335,7 @@ export default function oauthService({ strapi }) {
       ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);
       ctx.cookies.set('oidc_authenticated', '1', { ...cookieOptions, path: '/' });
 
-      const accessResult = await sessionManager('admin').generateAccessToken(refreshToken);
+      const accessResult = await smAdmin.generateAccessToken(refreshToken);
       if ('error' in accessResult) {
         throw new Error(accessResult.error);
       }
