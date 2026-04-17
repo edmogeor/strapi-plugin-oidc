@@ -290,10 +290,7 @@ describe('OIDC E2E Tests', () => {
       await setSettings(strapi, false, false);
     });
 
-    // -------------------------------------------------------------------------
-    // Fix 1: Pre-existing local sessions are rejected
-    // -------------------------------------------------------------------------
-    describe('Fix 1: Pre-existing local sessions', () => {
+    describe('Pre-existing local sessions', () => {
       it('does not redirect GET admin pages — enforcement is client-side only', async () => {
         const res = await request(strapi.server.httpServer)
           .get('/admin/auth/login')
@@ -331,10 +328,7 @@ describe('OIDC E2E Tests', () => {
       });
     });
 
-    // -------------------------------------------------------------------------
-    // Fix 2: Direct API auth calls are blocked
-    // -------------------------------------------------------------------------
-    describe('Fix 2: Direct API auth calls', () => {
+    describe('Direct API auth calls', () => {
       it('blocks POST /admin/login even when called directly (no browser)', async () => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/login')
@@ -373,9 +367,7 @@ describe('OIDC E2E Tests', () => {
     });
 
     // -------------------------------------------------------------------------
-    // Fix 4: Token refresh is blocked for non-OIDC sessions
-    // -------------------------------------------------------------------------
-    describe('Fix 4: Token refresh bypass prevention', () => {
+    describe('Token refresh bypass prevention', () => {
       it('returns 401 for token refresh when only strapi_admin_refresh is present (local session)', async () => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/token/refresh')
