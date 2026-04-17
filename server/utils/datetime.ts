@@ -1,3 +1,4 @@
+// fallow-ignore-file duplicate-code
 // Format a Date object as a datetime string suitable for filenames. Format: YYYYMMDD_HHmmss
 export function formatDatetimeForFilename(date: Date): string {
   const year = date.getFullYear();

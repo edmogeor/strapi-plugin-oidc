@@ -193,10 +193,7 @@ async function registerNewUser(
 
 function rolesChanged(current: Set<string>, next: Set<string>): boolean {
   if (current.size !== next.size) return true;
-  for (const id of next) {
-    if (!current.has(id)) return true;
-  }
-  return false;
+  return [...next].some((id) => !current.has(id));
 }
 
 async function updateUserRoles(

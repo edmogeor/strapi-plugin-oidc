@@ -3,7 +3,14 @@ import type { Core } from './test-types';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import { expect } from 'vitest';
+import type { Readable } from 'node:stream';
 export { clearRateLimitMap } from '../../routes';
+
+export async function streamToString(stream: Readable): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const c of stream) chunks.push(Buffer.from(c));
+  return Buffer.concat(chunks).toString('utf8');
+}
 
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
@@ -161,8 +168,35 @@ export function makeLogoutCtx(initialCookies: Record<string, string> = {}) {
   };
 }
 
+export function makeCookieTestCtx(secure = false) {
+  const calls: Array<{ name: string; value: string; opts: Record<string, unknown> }> = [];
+  return {
+    request: { secure },
+    cookies: {
+      set(name: string, value: string, opts: Record<string, unknown>) {
+        calls.push({ name, value, opts });
+      },
+      calls,
+    },
+  };
+}
+
 export function expectCookieCleared(ctx: ReturnType<typeof makeLogoutCtx>, name: string) {
   return expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
+}
+
+export function findAdminRefreshCookieCall(ctx: {
+  cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> };
+}) {
+  return ctx.cookies.calls.find((c) => c.name === 'strapi_admin_refresh');
+}
+
+export function expectAdminCookieSecure(
+  ctx: { cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> } },
+  secure: boolean,
+) {
+  const adminCall = findAdminRefreshCookieCall(ctx);
+  expect(adminCall?.opts?.secure).toBe(secure);
 }
 
 export async function setupGroupRoleMapping(
@@ -187,4 +221,55 @@ export function assertUserHasRole(user: { roles: Array<{ id: number }> }, roleId
 export async function getFirstAvailableRole(strapi: Core.Strapi) {
   const availableRoles = await strapi.db.query('admin::role').findMany();
   return availableRoles[0];
+}
+
+export function createAuditLogExportCtx(strapi: Core.Strapi) {
+  const headers: Record<string, string> = {};
+  return {
+    query: {},
+    set: (k: string, v: string) => {
+      headers[k] = v;
+    },
+    body: null as unknown,
+    strapi,
+    headers,
+  };
+}
+
+export function createSilentExportCtx(strapi: Core.Strapi) {
+  return {
+    query: {},
+    set: () => {},
+    body: null as unknown,
+    strapi,
+  };
+}
+
+export async function parseNdjsonBody(body: import('node:stream').Readable) {
+  const text = await streamToString(body);
+  const lines = text.split('\n').filter(Boolean);
+  return {
+    lines,
+    text,
+    parsed: lines.map((l) => JSON.parse(l)),
+  };
+}
+
+export async function exportAndCountLines(
+  strapi: Core.Strapi,
+  auditLogController: { export: (ctx: unknown) => Promise<void> },
+) {
+  const ctx = createSilentExportCtx(strapi);
+  await auditLogController.export(ctx);
+  const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
+  return lines.length;
+}
+
+export function assertNdjsonFormat(text: string) {
+  expect(text.trim().startsWith('[')).toBe(false);
+  expect(text.trim().endsWith(']')).toBe(false);
+  expect(text).not.toMatch(/},\n/);
+  for (const line of text.split('\n').filter(Boolean)) {
+    expect(() => JSON.parse(line)).not.toThrow();
+  }
 }

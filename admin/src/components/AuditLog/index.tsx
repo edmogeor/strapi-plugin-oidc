@@ -113,8 +113,7 @@ export default function AuditLog() {
         });
         return;
       }
-      const text = await response.text();
-      const blob = new Blob([text], { type: 'application/x-ndjson' });
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

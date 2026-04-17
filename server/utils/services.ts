@@ -6,7 +6,7 @@ import type {
   AdminUserService,
 } from '../types';
 
-export const PLUGIN_NAME = 'strapi-plugin-oidc';
+const PLUGIN_NAME = 'strapi-plugin-oidc';
 
 export const getOauthService = (): OAuthService =>
   strapi.plugin(PLUGIN_NAME).service('oauth') as OAuthService;

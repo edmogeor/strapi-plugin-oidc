@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import type { Core } from './test-types';
+import {
+  makeCookieTestCtx,
+  findAdminRefreshCookieCall,
+  expectAdminCookieSecure,
+} from './test-helpers';
 
 describe('pluginConfig utils', () => {
   let strapi: Core.Strapi;
@@ -125,21 +130,8 @@ describe('cookies utils', () => {
     strapi.config.set('environment', 'development');
   });
 
-  const makeMockCtx = (secure = false) => {
-    const calls: Array<{ name: string; value: string; opts: Record<string, unknown> }> = [];
-    return {
-      request: { secure },
-      cookies: {
-        set(name: string, value: string, opts: Record<string, unknown>) {
-          calls.push({ name, value, opts });
-        },
-        calls,
-      },
-    };
-  };
-
   it('clearAuthCookies clears all OIDC and admin cookies', () => {
-    const ctx = makeMockCtx(false) as unknown as Parameters<
+    const ctx = makeCookieTestCtx(false) as unknown as Parameters<
       typeof cookiesUtils.clearAuthCookies
     >[1];
     cookiesUtils.clearAuthCookies(strapi, ctx);
@@ -162,12 +154,14 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    const ctx = makeMockCtx(true) as unknown as Parameters<typeof cookiesUtils.clearAuthCookies>[1];
+    const ctx = makeCookieTestCtx(true) as unknown as Parameters<
+      typeof cookiesUtils.clearAuthCookies
+    >[1];
     cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const adminCall = ctx.cookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-    expect(adminCall?.opts.secure).toBe(true);
-    expect(adminCall?.opts.domain).toBe('example.com');
+    const adminCall = findAdminRefreshCookieCall(ctx);
+    expect(adminCall?.opts?.secure).toBe(true);
+    expect(adminCall?.opts?.domain).toBe('example.com');
   });
 
   it('clearAuthCookies does not set secure flag when request is not secure even in production', () => {
@@ -175,12 +169,11 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    const ctx = makeMockCtx(false) as unknown as Parameters<
+    const ctx = makeCookieTestCtx(false) as unknown as Parameters<
       typeof cookiesUtils.clearAuthCookies
     >[1];
     cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const adminCall = ctx.cookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-    expect(adminCall?.opts.secure).toBe(false);
+    expectAdminCookieSecure(ctx, false);
   });
 });

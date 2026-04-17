@@ -8,6 +8,12 @@ import {
   setSettings,
   initiateLoginAndCallback,
   queryAuditLog,
+  createAuditLogExportCtx,
+  createSilentExportCtx,
+  parseNdjsonBody,
+  exportAndCountLines,
+  assertNdjsonFormat,
+  streamToString,
 } from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
@@ -110,23 +116,77 @@ describe('AuditLog Controller', () => {
     expect(Array.isArray((ctx.body as { results: unknown[] }).results)).toBe(true);
   });
 
-  it('export() sets JSON content-type and returns records array', async () => {
+  it('export() sets NDJSON content-type and streams rows as newline-delimited JSON', async () => {
     const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
-    const headers: Record<string, string> = {};
-    const ctx = {
-      query: {},
-      set: (k: string, v: string) => {
-        headers[k] = v;
-      },
-      body: null as unknown,
-    };
+    const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
-    expect(headers['Content-Type']).toBe('application/json');
-    const records = ctx.body as Array<{ datetime: string; action: string }>;
-    expect(Array.isArray(records)).toBe(true);
-    expect(records.length).toBeGreaterThan(0);
-    for (const line of records) {
-      expect(() => JSON.stringify(line)).not.toThrow();
+
+    expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
+    expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
+    expect(ctx.headers['Cache-Control']).toBe('no-store');
+
+    const { parsed } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
+    expect(parsed.length).toBeGreaterThan(0);
+    for (const row of parsed) {
+      expect(row).toHaveProperty('datetime');
+      expect(row).toHaveProperty('action');
+      expect(row).toHaveProperty('email');
+      expect(row).toHaveProperty('ip');
+      expect(row).toHaveProperty('details');
+    }
+  });
+
+  it('export() emits every row across multiple pages', async () => {
+    const N = 1507;
+    const auditLogService = strapi
+      .plugin('strapi-plugin-oidc')
+      .service('auditLog') as AuditLogService;
+    for (let i = 0; i < N; i++) {
+      await auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' });
+    }
+    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const ctx = createSilentExportCtx(strapi);
+    await auditLogController.export(ctx);
+    const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
+    expect(lines.length).toBe(N + 1);
+  });
+
+  it('NDJSON body has no wrapping array, no trailing commas, one object per line', async () => {
+    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const ctx = createSilentExportCtx(strapi);
+    await auditLogController.export(ctx);
+    const { text } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
+    assertNdjsonFormat(text);
+  });
+
+  it('export() destroys the stream when the DB paging loop throws', async () => {
+    const auditLogService = strapi
+      .plugin('strapi-plugin-oidc')
+      .service('auditLog') as AuditLogService;
+    for (let i = 0; i < 501; i++) {
+      await auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' });
+    }
+    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const realFind = auditLogService.find;
+    let call = 0;
+    (auditLogService as { find: typeof realFind }).find = async (opts) => {
+      call++;
+      if (call === 2) throw new Error('synthetic DB failure');
+      return realFind(opts);
+    };
+
+    try {
+      const ctx = createSilentExportCtx(strapi);
+      await auditLogController.export(ctx);
+      const err: unknown = await new Promise((resolve) => {
+        const stream = ctx.body as import('node:stream').Readable;
+        stream.on('error', resolve);
+        stream.on('end', () => resolve(null));
+        stream.resume();
+      });
+      expect(err).toBeInstanceOf(Error);
+    } finally {
+      (auditLogService as { find: typeof realFind }).find = realFind;
     }
   });
 });
@@ -203,5 +263,21 @@ describe('AuditLog E2E Integration', () => {
 
     const rows = await queryAuditLog(strapi, 'logout');
     expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it('HTTP export returns Transfer-Encoding: chunked and valid NDJSON', async () => {
+    const auditLogSvc = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
+    await auditLogSvc.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
+    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const ctx = createAuditLogExportCtx(strapi);
+    await auditLogController.export(ctx);
+
+    expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
+    expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
+    expect(ctx.headers['Cache-Control']).toBe('no-store');
+
+    const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) JSON.parse(line);
   });
 });
