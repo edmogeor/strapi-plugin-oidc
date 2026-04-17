@@ -206,7 +206,6 @@ describe('OIDC E2E Tests', () => {
       expect(res.text).toContain(userFacingMessages.invalid_state);
     });
 
-    // Task 6: Typed OIDC errors - verify audit log action values
     it('token_exchange_failed produces token_exchange_failed audit action', async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       oidcServer.use(
@@ -471,7 +470,6 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
 
-      // Task 3: Logout userinfo fetch timeout
       it('logout with unreachable IdP completes within 5s and redirects to admin login', async () => {
         oidcServer.use(http.get('https://mock-oidc.com/userinfo', () => new Promise(() => {})));
 
@@ -581,7 +579,6 @@ describe('OIDC E2E Tests', () => {
       expect(user.roles.some((r: { id: number }) => r.id === targetRole.id)).toBe(true);
     });
 
-    // Task 5: Audit log includes mapped role name
     it('login with group-mapped role → audit log user_created details include mapped role name', async () => {
       const targetRole = await getFirstAvailableRole(strapi);
 
