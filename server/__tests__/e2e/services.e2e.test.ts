@@ -17,7 +17,11 @@ describe('OIDC Services E2E', () => {
   describe('Whitelist Service', () => {
     afterAll(async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
-        where: { email: { $in: ['e2e-test@whitelist.com', 'unknown@whitelist.com'] } },
+        where: {
+          email: {
+            $in: ['e2e-test@whitelist.com', 'unknown@whitelist.com', 'admin-count@test.com'],
+          },
+        },
       });
     });
 
@@ -37,7 +41,6 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should throw when user not in whitelist and whitelist is active', async () => {
-      // Ensure whitelist is active
       await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: false });
 
       await expect(
@@ -49,7 +52,49 @@ describe('OIDC Services E2E', () => {
       await whitelistService.setSettings({ useWhitelist: false, enforceOIDC: false });
 
       const result = await whitelistService.checkWhitelistForEmail('unknown@whitelist.com');
-      expect(result).toBeNull(); // returns null if disabled
+      expect(result).toBeNull();
+    });
+
+    it('hasUser returns true for registered email', async () => {
+      await whitelistService.registerUser('e2e-test@whitelist.com');
+      const result = await whitelistService.hasUser('e2e-test@whitelist.com');
+      expect(result).toBe(true);
+    });
+
+    it('hasUser returns false for unregistered email', async () => {
+      const result = await whitelistService.hasUser('notregistered@whitelist.com');
+      expect(result).toBe(false);
+    });
+
+    it('deleteAllUsers empties the whitelist table', async () => {
+      await whitelistService.registerUser('e2e-test@whitelist.com');
+      await whitelistService.registerUser('unknown@whitelist.com');
+
+      let users = await whitelistService.getUsers();
+      expect(users.length).toBeGreaterThan(0);
+
+      await whitelistService.deleteAllUsers();
+
+      users = await whitelistService.getUsers();
+      expect(users).toHaveLength(0);
+    });
+
+    it('countAdminUsersByEmails returns correct count', async () => {
+      const superAdmin = await strapi.db.query('admin::user').findOne({
+        where: { email: 'admin@strapi.test' },
+      });
+
+      const countAll = await whitelistService.countAdminUsersByEmails([
+        'admin@strapi.test',
+        'nonexistent@test.com',
+      ]);
+      expect(countAll).toBe(superAdmin ? 1 : 0);
+
+      const countNone = await whitelistService.countAdminUsersByEmails(['nonexistent@test.com']);
+      expect(countNone).toBe(0);
+
+      const countEmpty = await whitelistService.countAdminUsersByEmails([]);
+      expect(countEmpty).toBe(0);
     });
   });
 

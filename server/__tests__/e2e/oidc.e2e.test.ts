@@ -185,7 +185,6 @@ describe('OIDC E2E Tests', () => {
     });
 
     it('rejects a mismatched nonce in the ID token', async () => {
-      // Build a minimal JWT with a wrong nonce in the payload
       const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
       const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
         'base64url',
@@ -198,8 +197,6 @@ describe('OIDC E2E Tests', () => {
     });
 
     it('does not reflect user-supplied values in error responses', async () => {
-      // The state value is never echoed back — the response must only contain
-      // the static 'Invalid state' message with no reflection of the input.
       const res = await agent
         .get('/strapi-plugin-oidc/oidc/callback?code=mock-code&state=<script>alert(1)</script>')
         .redirects(0);
@@ -207,6 +204,62 @@ describe('OIDC E2E Tests', () => {
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
       expect(res.text).toContain(userFacingMessages.invalid_state);
+    });
+
+    // Task 6: Typed OIDC errors - verify audit log action values
+    it('token_exchange_failed produces token_exchange_failed audit action', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
+      );
+      const callbackUrl = await initiateLogin(agent);
+      await agent.get(callbackUrl).redirects(0);
+      const logs = await queryAuditLog(strapi, 'token_exchange_failed');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('nonce_mismatch produces nonce_mismatch audit action', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
+        'base64url',
+      );
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({
+            access_token: 'fake-jwt-token',
+            id_token: `${header}.${payload}.fakesig`,
+          }),
+        ),
+      );
+      const callbackUrl = await initiateLogin(agent);
+      await agent.get(callbackUrl).redirects(0);
+      const logs = await queryAuditLog(strapi, 'nonce_mismatch');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('userinfo_fetch_failed produces login_failure audit action', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
+      );
+      const callbackUrl = await initiateLogin(agent);
+      await agent.get(callbackUrl).redirects(0);
+      const logs = await queryAuditLog(strapi, 'login_failure');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('id_token_parse_failed produces login_failure audit action', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
+        ),
+      );
+      const callbackUrl = await initiateLogin(agent);
+      await agent.get(callbackUrl).redirects(0);
+      const logs = await queryAuditLog(strapi, 'login_failure');
+      expect(logs.length).toBeGreaterThan(0);
     });
   });
 
@@ -505,6 +558,36 @@ describe('OIDC E2E Tests', () => {
       expect(user.roles).toBeDefined();
       expect(user.roles.length).toBeGreaterThan(0);
       expect(user.roles.some((r: { id: number }) => r.id === targetRole.id)).toBe(true);
+    });
+
+    // Task 5: Audit log includes mapped role name
+    it('login with group-mapped role → audit log user_created details include mapped role name', async () => {
+      const targetRole = await getFirstAvailableRole(strapi);
+
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      await strapi.db.query('admin::user').deleteMany({ where: { email: 'audit-role@test.com' } });
+
+      oidcServer.use(
+        http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({
+            email: 'audit-role@test.com',
+            family_name: 'Test',
+            given_name: 'User',
+            groups: ['audit-group'],
+          }),
+        ),
+      );
+
+      await setupGroupRoleMapping(strapi, { 'audit-group': [targetRole.name] });
+
+      const agent = createAgent();
+      await initiateLoginAndCallback(agent);
+
+      const logs = await queryAuditLog(strapi, 'user_created');
+      expect(logs.length).toBeGreaterThan(0);
+      expect(logs[0].detailsKey).toBe('user_created');
+      expect(logs[0].detailsParams).toBeDefined();
+      expect(logs[0].detailsParams.roles).toContain(targetRole.name);
     });
 
     it('new user with non-matching group → falls back to default OIDC roles', async () => {

@@ -91,10 +91,7 @@ export async function loginWithGroups(
   _groups: string[],
   groupRoleMap: Record<string, string[]>,
 ): Promise<void> {
-  const config = { ...MOCK_OIDC_CONFIG };
-  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
-  strapi.config.set('plugin::strapi-plugin-oidc', config);
-
+  setGroupRoleMap(strapi, groupRoleMap);
   const agent = request.agent(strapi.server.httpServer);
   await initiateLoginAndCallback(agent);
 }
@@ -103,13 +100,17 @@ async function applyRoleMapConfig(
   strapi: Core.Strapi,
   groupRoleMap: Record<string, string[]>,
 ): Promise<ReturnType<typeof request.agent>> {
-  const config = { ...MOCK_OIDC_CONFIG };
-  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
-  strapi.config.set('plugin::strapi-plugin-oidc', config);
+  setGroupRoleMap(strapi, groupRoleMap);
   return request.agent(strapi.server.httpServer);
 }
 
 export { applyRoleMapConfig as applyRoleMap };
+
+export function setGroupRoleMap(strapi: Core.Strapi, groupRoleMap: Record<string, string[]>) {
+  const config = { ...MOCK_OIDC_CONFIG };
+  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
+  strapi.config.set('plugin::strapi-plugin-oidc', config);
+}
 
 export async function loginAndFetchUser(
   strapi: Core.Strapi,
@@ -118,18 +119,10 @@ export async function loginAndFetchUser(
   groupRoleMap: Record<string, string[]>,
 ) {
   oidcServer.use(mswHandler);
-
-  const config = { ...MOCK_OIDC_CONFIG };
-  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
-  strapi.config.set('plugin::strapi-plugin-oidc', config);
-
+  setGroupRoleMap(strapi, groupRoleMap);
   const agent = request.agent(strapi.server.httpServer);
   await initiateLoginAndCallback(agent);
-
-  return strapi.db.query('admin::user').findOne({
-    where: { email },
-    populate: ['roles'],
-  });
+  return fetchUserWithRoles(strapi, email);
 }
 
 export function mswUserInfoHandler(
@@ -176,9 +169,7 @@ export async function setupGroupRoleMapping(
   strapi: Core.Strapi,
   groupRoleMap: Record<string, string[]>,
 ) {
-  const config = { ...MOCK_OIDC_CONFIG };
-  config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);
-  strapi.config.set('plugin::strapi-plugin-oidc', config);
+  setGroupRoleMap(strapi, groupRoleMap);
 }
 
 export async function fetchUserWithRoles(strapi: Core.Strapi, email: string) {

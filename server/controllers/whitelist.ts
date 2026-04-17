@@ -1,12 +1,9 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
-import { formatDatetimeForFilename } from '../utils/datetime';
 import { isValidEmail } from '../utils/email';
-import type { WhitelistService, StrapiContext } from '../types';
-
-function getWhitelistService(): WhitelistService {
-  return strapi.plugin('strapi-plugin-oidc').service('whitelist') as WhitelistService;
-}
+import { getWhitelistService } from '../utils/services';
+import { setJsonAttachmentHeaders } from '../utils/http';
+import type { StrapiContext } from '../types';
 
 async function info(ctx) {
   const whitelistService = getWhitelistService();
@@ -58,17 +55,10 @@ async function register(ctx) {
   const emailList = rawEmails.map((e) => String(e).trim().toLowerCase()).filter(Boolean);
 
   const whitelistService = getWhitelistService();
-  let matchedExistingUsersCount = 0;
+  const matchedExistingUsersCount = await whitelistService.countAdminUsersByEmails(emailList);
 
   for (const singleEmail of emailList) {
-    const existingUser = await strapi
-      .query('admin::user')
-      .findOne({ where: { email: singleEmail } });
-    if (existingUser) matchedExistingUsersCount++;
-
-    const alreadyWhitelisted = await strapi
-      .query('plugin::strapi-plugin-oidc.whitelists')
-      .findOne({ where: { email: singleEmail } });
+    const alreadyWhitelisted = await whitelistService.hasUser(singleEmail);
     if (!alreadyWhitelisted) {
       await whitelistService.registerUser(singleEmail);
     }
@@ -85,14 +75,13 @@ async function removeEmail(ctx) {
 }
 
 async function deleteAll(ctx) {
-  await strapi.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
+  const whitelistService = getWhitelistService();
+  await whitelistService.deleteAllUsers();
   ctx.body = {};
 }
 
 async function exportWhitelist(ctx: StrapiContext): Promise<void> {
-  const datetime = formatDatetimeForFilename(new Date());
-  ctx.set('Content-Type', 'application/json');
-  ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-whitelist-${datetime}.json"`);
+  setJsonAttachmentHeaders(ctx, 'strapi-oidc-whitelist');
 
   const whitelistService = getWhitelistService();
   const users = await whitelistService.getUsers();

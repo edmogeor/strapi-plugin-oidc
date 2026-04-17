@@ -1,5 +1,6 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
+import { getWhitelistService, getAuditLogService } from './utils/services';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
@@ -15,7 +16,7 @@ export default async function bootstrap({ strapi }) {
 
     if ((isAuthRoute && isPost) || isTokenRefresh) {
       try {
-        const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+        const whitelistService = getWhitelistService();
         const settings = await whitelistService.getSettings();
         const enforceOIDC = resolveEnforceOIDC(strapi, settings?.enforceOIDC);
 
@@ -70,7 +71,7 @@ export default async function bootstrap({ strapi }) {
   const enforceOIDCConfig = getEnforceOIDCConfig(strapi);
   if (enforceOIDCConfig !== null) {
     try {
-      const whitelistService = strapi.plugin('strapi-plugin-oidc').service('whitelist');
+      const whitelistService = getWhitelistService();
       const settings = await whitelistService.getSettings();
       if (settings.enforceOIDC !== enforceOIDCConfig) {
         await whitelistService.setSettings({ ...settings, enforceOIDC: enforceOIDCConfig });
@@ -108,7 +109,7 @@ export default async function bootstrap({ strapi }) {
       task: async () => {
         try {
           const retentionDays = getRetentionDays();
-          await strapi.plugin('strapi-plugin-oidc').service('auditLog').cleanup(retentionDays);
+          await getAuditLogService().cleanup(retentionDays);
         } catch (err) {
           strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', err.message);
         }

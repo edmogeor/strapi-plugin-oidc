@@ -16,6 +16,8 @@ export const errorCodes = {
   MISSING_CONFIG: 'MISSING_CONFIG',
 } as const;
 
+export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
+
 const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   token_exchange_failed: 'Token exchange failed with HTTP status {status}',
   userinfo_fetch_failed: 'UserInfo endpoint returned HTTP {status}',

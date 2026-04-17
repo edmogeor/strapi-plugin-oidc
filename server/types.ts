@@ -69,6 +69,7 @@ export interface RoleService {
   oidcRoles(): Promise<{ roles: string[] } | null>;
   getOidcRoles(): AdminRole[];
   find(): Promise<AdminRole[]>;
+  update(roles: unknown): Promise<void>;
 }
 
 export interface PluginConfig {
@@ -99,6 +100,9 @@ export interface WhitelistService {
   registerUser(email: string): Promise<void>;
   removeUser(email: string): Promise<void>;
   checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null>;
+  hasUser(email: string): Promise<boolean>;
+  deleteAllUsers(): Promise<void>;
+  countAdminUsersByEmails(emails: string[]): Promise<number>;
 }
 
 export interface AdminUserService {

@@ -1,5 +1,6 @@
-import type { StrapiContext, AuditLogService } from '../types';
-import { formatDatetimeForFilename } from '../utils/datetime';
+import type { StrapiContext } from '../types';
+import { getAuditLogService } from '../utils/services';
+import { setJsonAttachmentHeaders } from '../utils/http';
 
 type AuditLogExportRow = {
   id: number;
@@ -10,10 +11,6 @@ type AuditLogExportRow = {
   details: string | null;
 };
 
-function getAuditLogService(): AuditLogService {
-  return strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
-}
-
 async function find(ctx: StrapiContext): Promise<void> {
   const page = Math.max(1, Number(ctx.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(ctx.query.pageSize) || 25));
@@ -21,9 +18,7 @@ async function find(ctx: StrapiContext): Promise<void> {
 }
 
 async function exportLogs(ctx: StrapiContext): Promise<void> {
-  const datetime = formatDatetimeForFilename(new Date());
-  ctx.set('Content-Type', 'application/json');
-  ctx.set('Content-Disposition', `attachment; filename="strapi-oidc-audit-log-${datetime}.json"`);
+  setJsonAttachmentHeaders(ctx, 'strapi-oidc-audit-log');
 
   const service = getAuditLogService();
   const PAGE_SIZE = 1000;

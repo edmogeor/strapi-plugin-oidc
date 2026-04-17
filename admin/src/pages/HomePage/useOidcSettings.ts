@@ -1,75 +1,250 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { OIDCRole, RoleDef } from '../../components/Role';
 import { WhitelistUser } from '../../components/Whitelist';
-import { formatDatetimeForFilename } from '../../utils/datetime';
+import { downloadJson } from '../../utils/download';
+
+type SettingsSnapshot = {
+  oidcRoles: OIDCRole[];
+  users: WhitelistUser[];
+  useWhitelist: boolean;
+  enforceOIDC: boolean;
+};
+
+type State = {
+  current: SettingsSnapshot;
+  initial: SettingsSnapshot;
+  roles: RoleDef[];
+  enforceOIDCConfig: boolean | null;
+  auditLogEnabled: boolean;
+  loading: boolean;
+  showSuccess: boolean;
+  showError: boolean;
+};
+
+type Action =
+  | { type: 'hydrate/roles'; roles: RoleDef[] }
+  | { type: 'hydrate/oidcRoles'; oidcRoles: OIDCRole[] }
+  | {
+      type: 'hydrate/whitelist';
+      snapshot: Partial<SettingsSnapshot>;
+      enforceOIDCConfig: boolean | null;
+      auditLogEnabled: boolean;
+    }
+  | { type: 'patch/oidcRole'; oidcId: string; values: string[] }
+  | { type: 'user/add'; email: string }
+  | { type: 'user/delete'; email: string }
+  | { type: 'users/clear' }
+  | { type: 'users/replace'; users: WhitelistUser[] }
+  | { type: 'toggle/useWhitelist'; value: boolean }
+  | { type: 'toggle/enforceOIDC'; value: boolean }
+  | { type: 'commit'; snapshot?: Partial<SettingsSnapshot> }
+  | { type: 'loading'; value: boolean }
+  | { type: 'flash/success' }
+  | { type: 'flash/error' }
+  | { type: 'flash/clear'; kind: 'success' | 'error' };
+
+const initialState: State = {
+  current: {
+    oidcRoles: [],
+    users: [],
+    useWhitelist: false,
+    enforceOIDC: false,
+  },
+  initial: {
+    oidcRoles: [],
+    users: [],
+    useWhitelist: false,
+    enforceOIDC: false,
+  },
+  roles: [],
+  enforceOIDCConfig: null,
+  auditLogEnabled: true,
+  loading: false,
+  showSuccess: false,
+  showError: false,
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'hydrate/roles':
+      return { ...state, roles: action.roles };
+
+    case 'hydrate/oidcRoles': {
+      const snapshot = { oidcRoles: action.oidcRoles };
+      return {
+        ...state,
+        current: { ...state.current, ...snapshot },
+        initial: { ...state.initial, ...snapshot },
+      };
+    }
+
+    case 'hydrate/whitelist': {
+      const snapshot: SettingsSnapshot = {
+        oidcRoles: action.snapshot.oidcRoles ?? state.current.oidcRoles,
+        users: action.snapshot.users ?? state.current.users,
+        useWhitelist: action.snapshot.useWhitelist ?? state.current.useWhitelist,
+        enforceOIDC: action.snapshot.enforceOIDC ?? state.current.enforceOIDC,
+      };
+      return {
+        ...state,
+        current: snapshot,
+        initial: structuredClone(snapshot),
+        enforceOIDCConfig: action.enforceOIDCConfig,
+        auditLogEnabled: action.auditLogEnabled,
+      };
+    }
+
+    case 'patch/oidcRole':
+      return {
+        ...state,
+        current: {
+          ...state.current,
+          oidcRoles: state.current.oidcRoles.map((role) =>
+            role.oauth_type === action.oidcId ? { ...role, role: action.values } : role,
+          ),
+        },
+      };
+
+    case 'user/add':
+      return {
+        ...state,
+        current: {
+          ...state.current,
+          users: [
+            ...state.current.users,
+            { email: action.email, createdAt: new Date().toISOString() },
+          ],
+        },
+      };
+
+    case 'user/delete': {
+      const updatedUsers = state.current.users.filter((u) => u.email !== action.email);
+      const updated = { users: updatedUsers };
+      let enforceOIDC = state.current.enforceOIDC;
+      if (state.current.useWhitelist && updatedUsers.length === 0) {
+        enforceOIDC = false;
+      }
+      return {
+        ...state,
+        current: { ...state.current, ...updated, enforceOIDC },
+      };
+    }
+
+    case 'users/clear': {
+      const updated = { users: [] };
+      let enforceOIDC = state.current.enforceOIDC;
+      if (state.current.useWhitelist) {
+        enforceOIDC = false;
+      }
+      return {
+        ...state,
+        current: { ...state.current, ...updated, enforceOIDC },
+      };
+    }
+
+    case 'users/replace':
+      return {
+        ...state,
+        current: { ...state.current, users: action.users },
+      };
+
+    case 'toggle/useWhitelist': {
+      const useWhitelist = action.value;
+      let enforceOIDC = state.current.enforceOIDC;
+      if (useWhitelist && state.current.users.length === 0) {
+        enforceOIDC = false;
+      }
+      return {
+        ...state,
+        current: { ...state.current, useWhitelist, enforceOIDC },
+      };
+    }
+
+    case 'toggle/enforceOIDC':
+      return {
+        ...state,
+        current: { ...state.current, enforceOIDC: action.value },
+      };
+
+    case 'commit':
+      return {
+        ...state,
+        initial: structuredClone(
+          action.snapshot ? { ...state.current, ...action.snapshot } : state.current,
+        ),
+      };
+
+    case 'loading':
+      return { ...state, loading: action.value };
+
+    case 'flash/success':
+      return { ...state, showSuccess: true };
+
+    case 'flash/error':
+      return { ...state, showError: true };
+
+    case 'flash/clear':
+      return {
+        ...state,
+        showSuccess: action.kind === 'success' ? false : state.showSuccess,
+        showError: action.kind === 'error' ? false : state.showError,
+      };
+
+    default:
+      return state;
+  }
+}
+
+function isDirtyPrimitive(a: boolean, b: boolean): boolean {
+  return a !== b;
+}
+
+function isDirtyArray(a: unknown[], b: unknown[]): boolean {
+  return JSON.stringify(a) !== JSON.stringify(b);
+}
 
 export function useOidcSettings() {
   const { get, put, post } = useFetchClient();
-
-  const [loading, setLoading] = useState(false);
-  const [showSuccess, setSuccess] = useState(false);
-  const [showError, setError] = useState(false);
-
-  const [initialOidcRoles, setInitialOIDCRoles] = useState<OIDCRole[]>([]);
-  const [oidcRoles, setOIDCRoles] = useState<OIDCRole[]>([]);
-  const [roles, setRoles] = useState<RoleDef[]>([]);
-
-  const [initialUseWhitelist, setInitialUseWhitelist] = useState(false);
-  const [useWhitelist, setUseWhitelist] = useState(false);
-  const [initialEnforceOIDC, setInitialEnforceOIDC] = useState(false);
-  const [enforceOIDC, setEnforceOIDC] = useState(false);
-  const [enforceOIDCConfig, setEnforceOIDCConfig] = useState<boolean | null>(null);
-  const [initialUsers, setInitialUsers] = useState<WhitelistUser[]>([]);
-  const [users, setUsers] = useState<WhitelistUser[]>([]);
-  const [whitelistResponse, setWhitelistResponse] = useState<Record<string, unknown>>({});
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
-      setOIDCRoles(response.data);
-      setInitialOIDCRoles(structuredClone(response.data));
+      dispatch({ type: 'hydrate/oidcRoles', oidcRoles: response.data });
     });
     get(`/admin/roles`).then((response) => {
-      setRoles(response.data.data);
+      dispatch({ type: 'hydrate/roles', roles: response.data.data });
     });
     get('/strapi-plugin-oidc/whitelist').then((response) => {
       const data = response.data;
-      setWhitelistResponse(data);
-      setUsers(data.whitelistUsers);
-      setInitialUsers(structuredClone(data.whitelistUsers));
-      setUseWhitelist(data.useWhitelist);
-      setInitialUseWhitelist(data.useWhitelist);
-      setEnforceOIDC(data.enforceOIDC);
-      setInitialEnforceOIDC(data.enforceOIDC);
-      setEnforceOIDCConfig(data.enforceOIDCConfig ?? null);
+      dispatch({
+        type: 'hydrate/whitelist',
+        snapshot: {
+          users: data.whitelistUsers,
+          useWhitelist: data.useWhitelist,
+          enforceOIDC: data.enforceOIDC,
+        },
+        enforceOIDCConfig: data.enforceOIDCConfig ?? null,
+        auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
+      });
     });
   }, [get]);
 
   const onChangeRole = useCallback((values: string[], oidcId: string) => {
-    setOIDCRoles((prev) =>
-      prev.map((role) => (role.oauth_type === oidcId ? { ...role, role: values } : role)),
-    );
+    dispatch({ type: 'patch/oidcRole', oidcId, values });
   }, []);
 
   const onRegisterWhitelist = useCallback((email: string) => {
-    setUsers((prev) => [...prev, { email, createdAt: new Date().toISOString() }]);
+    dispatch({ type: 'user/add', email });
   }, []);
 
-  const onDeleteWhitelist = useCallback(
-    (email: string) => {
-      setUsers((prev) => {
-        const updated = prev.filter((u) => u.email !== email);
-        if (useWhitelist && updated.length === 0) setEnforceOIDC(false);
-        return updated;
-      });
-    },
-    [useWhitelist],
-  );
+  const onDeleteWhitelist = useCallback((email: string) => {
+    dispatch({ type: 'user/delete', email });
+  }, []);
 
   const onDeleteAll = useCallback(() => {
-    setUsers([]);
-    if (useWhitelist) setEnforceOIDC(false);
-  }, [useWhitelist]);
+    dispatch({ type: 'users/clear' });
+  }, []);
 
   const onImport = useCallback(
     async (emails: string[]): Promise<number> => {
@@ -77,8 +252,8 @@ export function useOidcSettings() {
         users: emails.map((e) => ({ email: e })),
       });
       const refreshed = await get('/strapi-plugin-oidc/whitelist');
-      setUsers(refreshed.data.whitelistUsers);
-      setInitialUsers(structuredClone(refreshed.data.whitelistUsers));
+      dispatch({ type: 'users/replace', users: refreshed.data.whitelistUsers });
+      dispatch({ type: 'commit' });
       return response.data.importedCount as number;
     },
     [post, get],
@@ -87,100 +262,91 @@ export function useOidcSettings() {
   const onExport = useCallback(async () => {
     const response = await get('/strapi-plugin-oidc/whitelist/export');
     const data = response.data as Array<{ email: string }>;
-    const datetime = formatDatetimeForFilename(new Date());
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `strapi-oidc-whitelist-${datetime}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadJson('strapi-oidc-whitelist', data);
   }, [get]);
 
-  const onToggleWhitelist = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = e.target.checked;
-      setUseWhitelist(checked);
-      if (checked && users.length === 0) setEnforceOIDC(false);
-    },
-    [users.length],
-  );
+  const onToggleWhitelist = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'toggle/useWhitelist', value: e.target.checked });
+  }, []);
 
   const onToggleEnforce = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setEnforceOIDC(e.target.checked);
+    dispatch({ type: 'toggle/enforceOIDC', value: e.target.checked });
   }, []);
 
   const isDirty = useMemo(
     () =>
-      useWhitelist !== initialUseWhitelist ||
-      enforceOIDC !== initialEnforceOIDC ||
-      JSON.stringify(oidcRoles) !== JSON.stringify(initialOidcRoles) ||
-      JSON.stringify(users) !== JSON.stringify(initialUsers),
-    [
-      useWhitelist,
-      initialUseWhitelist,
-      enforceOIDC,
-      initialEnforceOIDC,
-      oidcRoles,
-      initialOidcRoles,
-      users,
-      initialUsers,
-    ],
+      isDirtyPrimitive(state.current.useWhitelist, state.initial.useWhitelist) ||
+      isDirtyPrimitive(state.current.enforceOIDC, state.initial.enforceOIDC) ||
+      isDirtyArray(state.current.oidcRoles, state.initial.oidcRoles) ||
+      isDirtyArray(state.current.users, state.initial.users),
+    [state.current, state.initial],
   );
 
   const onSaveAll = useCallback(async () => {
-    setLoading(true);
+    dispatch({ type: 'loading', value: true });
     try {
       await Promise.all([
         put('/strapi-plugin-oidc/oidc-roles', {
-          roles: oidcRoles.map((role) => ({ oauth_type: role.oauth_type, role: role.role })),
+          roles: state.current.oidcRoles.map((role) => ({
+            oauth_type: role.oauth_type,
+            role: role.role,
+          })),
         }),
         put('/strapi-plugin-oidc/whitelist/sync', {
-          users: users.map((u) => ({ email: u.email })),
+          users: state.current.users.map((u) => ({ email: u.email })),
         }),
-        put('/strapi-plugin-oidc/whitelist/settings', { useWhitelist, enforceOIDC }),
+        put('/strapi-plugin-oidc/whitelist/settings', {
+          useWhitelist: state.current.useWhitelist,
+          enforceOIDC: state.current.enforceOIDC,
+        }),
       ]);
 
-      setInitialOIDCRoles(structuredClone(oidcRoles));
-      setInitialUseWhitelist(useWhitelist);
-      setInitialEnforceOIDC(enforceOIDC);
+      dispatch({ type: 'commit' });
 
-      get('/strapi-plugin-oidc/whitelist').then((getResponse) => {
-        const data = getResponse.data;
-        setWhitelistResponse(data);
-        setUsers(data.whitelistUsers);
-        setInitialUsers(structuredClone(data.whitelistUsers));
+      const getResponse = await get('/strapi-plugin-oidc/whitelist');
+      const data = getResponse.data;
+      dispatch({
+        type: 'hydrate/whitelist',
+        snapshot: {
+          users: data.whitelistUsers,
+          useWhitelist: data.useWhitelist,
+          enforceOIDC: data.enforceOIDC,
+        },
+        enforceOIDCConfig: data.enforceOIDCConfig ?? null,
+        auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
       });
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      dispatch({ type: 'flash/success' });
+      setTimeout(() => dispatch({ type: 'flash/clear', kind: 'success' }), 3000);
     } catch (e) {
       console.error(e);
-      setError(true);
-      setTimeout(() => setError(false), 3000);
+      dispatch({ type: 'flash/error' });
+      setTimeout(() => dispatch({ type: 'flash/clear', kind: 'error' }), 3000);
     } finally {
-      setLoading(false);
+      dispatch({ type: 'loading', value: false });
     }
-  }, [put, get, oidcRoles, users, useWhitelist, enforceOIDC]);
+  }, [put, get, state.current]);
 
   return {
     state: {
-      loading,
-      showSuccess,
-      showError,
-      oidcRoles,
-      roles,
-      useWhitelist,
-      enforceOIDC,
-      enforceOIDCConfig,
-      initialEnforceOIDC,
-      users,
+      loading: state.loading,
+      showSuccess: state.showSuccess,
+      showError: state.showError,
+      oidcRoles: state.current.oidcRoles,
+      roles: state.roles,
+      useWhitelist: state.current.useWhitelist,
+      enforceOIDC: state.current.enforceOIDC,
+      enforceOIDCConfig: state.enforceOIDCConfig,
+      initialEnforceOIDC: state.initial.enforceOIDC,
+      users: state.current.users,
       isDirty,
-      auditLogEnabled: (whitelistResponse.auditLogEnabled as boolean) ?? true,
+      auditLogEnabled: state.auditLogEnabled,
     },
     actions: {
-      setSuccess,
-      setError,
+      setSuccess: (val: boolean) =>
+        dispatch({ type: val ? 'flash/success' : 'flash/clear', kind: 'success' }),
+      setError: (val: boolean) =>
+        dispatch({ type: val ? 'flash/error' : 'flash/clear', kind: 'error' }),
       onChangeRole,
       onRegisterWhitelist,
       onDeleteWhitelist,

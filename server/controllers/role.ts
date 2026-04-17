@@ -1,5 +1,7 @@
+import { getRoleService } from '../utils/services';
+
 async function find(ctx) {
-  const roleService = strapi.plugin('strapi-plugin-oidc').service('role');
+  const roleService = getRoleService();
   const roles = await roleService.find();
   const oidcConstants = roleService.getOidcRoles();
 
@@ -16,7 +18,7 @@ async function find(ctx) {
 async function update(ctx) {
   try {
     const { roles } = ctx.request.body;
-    const roleService = strapi.plugin('strapi-plugin-oidc').service('role');
+    const roleService = getRoleService();
     await roleService.update(roles);
     ctx.send({}, 204);
   } catch (e) {

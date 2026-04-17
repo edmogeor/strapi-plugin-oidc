@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/types';
 import type { WhitelistSettings, WhitelistEntry } from '../types';
 import { errorMessages } from '../error-strings';
+import { OidcError } from '../oidc-errors';
 
 const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -45,8 +46,23 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
       const result = (await getWhitelistQuery().findOne({
         where: { email },
       })) as WhitelistEntry | null;
-      if (!result) throw new Error(errorMessages.WHITELIST_NOT_PRESENT);
+      if (!result) throw new OidcError('whitelist_rejected', errorMessages.WHITELIST_NOT_PRESENT);
       return result;
+    },
+    async hasUser(email: string): Promise<boolean> {
+      const row = await getWhitelistQuery().findOne({ where: { email }, select: ['id'] });
+      return !!row;
+    },
+    async deleteAllUsers(): Promise<void> {
+      await getWhitelistQuery().deleteMany({});
+    },
+    async countAdminUsersByEmails(emails: string[]): Promise<number> {
+      if (emails.length === 0) return 0;
+      const rows = await strapi.query('admin::user').findMany({
+        where: { email: { $in: emails } },
+        select: ['id'],
+      });
+      return rows.length;
     },
   };
 }
