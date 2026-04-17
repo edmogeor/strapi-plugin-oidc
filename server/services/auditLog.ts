@@ -21,6 +21,25 @@ interface AuditLogResult {
 
 type StrapiWhereClause = Record<string, unknown>;
 
+type StringFieldFilter = Partial<Record<string, string | boolean>>;
+
+function addStringFieldConditions(
+  conditions: StrapiWhereClause[],
+  field: string,
+  filter: StringFieldFilter,
+): void {
+  if ('$eq' in filter) conditions.push({ [field]: filter.$eq });
+  if ('$ne' in filter) conditions.push({ [field]: { $ne: filter.$ne } });
+  if ('$contains' in filter) conditions.push({ [field]: { $containsi: filter.$contains } });
+  if ('$notContains' in filter)
+    conditions.push({ [field]: { $notContainsi: filter.$notContains } });
+  if ('$startsWith' in filter) conditions.push({ [field]: { $startsWith: filter.$startsWith } });
+  if ('$endsWith' in filter) conditions.push({ [field]: { $endsWith: filter.$endsWith } });
+  if ('$null' in filter && filter.$null === true) conditions.push({ [field]: null });
+  if ('$notNull' in filter && filter.$notNull === true)
+    conditions.push({ [field]: { $notNull: true } });
+}
+
 function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
   const conditions: StrapiWhereClause[] = [];
 
@@ -32,29 +51,8 @@ function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
     if ('$notIn' in af) conditions.push({ action: { $notIn: af.$notIn } });
   }
 
-  if (filters.email) {
-    const ef = filters.email;
-    if ('$eq' in ef) conditions.push({ email: ef.$eq });
-    if ('$ne' in ef) conditions.push({ email: { $ne: ef.$ne } });
-    if ('$contains' in ef) conditions.push({ email: { $containsi: ef.$contains } });
-    if ('$notContains' in ef) conditions.push({ email: { $notContainsi: ef.$notContains } });
-    if ('$startsWith' in ef) conditions.push({ email: { $startsWith: ef.$startsWith } });
-    if ('$endsWith' in ef) conditions.push({ email: { $endsWith: ef.$endsWith } });
-    if ('$null' in ef && ef.$null === true) conditions.push({ email: null });
-    if ('$notNull' in ef && ef.$notNull === true) conditions.push({ email: { $notNull: true } });
-  }
-
-  if (filters.ip) {
-    const ipf = filters.ip;
-    if ('$eq' in ipf) conditions.push({ ip: ipf.$eq });
-    if ('$ne' in ipf) conditions.push({ ip: { $ne: ipf.$ne } });
-    if ('$contains' in ipf) conditions.push({ ip: { $containsi: ipf.$contains } });
-    if ('$notContains' in ipf) conditions.push({ ip: { $notContainsi: ipf.$notContains } });
-    if ('$startsWith' in ipf) conditions.push({ ip: { $startsWith: ipf.$startsWith } });
-    if ('$endsWith' in ipf) conditions.push({ ip: { $endsWith: ipf.$endsWith } });
-    if ('$null' in ipf && ipf.$null === true) conditions.push({ ip: null });
-    if ('$notNull' in ipf && ipf.$notNull === true) conditions.push({ ip: { $notNull: true } });
-  }
+  if (filters.email) addStringFieldConditions(conditions, 'email', filters.email);
+  if (filters.ip) addStringFieldConditions(conditions, 'ip', filters.ip);
 
   if (filters.createdAt) {
     const cf = filters.createdAt;

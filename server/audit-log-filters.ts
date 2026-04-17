@@ -73,20 +73,6 @@ function isAuditAction(value: unknown): value is AuditAction {
   return AUDIT_ACTIONS.includes(value as AuditAction);
 }
 
-function isStringOrBoolean(value: unknown): value is string | boolean {
-  return typeof value === 'string' || typeof value === 'boolean';
-}
-
-function isStringOrTuple(value: unknown): value is string | [string, string] {
-  if (typeof value === 'string') return true;
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === 'string' &&
-    typeof value[1] === 'string'
-  );
-}
-
 export class ValidationError extends Error {
   constructor(message: string) {
     super(message);

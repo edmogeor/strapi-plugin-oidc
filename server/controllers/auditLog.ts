@@ -46,17 +46,23 @@ function errorAwareNdjsonStream(service: AuditLogService, filters?: AuditLogFilt
 
 let strapi: StrapiContext['strapi'];
 
+function parseFiltersParam(query: StrapiContext['query']): AuditLogFilters | null {
+  try {
+    return parseAuditLogFilters(query.filters);
+  } catch (err) {
+    return null;
+  }
+}
+
 function find(ctx: StrapiContext): Promise<void> {
   strapi = ctx.strapi;
   const page = Math.max(1, Number(ctx.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(ctx.query.pageSize) || 25));
 
-  let filters;
-  try {
-    filters = parseAuditLogFilters(ctx.query.filters);
-  } catch (err) {
+  const filters = parseFiltersParam(ctx.query);
+  if (!filters) {
     ctx.status = 400;
-    ctx.body = { message: err instanceof Error ? err.message : 'Invalid filters' };
+    ctx.body = { message: 'Invalid filters' };
     return Promise.resolve();
   }
 
@@ -71,12 +77,10 @@ async function exportLogs(ctx: StrapiContext): Promise<void> {
   strapi = ctx.strapi;
   setNdjsonAttachmentHeaders(ctx, 'strapi-oidc-audit-log');
 
-  let filters;
-  try {
-    filters = parseAuditLogFilters(ctx.query.filters);
-  } catch (err) {
+  const filters = parseFiltersParam(ctx.query);
+  if (!filters) {
     ctx.status = 400;
-    ctx.body = { message: err instanceof Error ? err.message : 'Invalid filters' };
+    ctx.body = { message: 'Invalid filters' };
     return;
   }
 

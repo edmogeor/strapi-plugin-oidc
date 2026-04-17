@@ -1,4 +1,4 @@
-import type { Filters, SearchInputProps } from '@strapi/strapi/admin';
+import type { Filters } from '@strapi/strapi/admin';
 import { AUDIT_ACTIONS } from '../../../../server/audit-log-filters';
 
 export const auditLogFilters: Filters.Filter[] = [

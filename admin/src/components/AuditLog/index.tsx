@@ -142,7 +142,7 @@ export default function AuditLog() {
       const cookieMatch = document.cookie.match(/(?:^|;\s*)jwtToken=([^;]+)/);
       const token = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
       const queryString = buildQueryString({
-        filters: filters,
+        filters,
         q: searchQuery || undefined,
       });
       const response = await fetch(`/strapi-plugin-oidc/audit-logs/export?${queryString}`, {
