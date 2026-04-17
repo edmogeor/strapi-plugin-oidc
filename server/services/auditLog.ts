@@ -40,6 +40,7 @@ function addStringFieldConditions(
     conditions.push({ [field]: { $notNull: true } });
 }
 
+// fallow-ignore-next-line complexity
 function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
   const conditions: StrapiWhereClause[] = [];
 

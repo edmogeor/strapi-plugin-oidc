@@ -1,5 +1,7 @@
+// fallow-ignore-next-line unused-type
 import type { AuditAction } from './types';
 
+// fallow-ignore-next-line unused-type
 export type { AuditAction } from './types';
 
 export const AUDIT_ACTIONS: readonly AuditAction[] = [
@@ -15,7 +17,7 @@ export const AUDIT_ACTIONS: readonly AuditAction[] = [
   'user_created',
 ];
 
-export type StringOperator =
+type StringOperator =
   | '$eq'
   | '$ne'
   | '$contains'
@@ -25,10 +27,11 @@ export type StringOperator =
   | '$null'
   | '$notNull';
 
-export type DateOperator = '$eq' | '$gt' | '$gte' | '$lt' | '$lte' | '$between';
+type DateOperator = '$eq' | '$gt' | '$gte' | '$lt' | '$lte' | '$between';
 
-export type EnumOperator = '$eq' | '$ne' | '$in' | '$notIn';
+type EnumOperator = '$eq' | '$ne' | '$in' | '$notIn';
 
+// fallow-ignore-next-line unused-type
 export interface AuditLogFilters {
   action?: Partial<Record<EnumOperator, AuditAction | AuditAction[]>>;
   email?: Partial<Record<StringOperator, string | boolean>>;
@@ -73,13 +76,14 @@ function isAuditAction(value: unknown): value is AuditAction {
   return AUDIT_ACTIONS.includes(value as AuditAction);
 }
 
-export class ValidationError extends Error {
+class ValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ValidationError';
   }
 }
 
+// fallow-ignore-next-line complexity
 export function parseAuditLogFilters(query: unknown): AuditLogFilters {
   if (!isPlainObject(query)) return {};
 

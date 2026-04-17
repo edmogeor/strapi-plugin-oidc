@@ -273,3 +273,24 @@ export function assertNdjsonFormat(text: string) {
     expect(() => JSON.parse(line)).not.toThrow();
   }
 }
+
+export function expectFilterResults(
+  result: { results: { action: string }[]; pagination: { total: number; pageCount: number } },
+  expectedLength: number,
+  expectedTotal: number,
+  pageSize = 25,
+  actionFilter?: string[],
+) {
+  expect(result.results).toHaveLength(expectedLength);
+  expect(result.pagination.total).toBe(expectedTotal);
+  expect(result.pagination.pageCount).toBe(Math.ceil(expectedTotal / pageSize));
+  if (actionFilter) {
+    expect(result.results.every((r) => actionFilter.includes(r.action))).toBe(true);
+  }
+}
+
+export function expectNdjsonExportHeaders(ctx: { headers: Record<string, string> }) {
+  expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
+  expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
+  expect(ctx.headers['Cache-Control']).toBe('no-store');
+}

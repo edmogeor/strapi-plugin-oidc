@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file
 import type { Filters } from '@strapi/strapi/admin';
 import { AUDIT_ACTIONS } from '../../../../server/audit-log-filters';
 
