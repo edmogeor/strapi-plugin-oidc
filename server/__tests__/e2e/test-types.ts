@@ -19,7 +19,7 @@ export type {
   AuditLogService,
 };
 
-/** Typed global used by setup.ts and all test files. */
+// Typed global used by setup.ts and all test files.
 declare global {
   // eslint-disable-next-line no-var
   var strapiInstance: Core.Strapi;
@@ -27,14 +27,14 @@ declare global {
 
 export type { Core };
 
-/** A role record as stored by the plugin's roles content-type. */
+// A role record as stored by the plugin's roles content-type.
 export interface OidcRole {
   id: number;
   oauth_type: string;
   role: number[];
 }
 
-/** Minimal mock context used in controller unit-style tests. */
+// Minimal mock context used in controller unit-style tests.
 export interface MockCtx {
   request?: {
     body?: unknown;

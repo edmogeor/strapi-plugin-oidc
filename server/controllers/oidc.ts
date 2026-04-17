@@ -57,19 +57,16 @@ async function oidcSignIn(ctx: StrapiContext) {
 
   const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
 
-  // Always generate state server-side — never accept caller-supplied state, as that
-  // would defeat the anti-CSRF purpose of the parameter.
+  // Generate state server-side to prevent CSRF attacks.
   const state = randomBytes(32).toString('base64url');
-  // Nonce prevents ID token replay attacks (OIDC Core §3.1.2.1).
+  // Generate nonce to prevent ID token replay attacks.
   const nonce = randomBytes(32).toString('base64url');
 
-  // Cookie options aligned with Strapi's own session management.
-  // Secure in production, provided the reverse proxy is configured correctly
-  // (sending X-Forwarded-Proto and proxy: true in Strapi config).
+  // Cookie options aligned with Strapi's session management.
   const isProduction = strapi.config.get('environment') === 'production';
   const cookieOptions = {
     httpOnly: true,
-    maxAge: 600000, // 10 minutes
+    maxAge: 600000,
     secure: isProduction && ctx.request.secure,
     sameSite: 'lax' as const,
   };
@@ -116,8 +113,7 @@ async function exchangeTokenAndFetchUserInfo(
     id_token?: string;
   };
 
-  // Validate the nonce in the ID token if the provider returned one.
-  // The ID token is a JWT; the payload is the second base64url segment.
+  // Validate nonce in the ID token (JWT payload is the second base64url segment).
   if (tokenData.id_token) {
     try {
       const payloadB64 = tokenData.id_token.split('.')[1];
@@ -133,8 +129,7 @@ async function exchangeTokenAndFetchUserInfo(
     }
   }
 
-  // Always use the Authorization header (RFC 6750 §2.1). Sending the token as a
-  // URL query parameter (§2.3) is deprecated because it leaks into server/proxy logs.
+  // Use Authorization header (RFC 6750). URL query params are deprecated due to log leakage.
   const userResponse = await fetch(config.OIDC_USERINFO_ENDPOINT, {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   });
@@ -352,8 +347,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   const codeVerifier = ctx.cookies.get('oidc_code_verifier');
   const oidcNonce = ctx.cookies.get('oidc_nonce');
 
-  // Clear one-time-use PKCE/state/nonce cookies immediately — they are no longer needed
-  // after this point and should not linger in the browser.
+  // Clear one-time PKCE/state/nonce cookies immediately.
   ctx.cookies.set('oidc_state', null);
   ctx.cookies.set('oidc_code_verifier', null);
   ctx.cookies.set('oidc_nonce', null);
@@ -381,7 +375,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     const isProduction = strapi.config.get('environment') === 'production';
     ctx.cookies.set('oidc_access_token', accessToken, {
       httpOnly: true,
-      maxAge: 300000, // 5 minutes — matches typical provider access token lifetime
+      maxAge: 300000,
       secure: isProduction && ctx.request.secure,
       sameSite: 'lax' as const,
     });
@@ -397,7 +391,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
         ctx,
       );
 
-    // Store identity in httpOnly session cookies so logout can attribute audit log entries.
+    // Store identity in httpOnly cookies for audit logging on logout.
     const identityCookieOptions = {
       httpOnly: true,
       path: '/',
@@ -458,7 +452,7 @@ async function logout(ctx: StrapiContext) {
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
 
-  // Read before clearing — cookies are gone after clearAuthCookies.
+  // Read before clearing (cookies are gone after clearAuthCookies).
   const isOidcSession = !!ctx.cookies.get('oidc_authenticated');
   const accessToken = ctx.cookies.get('oidc_access_token');
   const userEmail = ctx.cookies.get('oidc_user_email') ?? undefined;
@@ -466,9 +460,8 @@ async function logout(ctx: StrapiContext) {
   clearAuthCookies(strapi, ctx);
 
   if (logoutUrl && isOidcSession && accessToken) {
-    // Check if the provider session is still active before redirecting to end-session.
-    // If the access token is expired, skip Authentik and go straight to Strapi login
-    // to avoid the bare "Logout successful" page with no redirect.
+    // Check if provider session is still active before redirecting to end-session.
+    // Skip provider logout if token is expired to avoid a bare redirect page.
     try {
       const response = await fetch(config.OIDC_USERINFO_ENDPOINT, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -479,12 +472,12 @@ async function logout(ctx: StrapiContext) {
           auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
         return ctx.redirect(logoutUrl);
       }
-      // Non-ok means the session expired at the provider
+      // Session expired at provider.
       if (userEmail)
         await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
       return ctx.redirect(`${adminPanelUrl}/auth/login`);
     } catch {
-      // Network error — treat as session expired
+      // Network error — treat as session expired.
       if (userEmail)
         await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
       return ctx.redirect(`${adminPanelUrl}/auth/login`);

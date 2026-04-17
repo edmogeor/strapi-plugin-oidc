@@ -101,7 +101,6 @@ async function importUsers(ctx) {
     .map((u) => String(u.email).trim().toLowerCase())
     .filter(isValidEmail);
 
-  // Deduplicate within the import payload itself
   const deduped = [...new Set(normalized)];
 
   const whitelistService = getWhitelistService();
@@ -129,14 +128,12 @@ async function syncUsers(ctx) {
   const syncEmailSet = new Set(emails);
   const currentUsersByEmail = new Map(currentUsers.map((u) => [u.email, u]));
 
-  // Remove whitelist entries not present in the incoming list
   for (const currUser of currentUsers) {
     if (!syncEmailSet.has(currUser.email)) {
       await whitelistService.removeUser(currUser.email);
     }
   }
 
-  // Add new entries
   for (const email of emails) {
     if (!currentUsersByEmail.has(email)) {
       await whitelistService.registerUser(email);

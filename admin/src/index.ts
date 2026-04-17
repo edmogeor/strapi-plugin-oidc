@@ -41,7 +41,6 @@ export default {
     const isAuthRoute = (path: string) =>
       /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
-    // --- SSO button injection + enforcement DOM removal ---
     let ssoButtonInjected = false;
     let loginObserver: MutationObserver | null = null;
 
@@ -56,13 +55,12 @@ export default {
       const btn = document.createElement('button');
       btn.id = 'strapi-oidc-sso-btn';
       btn.type = 'button';
-      // Copy styled-components classes from the submit button so appearance is identical
       btn.className = submitButton.className;
       btn.onclick = () => {
         window.location.href = '/strapi-plugin-oidc/oidc';
       };
 
-      // Match the inner <span> structure of the submit button
+      // Match the inner span structure of the submit button.
       const innerSpan = submitButton.querySelector('span');
       const span = document.createElement('span');
       if (innerSpan) span.className = innerSpan.className;
@@ -92,11 +90,10 @@ export default {
       ssoButtonInjected = true;
     };
 
-    // Remove standard login elements from the DOM when enforcement is on.
-    // Uses stable semantic selectors so it survives Strapi's hashed class names.
-    // Called on each observer tick so elements re-added by React are removed again.
+    // Remove standard login elements when enforcement is on.
+    // Uses stable semantic selectors that survive Strapi's hashed class names.
     const removeEnforcedElements = () => {
-      // Form field wrappers (email, password, remember-me) and the login submit button
+      // Form field wrappers (email, password, remember-me) and the login submit button.
       [
         'form > div > div:has(input[name="email"])',
         'form > div > div:has(input[name="password"])',
@@ -106,7 +103,7 @@ export default {
         document.querySelectorAll(selector).forEach((el) => el.remove());
       });
 
-      // Forgot password link — remove its outer wrapper div so no empty space remains
+      // Forgot password link — remove its outer wrapper div to avoid empty space.
       document.querySelectorAll('a[href*="forgot-password"]').forEach((el) => {
         (el.closest('div')?.parentElement ?? el).remove();
       });
@@ -121,13 +118,11 @@ export default {
         if (enforced) removeEnforcedElements();
       };
 
-      tick(); // try immediately in case the form is already in the DOM
+      tick();
       loginObserver = new MutationObserver(tick);
       loginObserver.observe(document.body, { childList: true, subtree: true });
     };
-    // --- end SSO button / enforcement ---
 
-    // Fetch public settings, then start the login observer.
     const applySettings = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
@@ -180,7 +175,7 @@ export default {
         if (locale === 'en') {
           return Promise.resolve({ data: transformKeys(en), locale });
         }
-        // Additional locale files live in translations/locales/ (e.g. fr.json, de.json)
+        // Additional locale files live in translations/locales/.
         return import(`../translations/locales/${locale}.json`)
           .then(({ default: data }) => ({ data: transformKeys(data), locale }))
           .catch(() => ({ data: {}, locale }));

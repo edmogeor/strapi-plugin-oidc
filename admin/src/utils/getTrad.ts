@@ -11,7 +11,7 @@ export default function getTrad(id: string) {
   };
 }
 
-/** Returns the English string for a translation key — for use outside React components. */
+// Returns the English string for a translation key — for use outside React components.
 export function t(id: keyof typeof en): string {
   return en[id];
 }

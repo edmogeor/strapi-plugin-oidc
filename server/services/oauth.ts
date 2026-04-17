@@ -276,10 +276,9 @@ export default function oauthService({ strapi }) {
       };
 
       if (rememberMe) {
-        // Mirror Strapi's own cookie expiry: min(idle lifespan, token absolute expiry)
         const idleLifespanSec = strapi.config.get(
           'admin.auth.sessions.idleRefreshTokenLifespan',
-          1_209_600, // 14 days — Strapi default
+          1_209_600,
         );
         const idleMs = idleLifespanSec * 1000;
         const absoluteMs = new Date(absoluteExpiresAt).getTime() - Date.now();
@@ -289,10 +288,6 @@ export default function oauthService({ strapi }) {
       }
 
       ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);
-      // Marker cookie so the enforceOIDC middleware can distinguish OIDC sessions
-      // from pre-existing local sessions. httpOnly so it cannot be forged by JS.
-      // Must use path '/' so the cookie is sent to /strapi-plugin-oidc/logout,
-      // which is outside the /admin path used by strapi_admin_refresh.
       ctx.cookies.set('oidc_authenticated', '1', { ...cookieOptions, path: '/' });
 
       const accessResult = await sessionManager('admin').generateAccessToken(refreshToken);

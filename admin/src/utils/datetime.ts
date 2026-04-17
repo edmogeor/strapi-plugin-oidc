@@ -1,9 +1,4 @@
-// fallow-ignore-file code-duplication
-/**
- * Format a Date object as a datetime string suitable for filenames.
- * Format: YYYYMMDD_HHmmss
- */
-// fallow-ignore-next-line code-duplication
+// Format a Date object as a datetime string suitable for filenames. Format: YYYYMMDD_HHmmss
 export function formatDatetimeForFilename(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

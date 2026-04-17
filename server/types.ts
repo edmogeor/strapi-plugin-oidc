@@ -1,9 +1,6 @@
 import type { Context } from 'koa';
 
-/**
- * Strapi augments the Koa context with a `send` helper used throughout
- * the plugin's route handlers.
- */
+// Strapi augments Koa context with a `send` helper used throughout the plugin's route handlers.
 export interface StrapiContext extends Context {
   send(body: unknown, status?: number): void;
 }
@@ -13,10 +10,7 @@ export interface WhitelistSettings {
   enforceOIDC: boolean;
 }
 
-/**
- * Parsed shape of the OIDC_GROUP_ROLE_MAP JSON string.
- * Values are Strapi role names (e.g. "Editor", "Super Admin"), not IDs.
- */
+// Parsed shape of the OIDC_GROUP_ROLE_MAP JSON string. Values are Strapi role names (e.g. "Editor", "Super Admin"), not IDs.
 export interface GroupRoleMap {
   [groupName: string]: string[];
 }
@@ -35,7 +29,7 @@ export interface StrapiAdminUser {
   roles?: Array<{ id: number; name: string; code: string }>;
 }
 
-/** Minimal shape of the OIDC userinfo endpoint response. */
+// Minimal shape of the OIDC userinfo endpoint response.
 export interface OidcUserInfo {
   email: string;
   [key: string]: unknown;
@@ -89,7 +83,7 @@ export interface PluginConfig {
   OIDC_ENFORCE: boolean | null;
   AUDIT_LOG_RETENTION_DAYS: number;
   OIDC_GROUP_FIELD: string;
-  /** JSON-encoded GroupRoleMap, e.g. '{"admins":["1"],"editors":["2"]}' */
+  // JSON-encoded GroupRoleMap (e.g. '{"admins":["1"],"editors":["2"]}').
   OIDC_GROUP_ROLE_MAP: string;
 }
 
