@@ -130,16 +130,17 @@ describe('cookies utils', () => {
     strapi.config.set('environment', 'development');
   });
 
+  interface CookieCall {
+    name: string;
+    value: string;
+    opts?: Record<string, unknown>;
+  }
+  type CookieCallArray = Array<CookieCall>;
+  type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
+    cookies: { calls: CookieCallArray };
+  };
+
   it('clearAuthCookies clears all OIDC and admin cookies', () => {
-    interface CookieCall {
-      name: string;
-      value: string;
-      opts?: Record<string, unknown>;
-    }
-    type CookieCallArray = Array<CookieCall>;
-    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
-      cookies: { calls: CookieCallArray };
-    };
     const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
     expect(
@@ -169,14 +170,6 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    interface CookieCall {
-      name: string;
-      opts?: Record<string, unknown>;
-    }
-    type CookieCallArray = Array<CookieCall>;
-    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
-      cookies: { calls: CookieCallArray };
-    };
     const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
 
@@ -190,14 +183,6 @@ describe('cookies utils', () => {
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
 
-    interface CookieCall {
-      name: string;
-      opts?: Record<string, unknown>;
-    }
-    type CookieCallArray = Array<CookieCall>;
-    type TestCtx = Parameters<typeof cookiesUtils.clearAuthCookies>[1] & {
-      cookies: { calls: CookieCallArray };
-    };
     const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
 

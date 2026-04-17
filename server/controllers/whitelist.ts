@@ -24,8 +24,9 @@ async function info(ctx: Context) {
 }
 
 async function updateSettings(ctx: Context) {
-  const { useWhitelist } = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
-  let { enforceOIDC } = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
+  const body = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
+  const { useWhitelist } = body;
+  let { enforceOIDC } = body;
   const whitelistService = getWhitelistService();
 
   if (useWhitelist && enforceOIDC) {
