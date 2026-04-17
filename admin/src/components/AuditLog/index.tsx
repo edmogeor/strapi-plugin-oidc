@@ -9,13 +9,18 @@ import {
   Tooltip,
   Tr,
   Typography,
+  TextInput,
+  Combobox,
+  ComboboxOption,
 } from '@strapi/design-system';
 import { useCallback, useEffect, useState } from 'react';
 import { Download, Information, Trash } from '@strapi/icons';
 import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
+import qs from 'qs';
 import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
+import { AUDIT_ACTIONS } from '../../../../server/audit-log-filters';
 
 interface AuditLogRecord {
   id: number;
@@ -44,6 +49,22 @@ const DETAILS_TEXT_STYLE = {
   cursor: 'help',
 } as const;
 
+interface FilterState {
+  action?: string;
+  email?: string;
+  ip?: string;
+  createdAt?: string;
+}
+
+function buildQueryString(params: {
+  filters?: FilterState;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  return qs.stringify(params, { encodeValuesOnly: true });
+}
+
 export default function AuditLog() {
   const { formatMessage } = useIntl();
   const { get, del } = useFetchClient();
@@ -58,14 +79,20 @@ export default function AuditLog() {
   });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchLogs = useCallback(
-    async (p: number) => {
+    async (p: number, f: FilterState, q: string) => {
       setLoading(true);
       try {
-        const response = await get(
-          `/strapi-plugin-oidc/audit-logs?page=${p}&pageSize=${PAGE_SIZE}`,
-        );
+        const queryString = buildQueryString({
+          filters: f,
+          q: q || undefined,
+          page: p,
+          pageSize: PAGE_SIZE,
+        });
+        const response = await get(`/strapi-plugin-oidc/audit-logs?${queryString}`);
         setRecords(response.data.results ?? []);
         setPagination(
           response.data.pagination ?? { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 },
@@ -80,8 +107,19 @@ export default function AuditLog() {
   );
 
   useEffect(() => {
-    fetchLogs(page);
-  }, [fetchLogs, page]);
+    fetchLogs(page, filters, searchQuery);
+  }, [fetchLogs, page, filters, searchQuery]);
+
+  const handleFilterChange = (name: keyof FilterState, value: string) => {
+    setFilters((prev) => {
+      if (!value) {
+        const { [name]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [name]: value };
+    });
+    setPage(1);
+  };
 
   const handleClearAll = async () => {
     try {
@@ -90,7 +128,7 @@ export default function AuditLog() {
         type: 'success',
         message: formatMessage(getTrad('auditlog.clear.success')),
       });
-      fetchLogs(1);
+      fetchLogs(1, {}, '');
     } catch {
       toggleNotification({
         type: 'danger',
@@ -103,7 +141,11 @@ export default function AuditLog() {
     try {
       const cookieMatch = document.cookie.match(/(?:^|;\s*)jwtToken=([^;]+)/);
       const token = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
-      const response = await fetch('/strapi-plugin-oidc/audit-logs/export', {
+      const queryString = buildQueryString({
+        filters: filters,
+        q: searchQuery || undefined,
+      });
+      const response = await fetch(`/strapi-plugin-oidc/audit-logs/export?${queryString}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -127,6 +169,14 @@ export default function AuditLog() {
       });
     }
   };
+
+  const clearFilters = () => {
+    setFilters({});
+    setSearchQuery('');
+    setPage(1);
+  };
+
+  const hasActiveFilters = Object.keys(filters).length > 0 || searchQuery.length > 0;
 
   return (
     <Box>
@@ -171,6 +221,56 @@ export default function AuditLog() {
         </Flex>
       </Flex>
 
+      <Flex justifyContent="space-between" alignItems="center" marginBottom={4} gap={4}>
+        <Flex gap={2} alignItems="flex-end" wrap="wrap" style={{ flex: 1 }}>
+          <Combobox
+            value={filters.action ?? ''}
+            onChange={(value) => handleFilterChange('action', value ?? '')}
+            placeholder={formatMessage(getTrad('auditlog.filters.action'))}
+            clearLabel={formatMessage(getTrad('auditlog.filters.clear'))}
+            onClear={() => handleFilterChange('action', '')}
+          >
+            {AUDIT_ACTIONS.map((action) => (
+              <ComboboxOption key={action} value={action}>
+                {action}
+              </ComboboxOption>
+            ))}
+          </Combobox>
+          <TextInput
+            placeholder={formatMessage(getTrad('auditlog.filters.email'))}
+            value={filters.email ?? ''}
+            onChange={(e) => handleFilterChange('email', e.target.value)}
+          />
+          <TextInput
+            placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
+            value={filters.ip ?? ''}
+            onChange={(e) => handleFilterChange('ip', e.target.value)}
+          />
+          <TextInput
+            type="datetime-local"
+            placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
+            value={filters.createdAt ?? ''}
+            onChange={(e) => handleFilterChange('createdAt', e.target.value)}
+          />
+          {hasActiveFilters && (
+            <Button size="S" variant="danger-light" onClick={clearFilters}>
+              {formatMessage(getTrad('auditlog.filters.clear'))}
+            </Button>
+          )}
+        </Flex>
+      </Flex>
+
+      <Flex justifyContent="flex-end" marginBottom={4}>
+        <TextInput
+          placeholder={formatMessage(getTrad('auditlog.search.placeholder'))}
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setPage(1);
+          }}
+        />
+      </Flex>
+
       <CustomTable colCount={5} rowCount={records.length}>
         <Thead>
           <Tr>
@@ -198,7 +298,9 @@ export default function AuditLog() {
               <Td colSpan={5}>
                 <Flex justifyContent="center" padding={4}>
                   <Typography textColor="neutral600">
-                    {formatMessage(getTrad('auditlog.table.empty'))}
+                    {hasActiveFilters
+                      ? formatMessage(getTrad('auditlog.filters.empty'))
+                      : formatMessage(getTrad('auditlog.table.empty'))}
                   </Typography>
                 </Flex>
               </Td>

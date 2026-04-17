@@ -115,6 +115,8 @@ export type AuditAction =
   | 'session_expired'
   | 'user_created';
 
+export type AuditLogFilters = import('./audit-log-filters').AuditLogFilters;
+
 export interface AuditEntry {
   action: AuditAction;
   email?: string;
@@ -131,7 +133,7 @@ export interface AuditLogRecord extends AuditEntry {
 
 export interface AuditLogService {
   log(entry: AuditEntry): Promise<void>;
-  find(opts?: { page?: number; pageSize?: number }): Promise<{
+  find(opts?: { page?: number; pageSize?: number; filters?: AuditLogFilters }): Promise<{
     results: (Omit<AuditLogRecord, 'detailsKey' | 'detailsParams'> & { details: string | null })[];
     pagination: { page: number; pageSize: number; total: number; pageCount: number };
   }>;

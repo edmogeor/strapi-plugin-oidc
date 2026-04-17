@@ -91,6 +91,185 @@ describe('AuditLog Service', () => {
   });
 });
 
+describe('AuditLog Service with filters', () => {
+  let strapi: Core.Strapi;
+  let auditLogService: AuditLogService;
+
+  beforeAll(() => {
+    strapi = globalThis.strapiInstance;
+    auditLogService = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
+  });
+
+  beforeEach(async () => {
+    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
+  });
+
+  const seedFixture = async () => {
+    await auditLogService.log({ action: 'login_success', email: 'alice@acme.com', ip: '1.1.1.1' });
+    await auditLogService.log({ action: 'login_failure', email: 'bob@acme.com', ip: '2.2.2.2' });
+    await auditLogService.log({ action: 'logout', ip: '3.3.3.3' });
+    await auditLogService.log({ action: 'user_created', email: 'carol@acme.com', ip: '1.1.1.1' });
+    await auditLogService.log({ action: 'login_success', email: 'dave@other.com', ip: '4.4.4.4' });
+  };
+
+  it('filters by action $eq', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { action: { $eq: 'login_success' } },
+    });
+    expect(result.results).toHaveLength(2);
+    expect(result.results.every((r) => r.action === 'login_success')).toBe(true);
+  });
+
+  it('filters by action $in', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { action: { $in: ['login_success', 'login_failure'] } },
+    });
+    expect(result.results).toHaveLength(3);
+    expect(result.results.every((r) => ['login_success', 'login_failure'].includes(r.action))).toBe(
+      true,
+    );
+  });
+
+  it('filters by action $notIn', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { action: { $notIn: ['logout', 'session_expired'] } },
+    });
+    expect(result.results).toHaveLength(4);
+    expect(
+      result.results.every((r) => r.action !== 'logout' && r.action !== 'session_expired'),
+    ).toBe(true);
+  });
+
+  it('filters by email $contains (case-insensitive)', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { email: { $contains: 'acme' } },
+    });
+    expect(result.results).toHaveLength(3);
+    expect(result.results.every((r) => r.email?.toLowerCase().includes('acme'))).toBe(true);
+  });
+
+  it('filters by email $startsWith', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { email: { $startsWith: 'alice' } },
+    });
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].email).toBe('alice@acme.com');
+  });
+
+  it('filters by email $endsWith', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { email: { $endsWith: 'other.com' } },
+    });
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].email).toBe('dave@other.com');
+  });
+
+  it('filters by email $null returns rows with null email', async () => {
+    await seedFixture();
+    await auditLogService.log({ action: 'logout', ip: '5.5.5.5' });
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { email: { $null: true } },
+    });
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].action).toBe('logout');
+  });
+
+  it('filters by ip $contains', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { ip: { $contains: '1.1' } },
+    });
+    expect(result.results).toHaveLength(2);
+  });
+
+  it('combines filters with AND logic', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: {
+        action: { $eq: 'login_success' },
+        email: { $contains: 'acme' },
+      },
+    });
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].email).toBe('alice@acme.com');
+  });
+
+  it('filters with q search across email and ip', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { q: 'acme' },
+    });
+    expect(result.results).toHaveLength(3);
+  });
+
+  it('filters with q combined with field filters', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { q: 'acme', action: { $eq: 'login_success' } },
+    });
+    expect(result.results).toHaveLength(2);
+    expect(result.results.every((r) => r.action === 'login_success')).toBe(true);
+  });
+
+  it('pagination metadata reflects filtered set', async () => {
+    await seedFixture();
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 2,
+      filters: { action: { $in: ['login_success', 'login_failure'] } },
+    });
+    expect(result.pagination.total).toBe(3);
+    expect(result.pagination.pageCount).toBe(2);
+  });
+
+  it('sort order is always createdAt desc regardless of filters', async () => {
+    await auditLogService.log({ action: 'login_success', email: 'older@test.com', ip: '1.1.1.1' });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await auditLogService.log({ action: 'login_success', email: 'newer@test.com', ip: '1.1.1.1' });
+
+    const result = await auditLogService.find({
+      page: 1,
+      pageSize: 25,
+      filters: { action: { $eq: 'login_success' } },
+    });
+    const emails = result.results.map((r) => r.email);
+    expect(emails[0]).toBe('newer@test.com');
+    expect(emails[1]).toBe('older@test.com');
+  });
+
+  afterAll(async () => {
+    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
+  });
+});
+
 describe('AuditLog Controller', () => {
   let strapi: Core.Strapi;
 
