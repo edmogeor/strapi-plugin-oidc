@@ -1,4 +1,3 @@
-import { getTranslation } from './utils/getTranslation';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 import Initializer from './components/Initializer';
@@ -171,7 +170,7 @@ export default {
     const transformKeys = (data: Record<string, string>) =>
       Object.fromEntries(
         Object.entries(data).map(([key, value]) => [
-          key.startsWith('global.') ? key : getTranslation(key),
+          key.startsWith('global.') ? key : `${pluginId}.${key}`,
           value,
         ]),
       );

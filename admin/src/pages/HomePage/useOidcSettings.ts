@@ -1,12 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { OIDCRole, RoleDef } from '../../components/Role';
 import { WhitelistUser } from '../../components/Whitelist';
 import { formatDatetimeForFilename } from '../../utils/datetime';
-
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
 
 export function useOidcSettings() {
   const { get, put, post } = useFetchClient();
@@ -31,7 +27,7 @@ export function useOidcSettings() {
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
       setOIDCRoles(response.data);
-      setInitialOIDCRoles(deepClone(response.data));
+      setInitialOIDCRoles(structuredClone(response.data));
     });
     get(`/admin/roles`).then((response) => {
       setRoles(response.data.data);
@@ -40,7 +36,7 @@ export function useOidcSettings() {
       const data = response.data;
       setWhitelistResponse(data);
       setUsers(data.whitelistUsers);
-      setInitialUsers(deepClone(data.whitelistUsers));
+      setInitialUsers(structuredClone(data.whitelistUsers));
       setUseWhitelist(data.useWhitelist);
       setInitialUseWhitelist(data.useWhitelist);
       setEnforceOIDC(data.enforceOIDC);
@@ -82,7 +78,7 @@ export function useOidcSettings() {
       });
       const refreshed = await get('/strapi-plugin-oidc/whitelist');
       setUsers(refreshed.data.whitelistUsers);
-      setInitialUsers(deepClone(refreshed.data.whitelistUsers));
+      setInitialUsers(structuredClone(refreshed.data.whitelistUsers));
       return response.data.importedCount as number;
     },
     [post, get],
@@ -114,24 +110,38 @@ export function useOidcSettings() {
     setEnforceOIDC(e.target.checked);
   }, []);
 
-  const isDirty =
-    useWhitelist !== initialUseWhitelist ||
-    enforceOIDC !== initialEnforceOIDC ||
-    JSON.stringify(oidcRoles) !== JSON.stringify(initialOidcRoles) ||
-    JSON.stringify(users) !== JSON.stringify(initialUsers);
+  const isDirty = useMemo(
+    () =>
+      useWhitelist !== initialUseWhitelist ||
+      enforceOIDC !== initialEnforceOIDC ||
+      JSON.stringify(oidcRoles) !== JSON.stringify(initialOidcRoles) ||
+      JSON.stringify(users) !== JSON.stringify(initialUsers),
+    [
+      useWhitelist,
+      initialUseWhitelist,
+      enforceOIDC,
+      initialEnforceOIDC,
+      oidcRoles,
+      initialOidcRoles,
+      users,
+      initialUsers,
+    ],
+  );
 
   const onSaveAll = useCallback(async () => {
     setLoading(true);
     try {
-      await put('/strapi-plugin-oidc/oidc-roles', {
-        roles: oidcRoles.map((role) => ({ oauth_type: role.oauth_type, role: role.role })),
-      });
-      await put('/strapi-plugin-oidc/whitelist/sync', {
-        users: users.map((u) => ({ email: u.email })),
-      });
-      await put('/strapi-plugin-oidc/whitelist/settings', { useWhitelist, enforceOIDC });
+      await Promise.all([
+        put('/strapi-plugin-oidc/oidc-roles', {
+          roles: oidcRoles.map((role) => ({ oauth_type: role.oauth_type, role: role.role })),
+        }),
+        put('/strapi-plugin-oidc/whitelist/sync', {
+          users: users.map((u) => ({ email: u.email })),
+        }),
+        put('/strapi-plugin-oidc/whitelist/settings', { useWhitelist, enforceOIDC }),
+      ]);
 
-      setInitialOIDCRoles(deepClone(oidcRoles));
+      setInitialOIDCRoles(structuredClone(oidcRoles));
       setInitialUseWhitelist(useWhitelist);
       setInitialEnforceOIDC(enforceOIDC);
 
@@ -139,7 +149,7 @@ export function useOidcSettings() {
         const data = getResponse.data;
         setWhitelistResponse(data);
         setUsers(data.whitelistUsers);
-        setInitialUsers(deepClone(data.whitelistUsers));
+        setInitialUsers(structuredClone(data.whitelistUsers));
       });
 
       setSuccess(true);

@@ -1,6 +1,7 @@
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
 import { isAuditLogEnabled } from '../utils/pluginConfig';
 import { formatDatetimeForFilename } from '../utils/datetime';
+import { isValidEmail } from '../utils/email';
 import type { WhitelistService, StrapiContext } from '../types';
 
 function getWhitelistService(): WhitelistService {
@@ -109,7 +110,7 @@ async function importUsers(ctx) {
   const normalized = users
     .filter((u) => u?.email)
     .map((u) => String(u.email).trim().toLowerCase())
-    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+    .filter(isValidEmail);
 
   // Deduplicate within the import payload itself
   const deduped = [...new Set(normalized)];
@@ -131,9 +132,7 @@ async function importUsers(ctx) {
 async function syncUsers(ctx) {
   const { users: rawUsers } = ctx.request.body;
 
-  const emails = rawUsers
-    .map((u) => String(u.email).toLowerCase())
-    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  const emails = rawUsers.map((u) => String(u.email).toLowerCase()).filter(isValidEmail);
 
   const whitelistService = getWhitelistService();
   const currentUsers = await whitelistService.getUsers();

@@ -127,15 +127,12 @@ export default function oauthService({ strapi }) {
   return {
     async createUser(email, lastname, firstname, locale, roles = []) {
       const userService = strapi.service('admin::user');
-      if (/[A-Z]/.test(email)) {
-        const dbUser = await userService.findOneByEmail(email.toLocaleLowerCase());
-        if (dbUser) return dbUser;
-      }
+      const normalizedEmail = email.toLowerCase();
 
       const createdUser = await userService.create({
         firstname: firstname || 'unset',
         lastname: lastname || '',
-        email: email.toLocaleLowerCase(),
+        email: normalizedEmail,
         roles,
         preferedLanguage: locale,
       });
@@ -252,7 +249,6 @@ export default function oauthService({ strapi }) {
         throw new Error(errorMessages.SESSION_MANAGER_UNSUPPORTED);
       }
       const userId = String(user.id);
-      // TODO: A deviceId is generated each time you log in.
       const deviceId = randomUUID();
 
       const config = strapi.config.get('plugin::strapi-plugin-oidc');

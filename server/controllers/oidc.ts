@@ -1,6 +1,7 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { clearAuthCookies } from '../utils/cookies';
+import { isValidEmail } from '../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../error-strings';
 import { userFacingMessages } from '../audit-error-strings';
 import type {
@@ -254,7 +255,7 @@ async function handleUserAuthentication(
 }> {
   const rawEmail = String(userResponseData.email ?? '');
   const email = rawEmail.toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !isValidEmail(email)) {
     throw new Error(errorMessages.INVALID_EMAIL);
   }
 

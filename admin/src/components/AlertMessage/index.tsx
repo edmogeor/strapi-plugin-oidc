@@ -43,20 +43,3 @@ export function ErrorAlertMessage({ onClose }: { onClose: () => void }) {
     </AlertMessage>
   );
 }
-
-function MatchedUserAlertMessage({ onClose, count }: { onClose: () => void; count: number }) {
-  const { formatMessage } = useIntl();
-  const id = count > 1 ? 'whitelist.users_exists' : 'whitelist.user_exists';
-  return (
-    <AlertMessage>
-      <Alert
-        title={formatMessage(getTrad('alert.title.info'))}
-        variant={'default'}
-        closeLabel={''}
-        onClose={onClose}
-      >
-        {formatMessage(getTrad(id))}
-      </Alert>
-    </AlertMessage>
-  );
-}
