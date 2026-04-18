@@ -13,6 +13,7 @@ import {
 } from '@strapi/design-system';
 
 export { TagInput } from './TagInput';
+export { TagInputWithOptions } from './TagInputWithOptions';
 import { WarningCircle } from '@strapi/icons';
 import styled from 'styled-components';
 import { useIntl } from 'react-intl';

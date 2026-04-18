@@ -74,9 +74,13 @@ interface TagInputProps {
 export function TagInput({ value = [], onChange, placeholder }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
 
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const addTag = (tag: string) => {
     const trimmed = tag.trim();
-    if (trimmed && !value.includes(trimmed)) {
+    if (trimmed && !value.includes(trimmed) && isValidEmail(trimmed)) {
       onChange([...value, trimmed]);
     }
     setInputValue('');
@@ -89,7 +93,7 @@ export function TagInput({ value = [], onChange, placeholder }: TagInputProps) {
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      if (inputValue) {
+      if (inputValue && isValidEmail(inputValue.trim())) {
         addTag(inputValue);
       }
     } else if (e.key === 'Backspace' && !inputValue && value.length > 0) {

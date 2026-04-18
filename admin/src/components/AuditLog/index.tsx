@@ -10,8 +10,6 @@ import {
   Tr,
   Typography,
   TextInput,
-  Combobox,
-  ComboboxOption,
 } from '@strapi/design-system';
 import { useCallback, useEffect, useState } from 'react';
 import { Download, Information, Trash } from '@strapi/icons';
@@ -19,7 +17,14 @@ import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import qs from 'qs';
 import getTrad from '../../utils/getTrad';
-import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination, TagInput } from '../shared';
+import {
+  ConfirmDialog,
+  CustomTable,
+  LocalizedDate,
+  TablePagination,
+  TagInput,
+  TagInputWithOptions,
+} from '../shared';
 import { AUDIT_ACTIONS } from '../../../../shared/audit-actions';
 
 interface AuditLogRecord {
@@ -50,7 +55,7 @@ const DETAILS_TEXT_STYLE = {
 } as const;
 
 interface FilterState {
-  action?: string;
+  action?: string[];
   email?: string[];
   ip?: string[];
   createdAt?: string;
@@ -58,7 +63,7 @@ interface FilterState {
 
 function toWireFilters(f: FilterState) {
   const out: Record<string, unknown> = {};
-  if (f.action) out.action = { $eq: f.action };
+  if (f.action?.length) out.action = { $or: f.action.map((v) => ({ $eq: v })) };
   if (f.email?.length) out.email = { $or: f.email.map((v) => ({ $contains: v })) };
   if (f.ip?.length) out.ip = { $or: f.ip.map((v) => ({ $contains: v })) };
   if (f.createdAt) out.createdAt = { $gte: f.createdAt };
@@ -206,8 +211,12 @@ export default function AuditLog() {
   };
 
   const hasActiveFilters =
-    !!(filters.action || filters.email?.length || filters.ip?.length || filters.createdAt) ||
-    searchQuery.length > 0;
+    !!(
+      filters.action?.length ||
+      filters.email?.length ||
+      filters.ip?.length ||
+      filters.createdAt
+    ) || searchQuery.length > 0;
 
   return (
     <Box>
@@ -253,19 +262,14 @@ export default function AuditLog() {
       </Flex>
 
       <Flex gap={2} alignItems="flex-end" wrap="wrap" marginBottom={4}>
-        <Combobox
-          value={filters.action ?? null}
-          onChange={(value) => handleFilterChange('action', value ?? '')}
-          placeholder={formatMessage(getTrad('auditlog.filters.action'))}
-          clearLabel={formatMessage(getTrad('auditlog.filters.clear'))}
-          onClear={() => handleFilterChange('action', '')}
-        >
-          {AUDIT_ACTIONS.map((action) => (
-            <ComboboxOption key={action} value={action}>
-              {action}
-            </ComboboxOption>
-          ))}
-        </Combobox>
+        <Box style={{ minWidth: '200px' }}>
+          <TagInputWithOptions
+            value={filters.action ?? []}
+            onChange={(value) => setFilters((prev) => ({ ...prev, action: value }))}
+            options={AUDIT_ACTIONS}
+            placeholder={formatMessage(getTrad('auditlog.filters.action'))}
+          />
+        </Box>
         <Box style={{ minWidth: '180px' }}>
           <TagInput
             value={filters.email ?? []}
