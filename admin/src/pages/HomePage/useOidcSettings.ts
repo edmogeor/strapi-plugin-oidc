@@ -72,11 +72,10 @@ function withEnforceGuard(current: SettingsSnapshot): SettingsSnapshot {
   return current;
 }
 
-function reducer(state: State, action: Action): State {
+function reduceHydrate(state: State, action: Action): State | null {
   switch (action.type) {
     case 'hydrate/roles':
       return { ...state, roles: action.roles };
-
     case 'hydrate/oidcRoles': {
       const snapshot = { oidcRoles: action.oidcRoles };
       return {
@@ -85,7 +84,6 @@ function reducer(state: State, action: Action): State {
         initial: { ...state.initial, ...snapshot },
       };
     }
-
     case 'hydrate/whitelist': {
       const snapshot: SettingsSnapshot = {
         oidcRoles: action.snapshot.oidcRoles ?? state.current.oidcRoles,
@@ -101,7 +99,20 @@ function reducer(state: State, action: Action): State {
         auditLogEnabled: action.auditLogEnabled,
       };
     }
+    case 'commit':
+      return {
+        ...state,
+        initial: structuredClone(
+          action.snapshot ? { ...state.current, ...action.snapshot } : state.current,
+        ),
+      };
+    default:
+      return null;
+  }
+}
 
+function reduceWhitelist(state: State, action: Action): State | null {
+  switch (action.type) {
     case 'patch/oidcRole':
       return {
         ...state,
@@ -112,7 +123,6 @@ function reducer(state: State, action: Action): State {
           ),
         },
       };
-
     case 'user/add':
       return {
         ...state,
@@ -124,7 +134,6 @@ function reducer(state: State, action: Action): State {
           ],
         },
       };
-
     case 'user/delete':
       return {
         ...state,
@@ -133,58 +142,48 @@ function reducer(state: State, action: Action): State {
           users: state.current.users.filter((u) => u.email !== action.email),
         }),
       };
-
     case 'users/clear':
-      return {
-        ...state,
-        current: withEnforceGuard({ ...state.current, users: [] }),
-      };
-
+      return { ...state, current: withEnforceGuard({ ...state.current, users: [] }) };
     case 'users/replace':
-      return {
-        ...state,
-        current: { ...state.current, users: action.users },
-      };
-
+      return { ...state, current: { ...state.current, users: action.users } };
     case 'toggle/useWhitelist':
       return {
         ...state,
         current: withEnforceGuard({ ...state.current, useWhitelist: action.value }),
       };
-
     case 'toggle/enforceOIDC':
-      return {
-        ...state,
-        current: { ...state.current, enforceOIDC: action.value },
-      };
+      return { ...state, current: { ...state.current, enforceOIDC: action.value } };
+    default:
+      return null;
+  }
+}
 
-    case 'commit':
-      return {
-        ...state,
-        initial: structuredClone(
-          action.snapshot ? { ...state.current, ...action.snapshot } : state.current,
-        ),
-      };
-
+function reduceFlash(state: State, action: Action): State | null {
+  switch (action.type) {
     case 'loading':
       return { ...state, loading: action.value };
-
     case 'flash/success':
       return { ...state, showSuccess: true };
-
     case 'flash/error':
       return { ...state, showError: true };
-
     case 'flash/clear':
       return {
         ...state,
         showSuccess: action.kind === 'success' ? false : state.showSuccess,
         showError: action.kind === 'error' ? false : state.showError,
       };
-
     default:
-      return state;
+      return null;
   }
+}
+
+function reducer(state: State, action: Action): State {
+  return (
+    reduceHydrate(state, action) ??
+    reduceWhitelist(state, action) ??
+    reduceFlash(state, action) ??
+    state
+  );
 }
 
 function isDirtyPrimitive(a: boolean, b: boolean): boolean {
