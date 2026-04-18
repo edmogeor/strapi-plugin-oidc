@@ -10,3 +10,5 @@ export const AUDIT_ACTIONS = [
   'session_expired',
   'user_created',
 ] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];

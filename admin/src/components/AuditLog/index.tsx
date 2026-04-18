@@ -20,7 +20,7 @@ import { useIntl } from 'react-intl';
 import qs from 'qs';
 import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
-import { AUDIT_ACTIONS } from './constants';
+import { AUDIT_ACTIONS } from '../../../../shared/audit-actions';
 
 interface AuditLogRecord {
   id: number;
@@ -56,13 +56,37 @@ interface FilterState {
   createdAt?: string;
 }
 
+function toWireFilters(f: FilterState) {
+  const out: Record<string, Record<string, string>> = {};
+  if (f.action) out.action = { $eq: f.action };
+  if (f.email) out.email = { $contains: f.email };
+  if (f.ip) out.ip = { $contains: f.ip };
+  if (f.createdAt) out.createdAt = { $gte: f.createdAt };
+  return out;
+}
+
 function buildQueryString(params: {
   filters?: FilterState;
   q?: string;
   page?: number;
   pageSize?: number;
 }) {
-  return qs.stringify(params, { encodeValuesOnly: true });
+  const { filters, ...rest } = params;
+  return qs.stringify(
+    { ...rest, filters: filters ? toWireFilters(filters) : undefined },
+    {
+      encodeValuesOnly: true,
+    },
+  );
+}
+
+function useDebounced<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
 }
 
 export default function AuditLog() {
@@ -81,6 +105,9 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>({});
   const [searchQuery, setSearchQuery] = useState('');
+
+  const debouncedFilters = useDebounced(filters);
+  const debouncedSearch = useDebounced(searchQuery);
 
   const fetchLogs = useCallback(
     async (p: number, f: FilterState, q: string) => {
@@ -107,13 +134,13 @@ export default function AuditLog() {
   );
 
   useEffect(() => {
-    fetchLogs(page, filters, searchQuery);
-  }, [fetchLogs, page, filters, searchQuery]);
+    fetchLogs(page, debouncedFilters, debouncedSearch);
+  }, [fetchLogs, page, debouncedFilters, debouncedSearch]);
 
   const handleFilterChange = (name: keyof FilterState, value: string) => {
     setFilters((prev) => {
       if (!value) {
-        const { [name]: _, ...rest } = prev;
+        const { [name]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [name]: value };
@@ -128,7 +155,9 @@ export default function AuditLog() {
         type: 'success',
         message: formatMessage(getTrad('auditlog.clear.success')),
       });
-      fetchLogs(1, {}, '');
+      setFilters({});
+      setSearchQuery('');
+      setPage(1);
     } catch {
       toggleNotification({
         type: 'danger',
@@ -221,46 +250,36 @@ export default function AuditLog() {
         </Flex>
       </Flex>
 
-      <Flex justifyContent="space-between" alignItems="center" marginBottom={4} gap={4}>
-        <Flex gap={2} alignItems="flex-end" wrap="wrap" style={{ flex: 1 }}>
-          <Combobox
-            value={filters.action ?? ''}
-            onChange={(value) => handleFilterChange('action', value ?? '')}
-            placeholder={formatMessage(getTrad('auditlog.filters.action'))}
-            clearLabel={formatMessage(getTrad('auditlog.filters.clear'))}
-            onClear={() => handleFilterChange('action', '')}
-          >
-            {AUDIT_ACTIONS.map((action) => (
-              <ComboboxOption key={action} value={action}>
-                {action}
-              </ComboboxOption>
-            ))}
-          </Combobox>
-          <TextInput
-            placeholder={formatMessage(getTrad('auditlog.filters.email'))}
-            value={filters.email ?? ''}
-            onChange={(e) => handleFilterChange('email', e.target.value)}
-          />
-          <TextInput
-            placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
-            value={filters.ip ?? ''}
-            onChange={(e) => handleFilterChange('ip', e.target.value)}
-          />
-          <TextInput
-            type="datetime-local"
-            placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
-            value={filters.createdAt ?? ''}
-            onChange={(e) => handleFilterChange('createdAt', e.target.value)}
-          />
-          {hasActiveFilters && (
-            <Button size="S" variant="danger-light" onClick={clearFilters}>
-              {formatMessage(getTrad('auditlog.filters.clear'))}
-            </Button>
-          )}
-        </Flex>
-      </Flex>
-
-      <Flex justifyContent="flex-end" marginBottom={4}>
+      <Flex gap={2} alignItems="flex-end" wrap="wrap" marginBottom={4}>
+        <Combobox
+          value={filters.action ?? ''}
+          onChange={(value) => handleFilterChange('action', value ?? '')}
+          placeholder={formatMessage(getTrad('auditlog.filters.action'))}
+          clearLabel={formatMessage(getTrad('auditlog.filters.clear'))}
+          onClear={() => handleFilterChange('action', '')}
+        >
+          {AUDIT_ACTIONS.map((action) => (
+            <ComboboxOption key={action} value={action}>
+              {action}
+            </ComboboxOption>
+          ))}
+        </Combobox>
+        <TextInput
+          placeholder={formatMessage(getTrad('auditlog.filters.email'))}
+          value={filters.email ?? ''}
+          onChange={(e) => handleFilterChange('email', e.target.value)}
+        />
+        <TextInput
+          placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
+          value={filters.ip ?? ''}
+          onChange={(e) => handleFilterChange('ip', e.target.value)}
+        />
+        <TextInput
+          type="datetime-local"
+          placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
+          value={filters.createdAt ?? ''}
+          onChange={(e) => handleFilterChange('createdAt', e.target.value)}
+        />
         <TextInput
           placeholder={formatMessage(getTrad('auditlog.search.placeholder'))}
           value={searchQuery}
@@ -269,6 +288,11 @@ export default function AuditLog() {
             setPage(1);
           }}
         />
+        {hasActiveFilters && (
+          <Button size="S" variant="danger-light" onClick={clearFilters}>
+            {formatMessage(getTrad('auditlog.filters.clear'))}
+          </Button>
+        )}
       </Flex>
 
       <CustomTable colCount={5} rowCount={records.length}>

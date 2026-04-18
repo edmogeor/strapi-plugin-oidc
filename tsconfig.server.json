@@ -2,12 +2,12 @@
   "extends": "@strapi/typescript-utils/tsconfigs/server",
   "compilerOptions": {
     "outDir": "dist/server",
-    "rootDir": "server",
+    "rootDir": ".",
     "moduleResolution": "node16",
     "module": "node16",
     "sourceMap": false,
     "inlineSourceMap": false
   },
-  "include": ["server"],
+  "include": ["server", "shared"],
   "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]
 }

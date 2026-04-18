@@ -1,8 +1,8 @@
 import request, { Agent } from 'supertest';
-import type { Core } from './test-types';
+import type { Core, AuditLogService } from './test-types';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
-import { expect } from 'vitest';
+import { expect, beforeAll, beforeEach } from 'vitest';
 import type { Readable } from 'node:stream';
 export { clearRateLimitMap } from '../../routes';
 
@@ -265,6 +265,24 @@ export async function exportAndCountLines(
   return lines.length;
 }
 
+export function createAuditLogSuite(uid: string) {
+  const ref = {} as { strapi: Core.Strapi; service: AuditLogService };
+  beforeAll(() => {
+    ref.strapi = globalThis.strapiInstance;
+    ref.service = ref.strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
+  });
+  beforeEach(async () => {
+    await ref.strapi.db.query(uid).deleteMany({});
+  });
+  return ref;
+}
+
+export function expectNdjsonExportHeaders(headers: Record<string, string>) {
+  expect(headers['Content-Type']).toMatch(/application\/x-ndjson/);
+  expect(headers['Content-Disposition']).toMatch(/\.ndjson"$/);
+  expect(headers['Cache-Control']).toBe('no-store');
+}
+
 export function assertNdjsonFormat(text: string) {
   expect(text.trim().startsWith('[')).toBe(false);
   expect(text.trim().endsWith(']')).toBe(false);
@@ -272,25 +290,4 @@ export function assertNdjsonFormat(text: string) {
   for (const line of text.split('\n').filter(Boolean)) {
     expect(() => JSON.parse(line)).not.toThrow();
   }
-}
-
-export function expectFilterResults(
-  result: { results: { action: string }[]; pagination: { total: number; pageCount: number } },
-  expectedLength: number,
-  expectedTotal: number,
-  pageSize = 25,
-  actionFilter?: string[],
-) {
-  expect(result.results).toHaveLength(expectedLength);
-  expect(result.pagination.total).toBe(expectedTotal);
-  expect(result.pagination.pageCount).toBe(Math.ceil(expectedTotal / pageSize));
-  if (actionFilter) {
-    expect(result.results.every((r) => actionFilter.includes(r.action))).toBe(true);
-  }
-}
-
-export function expectNdjsonExportHeaders(ctx: { headers: Record<string, string> }) {
-  expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
-  expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
-  expect(ctx.headers['Cache-Control']).toBe('no-store');
 }

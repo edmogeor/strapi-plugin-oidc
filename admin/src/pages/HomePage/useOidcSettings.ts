@@ -65,6 +65,13 @@ const initialState: State = {
   showError: false,
 };
 
+function withEnforceGuard(current: SettingsSnapshot): SettingsSnapshot {
+  if (current.useWhitelist && current.users.length === 0 && current.enforceOIDC) {
+    return { ...current, enforceOIDC: false };
+  }
+  return current;
+}
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'hydrate/roles':
@@ -118,30 +125,20 @@ function reducer(state: State, action: Action): State {
         },
       };
 
-    case 'user/delete': {
-      const updatedUsers = state.current.users.filter((u) => u.email !== action.email);
-      const updated = { users: updatedUsers };
-      let enforceOIDC = state.current.enforceOIDC;
-      if (state.current.useWhitelist && updatedUsers.length === 0) {
-        enforceOIDC = false;
-      }
+    case 'user/delete':
       return {
         ...state,
-        current: { ...state.current, ...updated, enforceOIDC },
+        current: withEnforceGuard({
+          ...state.current,
+          users: state.current.users.filter((u) => u.email !== action.email),
+        }),
       };
-    }
 
-    case 'users/clear': {
-      const updated = { users: [] };
-      let enforceOIDC = state.current.enforceOIDC;
-      if (state.current.useWhitelist) {
-        enforceOIDC = false;
-      }
+    case 'users/clear':
       return {
         ...state,
-        current: { ...state.current, ...updated, enforceOIDC },
+        current: withEnforceGuard({ ...state.current, users: [] }),
       };
-    }
 
     case 'users/replace':
       return {
@@ -149,17 +146,11 @@ function reducer(state: State, action: Action): State {
         current: { ...state.current, users: action.users },
       };
 
-    case 'toggle/useWhitelist': {
-      const useWhitelist = action.value;
-      let enforceOIDC = state.current.enforceOIDC;
-      if (useWhitelist && state.current.users.length === 0) {
-        enforceOIDC = false;
-      }
+    case 'toggle/useWhitelist':
       return {
         ...state,
-        current: { ...state.current, useWhitelist, enforceOIDC },
+        current: withEnforceGuard({ ...state.current, useWhitelist: action.value }),
       };
-    }
 
     case 'toggle/enforceOIDC':
       return {

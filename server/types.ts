@@ -103,17 +103,8 @@ export interface AdminUserService {
   findOneByEmail(email: string, populate?: string[]): Promise<StrapiAdminUser | null>;
 }
 
-export type AuditAction =
-  | 'login_success'
-  | 'login_failure'
-  | 'missing_code'
-  | 'state_mismatch'
-  | 'nonce_mismatch'
-  | 'token_exchange_failed'
-  | 'whitelist_rejected'
-  | 'logout'
-  | 'session_expired'
-  | 'user_created';
+export type { AuditAction } from '../shared/audit-actions';
+import type { AuditAction } from '../shared/audit-actions';
 
 export interface AuditEntry {
   action: AuditAction;

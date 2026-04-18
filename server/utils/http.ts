@@ -1,5 +1,5 @@
 import type { StrapiContext } from '../types';
-import { formatDatetimeForFilename } from './datetime';
+import { formatDatetimeForFilename } from '../../shared/datetime';
 
 export function setJsonAttachmentHeaders(ctx: StrapiContext, basename: string): void {
   const datetime = formatDatetimeForFilename(new Date());

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseAuditLogFilters, ValidationError, AUDIT_ACTIONS } from '../audit-log-filters';
+import { parseAuditLogFilters, ValidationError } from '../audit-log-filters';
+import { AUDIT_ACTIONS } from '../../shared/audit-actions';
 
 describe('parseAuditLogFilters', () => {
   it('returns empty object for non-object input', () => {
@@ -234,11 +235,12 @@ describe('parseAuditLogFilters', () => {
     );
   });
 
-  it('drops unknown fields silently', () => {
-    const result = parseAuditLogFilters({
-      filters: { action: { $eq: 'login_success' }, unknown: { $eq: 'x' } },
-    } as Record<string, unknown>);
-    expect(result).toEqual({ action: { $eq: 'login_success' } });
+  it('throws when unknown field is mixed with valid fields', () => {
+    expect(() =>
+      parseAuditLogFilters({
+        filters: { action: { $eq: 'login_success' }, unknown: { $eq: 'x' } },
+      } as Record<string, unknown>),
+    ).toThrow('Unknown filter field: "unknown"');
   });
 
   it('handles __proto__ pollution attempt', () => {

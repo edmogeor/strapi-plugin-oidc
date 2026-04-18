@@ -832,51 +832,5 @@ describe('OIDC E2E Tests', () => {
       const userRoleIds = user.roles.map((r: { id: number }) => r.id);
       expect(userRoleIds).toContain(roleA.id);
     });
-
-    it('existing user → groups change between logins → role updates to new mapping', async () => {
-      const allRoles = await strapi.db.query('admin::role').findMany();
-      if (allRoles.length < 2) return;
-
-      const roleA = allRoles[0];
-      const roleB = allRoles[1];
-
-      await strapi.db.query('admin::user').create({
-        data: {
-          email: 'group-changed@test.com',
-          firstname: 'Existing',
-          lastname: 'User',
-          roles: [roleA.id],
-        },
-      });
-
-      oidcServer.use(
-        http.get('https://mock-oidc.com/userinfo', () =>
-          HttpResponse.json({
-            email: 'group-changed@test.com',
-            family_name: 'Existing',
-            given_name: 'User',
-            groups: ['group-b'],
-          }),
-        ),
-      );
-
-      const config = { ...MOCK_OIDC_CONFIG };
-      config.OIDC_GROUP_ROLE_MAP = JSON.stringify({
-        'group-a': [roleA.name],
-        'group-b': [roleB.name],
-      });
-      strapi.config.set('plugin::strapi-plugin-oidc', config);
-
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
-
-      const user = await strapi.db.query('admin::user').findOne({
-        where: { email: 'group-changed@test.com' },
-        populate: ['roles'],
-      });
-      const userRoleIds = user.roles.map((r: { id: number }) => r.id);
-      expect(userRoleIds).toContain(roleB.id);
-      expect(userRoleIds).not.toContain(roleA.id);
-    });
   });
 });

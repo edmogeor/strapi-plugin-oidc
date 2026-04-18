@@ -14,26 +14,18 @@ import {
   exportAndCountLines,
   assertNdjsonFormat,
   streamToString,
+  expectNdjsonExportHeaders,
+  createAuditLogSuite,
 } from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
 
 describe('AuditLog Service', () => {
-  let strapi: Core.Strapi;
-  let auditLogService: AuditLogService;
-
-  beforeAll(() => {
-    strapi = globalThis.strapiInstance;
-    auditLogService = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
-  });
-
-  beforeEach(async () => {
-    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
-  });
+  const s = createAuditLogSuite(AUDIT_LOG_UID);
 
   it('log() persists a record to the DB', async () => {
-    await auditLogService.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
-    const rows = await strapi.db.query(AUDIT_LOG_UID).findMany({});
+    await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
+    const rows = await s.strapi.db.query(AUDIT_LOG_UID).findMany({});
     expect(rows).toHaveLength(1);
     expect(rows[0].action).toBe('login_success');
     expect(rows[0].email).toBe('a@b.com');
@@ -42,79 +34,69 @@ describe('AuditLog Service', () => {
   it('log() emits an event on the eventHub', async () => {
     const received: unknown[] = [];
     const listener = (p: unknown) => received.push(p);
-    strapi.eventHub.on('strapi-plugin-oidc::auth.login_success', listener);
+    s.strapi.eventHub.on('strapi-plugin-oidc::auth.login_success', listener);
 
-    await auditLogService.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
+    await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
 
-    strapi.eventHub.removeListener('strapi-plugin-oidc::auth.login_success', listener);
+    s.strapi.eventHub.removeListener('strapi-plugin-oidc::auth.login_success', listener);
     expect(received).toHaveLength(1);
   });
 
   it('find() returns paginated results newest-first', async () => {
-    await auditLogService.log({ action: 'login_success', email: 'first@b.com', ip: '1.1.1.1' });
-    await auditLogService.log({ action: 'login_failure', email: 'second@b.com', ip: '2.2.2.2' });
-    await auditLogService.log({ action: 'logout', ip: '3.3.3.3' });
+    await s.service.log({ action: 'login_success', email: 'first@b.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_failure', email: 'second@b.com', ip: '2.2.2.2' });
+    await s.service.log({ action: 'logout', ip: '3.3.3.3' });
 
-    const result = await auditLogService.find({ page: 1, pageSize: 2 });
+    const result = await s.service.find({ page: 1, pageSize: 2 });
     expect(result.results).toHaveLength(2);
     expect(result.pagination.total).toBe(3);
     expect(result.pagination.pageCount).toBe(2);
     // page 2 should exist and contain the remaining record
-    const page2 = await auditLogService.find({ page: 2, pageSize: 2 });
+    const page2 = await s.service.find({ page: 2, pageSize: 2 });
     expect(page2.results).toHaveLength(1);
   });
 
   it('find() fetches all records across pages', async () => {
-    await auditLogService.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
-    await auditLogService.log({ action: 'logout', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'logout', ip: '1.1.1.1' });
 
-    const { results, pagination } = await auditLogService.find({ page: 1, pageSize: 100 });
+    const { results, pagination } = await s.service.find({ page: 1, pageSize: 100 });
     expect(results.length).toBeGreaterThanOrEqual(2);
     expect(pagination.total).toBeGreaterThanOrEqual(2);
   });
 
   it('cleanup() deletes records older than retention days', async () => {
-    await auditLogService.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
+    await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
 
     // Small delay to ensure the record's createdAt is strictly before the cleanup cutoff
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     // cleanup(0) → cutoff = Date.now() → deletes records with createdAt < now
-    await auditLogService.cleanup(0);
+    await s.service.cleanup(0);
 
-    const rows = await strapi.db.query(AUDIT_LOG_UID).findMany({});
+    const rows = await s.strapi.db.query(AUDIT_LOG_UID).findMany({});
     expect(rows).toHaveLength(0);
   });
 
   afterAll(async () => {
-    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
+    await s.strapi.db.query(AUDIT_LOG_UID).deleteMany({});
   });
 });
 
 describe('AuditLog Service with filters', () => {
-  let strapi: Core.Strapi;
-  let auditLogService: AuditLogService;
-
-  beforeAll(() => {
-    strapi = globalThis.strapiInstance;
-    auditLogService = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
-  });
-
-  beforeEach(async () => {
-    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
-  });
+  const s = createAuditLogSuite(AUDIT_LOG_UID);
 
   const seedFixture = async () => {
-    await auditLogService.log({ action: 'login_success', email: 'alice@acme.com', ip: '1.1.1.1' });
-    await auditLogService.log({ action: 'login_failure', email: 'bob@acme.com', ip: '2.2.2.2' });
-    await auditLogService.log({ action: 'logout', ip: '3.3.3.3' });
-    await auditLogService.log({ action: 'user_created', email: 'carol@acme.com', ip: '1.1.1.1' });
-    await auditLogService.log({ action: 'login_success', email: 'dave@other.com', ip: '4.4.4.4' });
+    await s.service.log({ action: 'login_success', email: 'alice@acme.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_failure', email: 'bob@acme.com', ip: '2.2.2.2' });
+    await s.service.log({ action: 'logout', ip: '3.3.3.3' });
+    await s.service.log({ action: 'user_created', email: 'carol@acme.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_success', email: 'dave@other.com', ip: '4.4.4.4' });
   };
 
   it('filters by action $eq', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { action: { $eq: 'login_success' } },
@@ -125,7 +107,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by action $in', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { action: { $in: ['login_success', 'login_failure'] } },
@@ -138,7 +120,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by action $notIn', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { action: { $notIn: ['logout', 'session_expired'] } },
@@ -151,7 +133,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by email $contains (case-insensitive)', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { email: { $contains: 'acme' } },
@@ -162,7 +144,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by email $startsWith', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { email: { $startsWith: 'alice' } },
@@ -173,7 +155,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by email $endsWith', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { email: { $endsWith: 'other.com' } },
@@ -184,8 +166,8 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by email $null returns rows with null email', async () => {
     await seedFixture();
-    await auditLogService.log({ action: 'logout', ip: '5.5.5.5' });
-    const result = await auditLogService.find({
+    await s.service.log({ action: 'logout', ip: '5.5.5.5' });
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { email: { $null: true } },
@@ -196,7 +178,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters by ip $contains', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { ip: { $contains: '1.1' } },
@@ -206,7 +188,7 @@ describe('AuditLog Service with filters', () => {
 
   it('combines filters with AND logic', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: {
@@ -220,7 +202,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters with q search across email and ip', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { q: 'acme' },
@@ -230,7 +212,7 @@ describe('AuditLog Service with filters', () => {
 
   it('filters with q combined with field filters', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { q: 'acme', action: { $eq: 'login_success' } },
@@ -241,7 +223,7 @@ describe('AuditLog Service with filters', () => {
 
   it('pagination metadata reflects filtered set', async () => {
     await seedFixture();
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 2,
       filters: { action: { $in: ['login_success', 'login_failure'] } },
@@ -251,11 +233,11 @@ describe('AuditLog Service with filters', () => {
   });
 
   it('sort order is always createdAt desc regardless of filters', async () => {
-    await auditLogService.log({ action: 'login_success', email: 'older@test.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_success', email: 'older@test.com', ip: '1.1.1.1' });
     await new Promise((resolve) => setTimeout(resolve, 10));
-    await auditLogService.log({ action: 'login_success', email: 'newer@test.com', ip: '1.1.1.1' });
+    await s.service.log({ action: 'login_success', email: 'newer@test.com', ip: '1.1.1.1' });
 
-    const result = await auditLogService.find({
+    const result = await s.service.find({
       page: 1,
       pageSize: 25,
       filters: { action: { $eq: 'login_success' } },
@@ -266,7 +248,7 @@ describe('AuditLog Service with filters', () => {
   });
 
   afterAll(async () => {
-    await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
+    await s.strapi.db.query(AUDIT_LOG_UID).deleteMany({});
   });
 });
 
@@ -300,9 +282,7 @@ describe('AuditLog Controller', () => {
     const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
 
-    expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
-    expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
-    expect(ctx.headers['Cache-Control']).toBe('no-store');
+    expectNdjsonExportHeaders(ctx.headers);
 
     const { parsed } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
     expect(parsed.length).toBeGreaterThan(0);
@@ -451,9 +431,7 @@ describe('AuditLog E2E Integration', () => {
     const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
 
-    expect(ctx.headers['Content-Type']).toMatch(/application\/x-ndjson/);
-    expect(ctx.headers['Content-Disposition']).toMatch(/\.ndjson"$/);
-    expect(ctx.headers['Cache-Control']).toBe('no-store');
+    expectNdjsonExportHeaders(ctx.headers);
 
     const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
     expect(lines.length).toBeGreaterThan(0);

@@ -1,4 +1,4 @@
-import { formatDatetimeForFilename } from './datetime';
+import { formatDatetimeForFilename } from '../../../shared/datetime';
 
 export function downloadJson(basename: string, data: unknown): void {
   const datetime = formatDatetimeForFilename(new Date());

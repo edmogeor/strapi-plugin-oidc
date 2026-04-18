@@ -1,17 +1,4 @@
-import type { AuditAction } from './types';
-
-export const AUDIT_ACTIONS: readonly AuditAction[] = [
-  'login_success',
-  'login_failure',
-  'missing_code',
-  'state_mismatch',
-  'nonce_mismatch',
-  'token_exchange_failed',
-  'whitelist_rejected',
-  'logout',
-  'session_expired',
-  'user_created',
-];
+import { AUDIT_ACTIONS, type AuditAction } from '../shared/audit-actions';
 
 type StringOperator =
   | '$eq'
@@ -36,7 +23,7 @@ export interface AuditLogFilters {
   q?: string;
 }
 
-const ALLOWED_FIELDS = new Set(['action', 'email', 'ip', 'createdAt', 'q']);
+const ALLOWED_FIELDS = new Set(['action', 'email', 'ip', 'createdAt']);
 const STRING_OPERATORS = new Set<StringOperator>([
   '$eq',
   '$ne',
@@ -72,7 +59,7 @@ function isAuditAction(value: unknown): value is AuditAction {
   return AUDIT_ACTIONS.includes(value as AuditAction);
 }
 
-class ValidationError extends Error {
+export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ValidationError';
@@ -159,24 +146,26 @@ function parseFieldOperators(field: string, fieldValue: unknown): Record<string,
 export function parseAuditLogFilters(query: unknown): AuditLogFilters {
   if (!isPlainObject(query)) return {};
 
-  const filters: AuditLogFilters = {};
+  const result: AuditLogFilters = {};
 
-  for (const [field, fieldValue] of Object.entries(query)) {
+  if (typeof query.q === 'string') {
+    const trimmed = query.q.trim();
+    if (trimmed) result.q = trimmed;
+  }
+
+  const filters = query.filters;
+  if (filters === undefined) return result;
+  if (!isPlainObject(filters)) {
+    throw new ValidationError(`"filters" must be an object, got ${typeof filters}`);
+  }
+
+  for (const [field, fieldValue] of Object.entries(filters)) {
     if (!ALLOWED_FIELDS.has(field)) {
       throw new ValidationError(`Unknown filter field: "${field}"`);
     }
-
-    if (field === 'q') {
-      if (typeof fieldValue === 'string') {
-        const trimmed = fieldValue.trim();
-        if (trimmed) filters.q = trimmed;
-      }
-      continue;
-    }
-
     const parsed = parseFieldOperators(field, fieldValue);
-    if (parsed) (filters as Record<string, unknown>)[field] = parsed;
+    if (parsed) (result as Record<string, unknown>)[field] = parsed;
   }
 
-  return filters;
+  return result;
 }

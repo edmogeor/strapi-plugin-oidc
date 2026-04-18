@@ -2,7 +2,7 @@ import { Readable } from 'node:stream';
 import type { StrapiContext, AuditLogService } from '../types';
 import { getAuditLogService } from '../utils/services';
 import { setNdjsonAttachmentHeaders } from '../utils/http';
-import { parseAuditLogFilters, type AuditLogFilters } from '../audit-log-filters';
+import { parseAuditLogFilters, ValidationError, type AuditLogFilters } from '../audit-log-filters';
 
 const EXPORT_PAGE_SIZE = 500;
 
@@ -33,7 +33,11 @@ async function* ndjsonRowStream(
   }
 }
 
-function errorAwareNdjsonStream(service: AuditLogService, filters?: AuditLogFilters): Readable {
+function errorAwareNdjsonStream(
+  strapi: StrapiContext['strapi'],
+  service: AuditLogService,
+  filters?: AuditLogFilters,
+): Readable {
   const gen = ndjsonRowStream(service, filters);
   const readable = Readable.from(gen);
   readable.on('error', (err) => {
@@ -42,48 +46,31 @@ function errorAwareNdjsonStream(service: AuditLogService, filters?: AuditLogFilt
   return readable;
 }
 
-let strapi: StrapiContext['strapi'];
-
-function parseFiltersParam(query: StrapiContext['query']): AuditLogFilters | null {
+function parseFiltersOr400(ctx: StrapiContext): AuditLogFilters | null {
   try {
-    return parseAuditLogFilters(query.filters);
+    return parseAuditLogFilters(ctx.query);
   } catch (err) {
+    ctx.status = 400;
+    ctx.body = { message: err instanceof ValidationError ? err.message : 'Invalid filters' };
     return null;
   }
 }
 
-function find(ctx: StrapiContext): Promise<void> {
-  strapi = ctx.strapi;
+async function find(ctx: StrapiContext): Promise<void> {
+  const filters = parseFiltersOr400(ctx);
+  if (!filters) return;
+
   const page = Math.max(1, Number(ctx.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(ctx.query.pageSize) || 25));
-
-  const filters = parseFiltersParam(ctx.query);
-  if (!filters) {
-    ctx.status = 400;
-    ctx.body = { message: 'Invalid filters' };
-    return Promise.resolve();
-  }
-
-  return getAuditLogService()
-    .find({ page, pageSize, filters })
-    .then((result) => {
-      ctx.body = result;
-    });
+  ctx.body = await getAuditLogService().find({ page, pageSize, filters });
 }
 
 async function exportLogs(ctx: StrapiContext): Promise<void> {
-  strapi = ctx.strapi;
+  const filters = parseFiltersOr400(ctx);
+  if (!filters) return;
+
   setNdjsonAttachmentHeaders(ctx, 'strapi-oidc-audit-log');
-
-  const filters = parseFiltersParam(ctx.query);
-  if (!filters) {
-    ctx.status = 400;
-    ctx.body = { message: 'Invalid filters' };
-    return;
-  }
-
-  const service = getAuditLogService();
-  ctx.body = errorAwareNdjsonStream(service, filters);
+  ctx.body = errorAwareNdjsonStream(ctx.strapi, getAuditLogService(), filters);
 }
 
 async function clearAll(ctx: StrapiContext): Promise<void> {

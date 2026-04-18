@@ -123,53 +123,24 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
       pageSize?: number;
       filters?: AuditLogFilters;
     } = {}): Promise<AuditLogResult> {
-      let results;
-      let total;
+      const where = filters ? buildWhereClause(filters) : {};
+      const dbQuery = strapi.db.query('plugin::strapi-plugin-oidc.audit-log');
 
-      if (filters && Object.keys(filters).length > 0) {
-        const whereClause = buildWhereClause(filters);
-        const dbQuery = strapi.db.query('plugin::strapi-plugin-oidc.audit-log');
-
-        [results, total] = await Promise.all([
-          dbQuery.findMany({
-            where: whereClause,
-            orderBy: [{ createdAt: 'desc' }],
-            limit: pageSize,
-            offset: (page - 1) * pageSize,
-          }),
-          dbQuery.count({ where: whereClause }),
-        ]);
-      } else {
-        results = await (
-          strapi.db.query('plugin::strapi-plugin-oidc.audit-log') as ReturnType<
-            typeof strapi.db.query
-          > & {
-            findPage: (opts: {
-              sort: { createdAt: string };
-              page: number;
-              pageSize: number;
-            }) => Promise<{
-              results: AuditLogRecord[];
-              pagination: { page: number; pageSize: number; total: number; pageCount: number };
-            }>;
-          }
-        ).findPage({
-          sort: { createdAt: 'desc' },
-          page,
-          pageSize,
-        });
-
-        total = results.pagination.total;
-        results = results.results;
-      }
-
-      const mappedResults = (results as AuditLogRecord[]).map((row) => ({
-        ...row,
-        details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
-      }));
+      const [rows, total] = (await Promise.all([
+        dbQuery.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }],
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        }),
+        dbQuery.count({ where }),
+      ])) as [AuditLogRecord[], number];
 
       return {
-        results: mappedResults,
+        results: rows.map((row) => ({
+          ...row,
+          details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
+        })),
         pagination: {
           page,
           pageSize,
