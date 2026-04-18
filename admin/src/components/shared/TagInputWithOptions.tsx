@@ -1,7 +1,9 @@
-import { useState, KeyboardEvent, useRef, useEffect } from 'react';
+import { useState, KeyboardEvent, useRef, useEffect, useId, ReactNode } from 'react';
 import { Box, Flex, Typography } from '@strapi/design-system';
 import styled from 'styled-components';
 import { Cross } from '@strapi/icons';
+import { useIntl } from 'react-intl';
+import getTrad from '../../utils/getTrad';
 
 const Tag = styled.span`
   display: inline-flex;
@@ -38,11 +40,18 @@ const InputWrapper = styled(Box)`
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.neutral200};
   background-color: ${({ theme }) => theme.colors.neutral0};
   cursor: text;
+  min-width: 180px;
+  min-height: 4rem;
+  flex: 0 0 auto;
+
+  .filter-row.expanded & {
+    flex: 1 0 auto;
+  }
 
   &:focus-within {
     border-color: ${({ theme }) => theme.colors.primary600};
@@ -75,7 +84,7 @@ const Dropdown = styled.div`
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.neutral200};
   background-color: ${({ theme }) => theme.colors.neutral0};
-  box-shadow: ${({ theme }) => theme.sizes?.shadow || '0 2px 8px rgba(0,0,0,0.1)'};
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 100;
   max-height: 200px;
   overflow-y: auto;
@@ -102,8 +111,9 @@ const DropdownItem = styled.button`
 interface TagInputWithOptionsProps {
   value: string[];
   onChange: (value: string[]) => void;
-  options: string[];
+  options: readonly string[];
   placeholder?: string;
+  startIcon?: ReactNode;
 }
 
 export function TagInputWithOptions({
@@ -111,11 +121,16 @@ export function TagInputWithOptions({
   onChange,
   options,
   placeholder,
+  startIcon,
 }: TagInputWithOptionsProps) {
+  const { formatMessage } = useIntl();
   const [inputValue, setInputValue] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
+  const optionIdPrefix = useId();
 
   const filteredOptions = options.filter(
     (opt) => !value.includes(opt) && opt.toLowerCase().includes(inputValue.toLowerCase()),
@@ -128,6 +143,7 @@ export function TagInputWithOptions({
     }
     setInputValue('');
     setShowDropdown(false);
+    setActiveIndex(-1);
   };
 
   const removeTag = (tagToRemove: string) => {
@@ -135,8 +151,30 @@ export function TagInputWithOptions({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
+      if (filteredOptions.length > 0) {
+        setShowDropdown(true);
+        setActiveIndex((i) => (i + 1) % filteredOptions.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (filteredOptions.length > 0) {
+        setShowDropdown(true);
+        setActiveIndex((i) => (i <= 0 ? filteredOptions.length - 1 : i - 1));
+      }
+    } else if (e.key === 'Home' && showDropdown && filteredOptions.length > 0) {
+      e.preventDefault();
+      setActiveIndex(0);
+    } else if (e.key === 'End' && showDropdown && filteredOptions.length > 0) {
+      e.preventDefault();
+      setActiveIndex(filteredOptions.length - 1);
+    } else if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
+        addTag(filteredOptions[activeIndex]);
+        return;
+      }
       const matchedOption = options.find((opt) => opt.toLowerCase() === inputValue.toLowerCase());
       if (matchedOption) {
         addTag(matchedOption);
@@ -145,12 +183,14 @@ export function TagInputWithOptions({
       removeTag(value[value.length - 1]);
     } else if (e.key === 'Escape') {
       setShowDropdown(false);
+      setActiveIndex(-1);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     setShowDropdown(true);
+    setActiveIndex(-1);
   };
 
   useEffect(() => {
@@ -164,30 +204,66 @@ export function TagInputWithOptions({
   }, []);
 
   return (
-    <InputWrapper ref={wrapperRef} onClick={() => inputRef.current?.focus()}>
+    <InputWrapper ref={wrapperRef} data-filter-input onClick={() => inputRef.current?.focus()}>
       <Flex gap={2} wrap="wrap" alignItems="center">
+        {startIcon && (
+          <span
+            aria-hidden="true"
+            style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}
+          >
+            {startIcon}
+          </span>
+        )}
         {value.map((tag) => (
           <Tag key={tag}>
             {tag}
-            <TagRemove type="button" onClick={() => removeTag(tag)} aria-label={tag}>
-              <Cross />
+            <TagRemove
+              type="button"
+              onClick={() => removeTag(tag)}
+              aria-label={formatMessage(getTrad('common.remove'), { label: tag })}
+            >
+              <Cross aria-hidden="true" />
             </TagRemove>
           </Tag>
         ))}
         <StyledInput
           ref={inputRef}
           type="text"
+          autoComplete="off"
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => setShowDropdown(true)}
           placeholder={value.length === 0 ? placeholder : ''}
+          role="combobox"
+          aria-label={placeholder}
+          aria-autocomplete="list"
+          aria-expanded={showDropdown && filteredOptions.length > 0}
+          aria-controls={listboxId}
+          aria-activedescendant={
+            showDropdown && activeIndex >= 0 && activeIndex < filteredOptions.length
+              ? `${optionIdPrefix}-${activeIndex}`
+              : undefined
+          }
         />
       </Flex>
       {showDropdown && filteredOptions.length > 0 && (
-        <Dropdown>
-          {filteredOptions.map((opt) => (
-            <DropdownItem key={opt} type="button" onClick={() => addTag(opt)}>
+        <Dropdown id={listboxId} role="listbox">
+          {filteredOptions.map((opt, i) => (
+            <DropdownItem
+              key={opt}
+              id={`${optionIdPrefix}-${i}`}
+              type="button"
+              role="option"
+              aria-selected={i === activeIndex}
+              onMouseEnter={() => setActiveIndex(i)}
+              onClick={() => addTag(opt)}
+              style={
+                i === activeIndex
+                  ? { outline: '2px solid currentColor', outlineOffset: '-2px' }
+                  : undefined
+              }
+            >
               <Typography textColor="neutral800">{opt}</Typography>
             </DropdownItem>
           ))}

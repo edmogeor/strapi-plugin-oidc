@@ -1,41 +1,38 @@
 import { AUDIT_ACTIONS, type AuditAction } from '../shared/audit-actions';
 
-type StringOperator =
-  | '$eq'
-  | '$ne'
-  | '$contains'
-  | '$notContains'
-  | '$startsWith'
-  | '$endsWith'
-  | '$null'
-  | '$notNull';
+type StringOperator = '$eq' | '$contains' | '$endsWith' | '$null' | '$notNull';
 
-type DateOperator = '$eq' | '$gt' | '$gte' | '$lt' | '$lte' | '$between';
+type DateOperator = '$gte' | '$lt' | '$lte' | '$between' | '$in';
 
-type EnumOperator = '$eq' | '$ne' | '$in' | '$notIn';
+// Strict ISO-8601 UTC datetime, exactly as produced by `Date.prototype.toISOString()`.
+// We require this format (rather than any date-like string) so the DB comparison
+// semantics are identical across SQL dialects.
+const ISO_UTC_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+function isIsoUtcDatetime(value: unknown): value is string {
+  return typeof value === 'string' && ISO_UTC_DATETIME.test(value);
+}
+
+type EnumOperator = '$eq' | '$in';
 
 // fallow-ignore-next-line unused-type
 export interface AuditLogFilters {
   action?: Partial<Record<EnumOperator, AuditAction | AuditAction[]>>;
   email?: Partial<Record<StringOperator, string | boolean>>;
   ip?: Partial<Record<StringOperator, string | boolean>>;
-  createdAt?: Partial<Record<DateOperator, string | [string, string]>>;
-  q?: string;
+  createdAt?: Partial<Record<DateOperator, string | string[]>>;
 }
 
 const ALLOWED_FIELDS = new Set(['action', 'email', 'ip', 'createdAt']);
 const STRING_OPERATORS = new Set<StringOperator>([
   '$eq',
-  '$ne',
   '$contains',
-  '$notContains',
-  '$startsWith',
   '$endsWith',
   '$null',
   '$notNull',
 ]);
-const DATE_OPERATORS = new Set<DateOperator>(['$eq', '$gt', '$gte', '$lt', '$lte', '$between']);
-const ENUM_OPERATORS = new Set<EnumOperator>(['$eq', '$ne', '$in', '$notIn']);
+const DATE_OPERATORS = new Set<DateOperator>(['$gte', '$lt', '$lte', '$between', '$in']);
+const ENUM_OPERATORS = new Set<EnumOperator>(['$eq', '$in']);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
@@ -77,7 +74,7 @@ function parseActionOperator(op: string, opValue: unknown): unknown {
   if (!isEnumOperator(op)) {
     throw new ValidationError(`Unknown operator "${op}" for field "action"`);
   }
-  if (op === '$in' || op === '$notIn') {
+  if (op === '$in') {
     requireType('action', op, opValue, Array.isArray(opValue), 'an array value');
     for (const v of opValue as unknown[]) {
       if (!isAuditAction(v)) {
@@ -100,20 +97,22 @@ function parseCreatedAtOperator(op: string, opValue: unknown): unknown {
   if (!isDateOperator(op)) {
     throw new ValidationError(`Unknown operator "${op}" for field "createdAt"`);
   }
+  const expected = 'an ISO-8601 UTC datetime string (e.g. "2024-01-15T00:00:00.000Z")';
   if (op === '$between') {
     const isTuple = Array.isArray(opValue) && opValue.length === 2;
     requireType('createdAt', op, opValue, isTuple, 'a tuple [start, end]');
     const [a, b] = opValue as unknown[];
-    requireType(
-      'createdAt',
-      op,
-      opValue,
-      typeof a === 'string' && typeof b === 'string',
-      'string values in the tuple',
-    );
+    requireType('createdAt', op, opValue, isIsoUtcDatetime(a) && isIsoUtcDatetime(b), expected);
     return opValue as [string, string];
   }
-  return requireType('createdAt', op, opValue, typeof opValue === 'string', 'a string value');
+  if (op === '$in') {
+    requireType('createdAt', op, opValue, Array.isArray(opValue), 'an array value');
+    for (const v of opValue as unknown[]) {
+      requireType('createdAt', op, v, isIsoUtcDatetime(v), expected);
+    }
+    return opValue as string[];
+  }
+  return requireType('createdAt', op, opValue, isIsoUtcDatetime(opValue), expected);
 }
 
 function parseStringFieldOperator(field: string, op: string, opValue: unknown): unknown {
@@ -147,11 +146,6 @@ export function parseAuditLogFilters(query: unknown): AuditLogFilters {
   if (!isPlainObject(query)) return {};
 
   const result: AuditLogFilters = {};
-
-  if (typeof query.q === 'string') {
-    const trimmed = query.q.trim();
-    if (trimmed) result.q = trimmed;
-  }
 
   const filters = query.filters;
   if (filters === undefined) return result;

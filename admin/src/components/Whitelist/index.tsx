@@ -117,17 +117,40 @@ export default function Whitelist({
 
       {useWhitelist && (
         <>
-          <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
-            <Typography variant="pi" textColor="neutral600">
-              {formatMessage(getTrad('whitelist.count'), { count: users.length })}
-            </Typography>
-            <Flex gap={2}>
+          <Flex gap={8} marginTop={5} marginBottom={5} alignItems="stretch" wrap="wrap">
+            <Flex gap={2} alignItems="center" style={{ minWidth: '280px', flex: '1 1 280px' }}>
+              <Box style={{ flex: 1, minWidth: '200px' }}>
+                <Field.Root>
+                  <Field.Input
+                    type="text"
+                    disabled={loading}
+                    value={email}
+                    hasError={Boolean(email && !EMAIL_REGEX.test(email))}
+                    onChange={(e) => setEmail(e.currentTarget.value)}
+                    placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
+                    style={{ fontSize: '1.4rem', lineHeight: '2.2rem' }}
+                  />
+                </Field.Root>
+              </Box>
+              <Button
+                size="S"
+                startIcon={<Plus />}
+                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
+                disabled={loading || email.trim() === '' || !EMAIL_REGEX.test(email)}
+                loading={loading}
+                onClick={onSaveEmail}
+              >
+                {formatMessage(getTrad('page.add'))}
+              </Button>
+            </Flex>
+            <Flex gap={2} alignItems="center">
               <Button
                 size="S"
                 variant="tertiary"
                 startIcon={<Download />}
                 onClick={onExport}
                 disabled={users.length === 0}
+                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('whitelist.export'))}
               </Button>
@@ -136,6 +159,7 @@ export default function Whitelist({
                 variant="tertiary"
                 startIcon={<Upload />}
                 onClick={() => fileInputRef.current?.click()}
+                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('whitelist.import'))}
               </Button>
@@ -146,53 +170,32 @@ export default function Whitelist({
                 style={{ display: 'none' }}
                 onChange={handleImport}
               />
-              {users.length > 0 && (
-                <ConfirmDialog
-                  trigger={
-                    <Button size="S" variant="danger-light" startIcon={<Trash />}>
-                      {formatMessage(getTrad('whitelist.delete.all.label'))}
-                    </Button>
-                  }
-                  title={formatMessage(getTrad('whitelist.delete.all.title'))}
-                  body={
-                    <Flex justifyContent="center">
-                      <Typography textColor="neutral800" textAlign="center">
-                        {formatMessage(getTrad('whitelist.delete.all.description'), {
-                          count: users.length,
-                        })}
-                      </Typography>
-                    </Flex>
-                  }
-                  confirmLabel={formatMessage(getTrad('whitelist.delete.all.label'))}
-                  onConfirm={onDeleteAll}
-                />
-              )}
+              <ConfirmDialog
+                trigger={
+                  <Button
+                    size="S"
+                    variant="danger-light"
+                    startIcon={<Trash />}
+                    disabled={users.length === 0}
+                    style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
+                  >
+                    {formatMessage(getTrad('whitelist.delete.all.label'))}
+                  </Button>
+                }
+                title={formatMessage(getTrad('whitelist.delete.all.title'))}
+                body={
+                  <Flex justifyContent="center">
+                    <Typography textColor="neutral800" textAlign="center">
+                      {formatMessage(getTrad('whitelist.delete.all.description'), {
+                        count: users.length,
+                      })}
+                    </Typography>
+                  </Flex>
+                }
+                confirmLabel={formatMessage(getTrad('whitelist.delete.all.label'))}
+                onConfirm={onDeleteAll}
+              />
             </Flex>
-          </Flex>
-          <Flex gap={4} marginTop={5} marginBottom={5} alignItems="flex-start">
-            <Box style={{ flex: 1 }}>
-              <Field.Root>
-                <Field.Input
-                  type="text"
-                  disabled={loading}
-                  value={email}
-                  hasError={Boolean(email && !EMAIL_REGEX.test(email))}
-                  onChange={(e) => setEmail(e.currentTarget.value)}
-                  placeholder={formatMessage(getTrad('whitelist.email.placeholder'))}
-                />
-              </Field.Root>
-            </Box>
-            <Box>
-              <Button
-                size="L"
-                startIcon={<Plus />}
-                disabled={loading || email.trim() === '' || !EMAIL_REGEX.test(email)}
-                loading={loading}
-                onClick={onSaveEmail}
-              >
-                {formatMessage(getTrad('page.add'))}
-              </Button>
-            </Box>
           </Flex>
 
           <Divider />
@@ -271,7 +274,12 @@ export default function Whitelist({
             </Tbody>
           </CustomTable>
 
-          <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          <TablePagination
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            total={users.length}
+          />
         </>
       )}
     </Box>

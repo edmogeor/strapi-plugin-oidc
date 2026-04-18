@@ -11,13 +11,28 @@ import {
   Table,
   Typography,
 } from '@strapi/design-system';
+import styled from 'styled-components';
+import { WarningCircle } from '@strapi/icons';
+import { useIntl } from 'react-intl';
+import getTrad from '../../utils/getTrad';
+
+export const Icon = styled.span<{ $size?: string }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.neutral500};
+  flex-shrink: 0;
+  font-size: ${({ $size }) => $size ?? '1.4rem'};
+  svg {
+    display: block;
+    width: 1em;
+    height: 1em;
+  }
+`;
 
 export { TagInput } from './TagInput';
 export { TagInputWithOptions } from './TagInputWithOptions';
-import { WarningCircle } from '@strapi/icons';
-import styled from 'styled-components';
-import { useIntl } from 'react-intl';
-import getTrad from '../../utils/getTrad';
+export { TagDateInput, type DateSelection } from './TagDateInput';
 
 export function LocalizedDate({
   date,
@@ -91,11 +106,11 @@ interface TablePaginationProps {
   page: number;
   pageCount: number;
   onPageChange: (page: number) => void;
+  total?: number;
 }
 
-export function TablePagination({ page, pageCount, onPageChange }: TablePaginationProps) {
+export function TablePagination({ page, pageCount, onPageChange, total }: TablePaginationProps) {
   const { formatMessage } = useIntl();
-  if (pageCount <= 1) return null;
 
   const handleClick = (e: MouseEvent, num: number) => {
     e.preventDefault();
@@ -147,16 +162,25 @@ export function TablePagination({ page, pageCount, onPageChange }: TablePaginati
 
   return (
     <Box paddingTop={4}>
-      <Flex justifyContent="flex-end">
-        <Pagination activePage={page} pageCount={pageCount}>
-          <PreviousLink href="#" onClick={(e) => handleClick(e, Math.max(1, page - 1))}>
-            {formatMessage(getTrad('pagination.previous'))}
-          </PreviousLink>
-          {pages}
-          <NextLink href="#" onClick={(e) => handleClick(e, Math.min(pageCount, page + 1))}>
-            {formatMessage(getTrad('pagination.next'))}
-          </NextLink>
-        </Pagination>
+      <Flex justifyContent="space-between" alignItems="center">
+        {total !== undefined && (
+          <Typography variant="pi" textColor="neutral600">
+            {total} {total === 1 ? 'entry' : 'entries'}
+          </Typography>
+        )}
+        {pageCount > 1 ? (
+          <Pagination activePage={page} pageCount={pageCount}>
+            <PreviousLink href="#" onClick={(e) => handleClick(e, Math.max(1, page - 1))}>
+              {formatMessage(getTrad('pagination.previous'))}
+            </PreviousLink>
+            {pages}
+            <NextLink href="#" onClick={(e) => handleClick(e, Math.min(pageCount, page + 1))}>
+              {formatMessage(getTrad('pagination.next'))}
+            </NextLink>
+          </Pagination>
+        ) : (
+          <Box />
+        )}
       </Flex>
     </Box>
   );

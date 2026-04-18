@@ -200,27 +200,6 @@ describe('AuditLog Service with filters', () => {
     expect(result.results[0].email).toBe('alice@acme.com');
   });
 
-  it('filters with q search across email and ip', async () => {
-    await seedFixture();
-    const result = await s.service.find({
-      page: 1,
-      pageSize: 25,
-      filters: { q: 'acme' },
-    });
-    expect(result.results).toHaveLength(3);
-  });
-
-  it('filters with q combined with field filters', async () => {
-    await seedFixture();
-    const result = await s.service.find({
-      page: 1,
-      pageSize: 25,
-      filters: { q: 'acme', action: { $eq: 'login_success' } },
-    });
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].email).toBe('alice@acme.com');
-  });
-
   it('pagination metadata reflects filtered set', async () => {
     await seedFixture();
     const result = await s.service.find({

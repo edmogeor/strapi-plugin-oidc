@@ -20,23 +20,11 @@ describe('parseAuditLogFilters', () => {
     expect(result).toEqual({ action: { $eq: 'login_success' } });
   });
 
-  it('parses action $ne filter', () => {
-    const result = parseAuditLogFilters({ filters: { action: { $ne: 'login_failure' } } });
-    expect(result).toEqual({ action: { $ne: 'login_failure' } });
-  });
-
   it('parses action $in filter', () => {
     const result = parseAuditLogFilters({
       filters: { action: { $in: ['login_success', 'user_created'] } },
     });
     expect(result).toEqual({ action: { $in: ['login_success', 'user_created'] } });
-  });
-
-  it('parses action $notIn filter', () => {
-    const result = parseAuditLogFilters({
-      filters: { action: { $notIn: ['logout', 'session_expired'] } },
-    });
-    expect(result).toEqual({ action: { $notIn: ['logout', 'session_expired'] } });
   });
 
   it('parses email $eq filter', () => {
@@ -47,11 +35,6 @@ describe('parseAuditLogFilters', () => {
   it('parses email $contains filter', () => {
     const result = parseAuditLogFilters({ filters: { email: { $contains: 'acme' } } });
     expect(result).toEqual({ email: { $contains: 'acme' } });
-  });
-
-  it('parses email $startsWith filter', () => {
-    const result = parseAuditLogFilters({ filters: { email: { $startsWith: 'admin' } } });
-    expect(result).toEqual({ email: { $startsWith: 'admin' } });
   });
 
   it('parses email $endsWith filter', () => {
@@ -75,47 +58,51 @@ describe('parseAuditLogFilters', () => {
     expect(result).toEqual({ ip: { $contains: '192.168' } });
   });
 
-  it('parses createdAt $eq filter', () => {
-    const result = parseAuditLogFilters({ filters: { createdAt: { $eq: '2024-01-01' } } });
-    expect(result).toEqual({ createdAt: { $eq: '2024-01-01' } });
-  });
-
-  it('parses createdAt $gt filter', () => {
-    const result = parseAuditLogFilters({ filters: { createdAt: { $gt: '2024-01-01' } } });
-    expect(result).toEqual({ createdAt: { $gt: '2024-01-01' } });
-  });
-
   it('parses createdAt $gte filter', () => {
-    const result = parseAuditLogFilters({ filters: { createdAt: { $gte: '2024-01-01' } } });
-    expect(result).toEqual({ createdAt: { $gte: '2024-01-01' } });
+    const result = parseAuditLogFilters({
+      filters: { createdAt: { $gte: '2024-01-01T00:00:00.000Z' } },
+    });
+    expect(result).toEqual({ createdAt: { $gte: '2024-01-01T00:00:00.000Z' } });
   });
 
   it('parses createdAt $lt filter', () => {
-    const result = parseAuditLogFilters({ filters: { createdAt: { $lt: '2024-12-31' } } });
-    expect(result).toEqual({ createdAt: { $lt: '2024-12-31' } });
+    const result = parseAuditLogFilters({
+      filters: { createdAt: { $lt: '2024-12-31T00:00:00.000Z' } },
+    });
+    expect(result).toEqual({ createdAt: { $lt: '2024-12-31T00:00:00.000Z' } });
   });
 
   it('parses createdAt $lte filter', () => {
-    const result = parseAuditLogFilters({ filters: { createdAt: { $lte: '2024-12-31' } } });
-    expect(result).toEqual({ createdAt: { $lte: '2024-12-31' } });
+    const result = parseAuditLogFilters({
+      filters: { createdAt: { $lte: '2024-12-31T00:00:00.000Z' } },
+    });
+    expect(result).toEqual({ createdAt: { $lte: '2024-12-31T00:00:00.000Z' } });
   });
 
   it('parses createdAt $between filter with tuple', () => {
     const result = parseAuditLogFilters({
-      filters: { createdAt: { $between: ['2024-01-01', '2024-12-31'] } },
+      filters: {
+        createdAt: { $between: ['2024-01-01T00:00:00.000Z', '2024-12-31T00:00:00.000Z'] },
+      },
     });
-    expect(result).toEqual({ createdAt: { $between: ['2024-01-01', '2024-12-31'] } });
+    expect(result).toEqual({
+      createdAt: { $between: ['2024-01-01T00:00:00.000Z', '2024-12-31T00:00:00.000Z'] },
+    });
   });
 
-  it('parses q (free-text search)', () => {
-    const result = parseAuditLogFilters({ q: 'admin@example.com' });
-    expect(result).toEqual({ q: 'admin@example.com' });
-  });
-
-  it('trims q and drops empty strings', () => {
-    expect(parseAuditLogFilters({ q: '  admin  ' })).toEqual({ q: 'admin' });
-    expect(parseAuditLogFilters({ q: '   ' })).toEqual({});
-    expect(parseAuditLogFilters({ q: '' })).toEqual({});
+  it('parses createdAt $in filter with array', () => {
+    const result = parseAuditLogFilters({
+      filters: {
+        createdAt: {
+          $in: ['2024-01-01T00:00:00.000Z', '2024-01-15T00:00:00.000Z', '2024-01-31T00:00:00.000Z'],
+        },
+      },
+    });
+    expect(result).toEqual({
+      createdAt: {
+        $in: ['2024-01-01T00:00:00.000Z', '2024-01-15T00:00:00.000Z', '2024-01-31T00:00:00.000Z'],
+      },
+    });
   });
 
   it('parses multiple fields together', () => {
@@ -123,13 +110,13 @@ describe('parseAuditLogFilters', () => {
       filters: {
         action: { $eq: 'login_success' },
         email: { $contains: 'acme' },
-        createdAt: { $gte: '2024-01-01' },
+        createdAt: { $gte: '2024-01-01T00:00:00.000Z' },
       },
     });
     expect(result).toEqual({
       action: { $eq: 'login_success' },
       email: { $contains: 'acme' },
-      createdAt: { $gte: '2024-01-01' },
+      createdAt: { $gte: '2024-01-01T00:00:00.000Z' },
     });
   });
 
@@ -169,10 +156,28 @@ describe('parseAuditLogFilters', () => {
     );
   });
 
-  it('throws for non-AuditAction value in action $ne', () => {
-    expect(() => parseAuditLogFilters({ filters: { action: { $ne: 'bad_action' } } })).toThrow(
-      'Invalid action value "bad_action" — must be one of:',
-    );
+  it('rejects removed action operators', () => {
+    for (const op of ['$ne', '$notIn'] as const) {
+      expect(() =>
+        parseAuditLogFilters({ filters: { action: { [op]: 'login_success' } } }),
+      ).toThrow(`Unknown operator "${op}" for field "action"`);
+    }
+  });
+
+  it('rejects removed string-field operators', () => {
+    for (const op of ['$ne', '$notContains', '$startsWith'] as const) {
+      expect(() => parseAuditLogFilters({ filters: { email: { [op]: 'admin' } } })).toThrow(
+        `Unknown operator "${op}" for field "email"`,
+      );
+    }
+  });
+
+  it('rejects removed createdAt operators', () => {
+    for (const op of ['$eq', '$gt'] as const) {
+      expect(() =>
+        parseAuditLogFilters({ filters: { createdAt: { [op]: '2024-01-01T00:00:00.000Z' } } }),
+      ).toThrow(`Unknown operator "${op}" for field "createdAt"`);
+    }
   });
 
   it('throws for non-array in action $in', () => {
@@ -189,20 +194,40 @@ describe('parseAuditLogFilters', () => {
 
   it('throws for $between with non-tuple on createdAt', () => {
     expect(() =>
-      parseAuditLogFilters({ filters: { createdAt: { $between: '2024-01-01' } } }),
+      parseAuditLogFilters({ filters: { createdAt: { $between: '2024-01-01T00:00:00.000Z' } } }),
     ).toThrow('Operator "$between" for field "createdAt" requires a tuple [start, end]');
   });
 
   it('throws for $between with wrong tuple length', () => {
     expect(() =>
-      parseAuditLogFilters({ filters: { createdAt: { $between: ['2024-01-01'] } } }),
+      parseAuditLogFilters({ filters: { createdAt: { $between: ['2024-01-01T00:00:00.000Z'] } } }),
     ).toThrow('Operator "$between" for field "createdAt" requires a tuple [start, end]');
   });
 
   it('throws for $between with non-string tuple values', () => {
     expect(() =>
       parseAuditLogFilters({ filters: { createdAt: { $between: [2024, 2025] } } }),
-    ).toThrow('Operator "$between" for field "createdAt" requires string values in the tuple');
+    ).toThrow('Operator "$between" for field "createdAt" requires an ISO-8601 UTC datetime string');
+  });
+
+  it('throws for $between with date-only (non-ISO-UTC) strings', () => {
+    expect(() =>
+      parseAuditLogFilters({ filters: { createdAt: { $between: ['2024-01-01', '2024-12-31'] } } }),
+    ).toThrow('Operator "$between" for field "createdAt" requires an ISO-8601 UTC datetime string');
+  });
+
+  it('throws for $in with non-array on createdAt', () => {
+    expect(() =>
+      parseAuditLogFilters({ filters: { createdAt: { $in: '2024-01-01T00:00:00.000Z' } } }),
+    ).toThrow('Operator "$in" for field "createdAt" requires an array value');
+  });
+
+  it('throws for $in with a date-only (non-ISO-UTC) string in the array', () => {
+    expect(() =>
+      parseAuditLogFilters({
+        filters: { createdAt: { $in: ['2024-01-01T00:00:00.000Z', '2024-01-15'] } },
+      }),
+    ).toThrow('Operator "$in" for field "createdAt" requires an ISO-8601 UTC datetime string');
   });
 
   it('throws for $null with non-boolean on email', () => {
@@ -224,9 +249,21 @@ describe('parseAuditLogFilters', () => {
   });
 
   it('throws for non-string value on createdAt operators', () => {
-    expect(() => parseAuditLogFilters({ filters: { createdAt: { $gt: 2024 } } })).toThrow(
-      'Operator "$gt" for field "createdAt" requires a string value',
+    expect(() => parseAuditLogFilters({ filters: { createdAt: { $gte: 2024 } } })).toThrow(
+      'Operator "$gte" for field "createdAt" requires an ISO-8601 UTC datetime string',
     );
+  });
+
+  it('throws for date-only (non-ISO-UTC) string on createdAt operators', () => {
+    expect(() => parseAuditLogFilters({ filters: { createdAt: { $gte: '2024-01-01' } } })).toThrow(
+      'Operator "$gte" for field "createdAt" requires an ISO-8601 UTC datetime string',
+    );
+  });
+
+  it('throws for non-UTC (local offset) ISO string on createdAt operators', () => {
+    expect(() =>
+      parseAuditLogFilters({ filters: { createdAt: { $lt: '2024-01-01T00:00:00+02:00' } } }),
+    ).toThrow('Operator "$lt" for field "createdAt" requires an ISO-8601 UTC datetime string');
   });
 
   it('throws for non-object field value', () => {

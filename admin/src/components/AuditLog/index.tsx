@@ -9,10 +9,11 @@ import {
   Tooltip,
   Tr,
   Typography,
-  TextInput,
 } from '@strapi/design-system';
-import { useCallback, useEffect, useState } from 'react';
-import { Download, Information, Trash } from '@strapi/icons';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { Calendar, Download, Information, Mail, Trash } from '@strapi/icons';
+import { ClipboardList, Filter, Server } from 'lucide-react';
+import styled from 'styled-components';
 import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import qs from 'qs';
@@ -20,8 +21,11 @@ import getTrad from '../../utils/getTrad';
 import {
   ConfirmDialog,
   CustomTable,
+  type DateSelection,
+  Icon,
   LocalizedDate,
   TablePagination,
+  TagDateInput,
   TagInput,
   TagInputWithOptions,
 } from '../shared';
@@ -58,7 +62,7 @@ interface FilterState {
   action?: string[];
   email?: string[];
   ip?: string[];
-  createdAt?: string;
+  createdAt?: DateSelection[];
 }
 
 function toWireFilters(f: FilterState) {
@@ -66,16 +70,15 @@ function toWireFilters(f: FilterState) {
   if (f.action?.length) out.action = { $or: f.action.map((v) => ({ $eq: v })) };
   if (f.email?.length) out.email = { $or: f.email.map((v) => ({ $contains: v })) };
   if (f.ip?.length) out.ip = { $or: f.ip.map((v) => ({ $contains: v })) };
-  if (f.createdAt) out.createdAt = { $gte: f.createdAt };
+  if (f.createdAt?.length) {
+    const allDates = f.createdAt.flatMap((s) => s.dates);
+    const deduped = [...new Set(allDates)];
+    out.createdAt = { $in: deduped };
+  }
   return out;
 }
 
-function buildQueryString(params: {
-  filters?: FilterState;
-  q?: string;
-  page?: number;
-  pageSize?: number;
-}) {
+function buildQueryString(params: { filters?: FilterState; page?: number; pageSize?: number }) {
   const { filters, ...rest } = params;
   return qs.stringify(
     { ...rest, filters: filters ? toWireFilters(filters) : undefined },
@@ -94,7 +97,7 @@ function useDebounced<T>(value: T, delay = 300): T {
   return debounced;
 }
 
-export default function AuditLog() {
+export default function AuditLog({ title }: { title?: ReactNode } = {}) {
   const { formatMessage } = useIntl();
   const { get, del } = useFetchClient();
   const { toggleNotification } = useNotification();
@@ -109,18 +112,15 @@ export default function AuditLog() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>({});
-  const [searchQuery, setSearchQuery] = useState('');
 
   const debouncedFilters = useDebounced(filters);
-  const debouncedSearch = useDebounced(searchQuery);
 
   const fetchLogs = useCallback(
-    async (p: number, f: FilterState, q: string) => {
+    async (p: number, f: FilterState) => {
       setLoading(true);
       try {
         const queryString = buildQueryString({
           filters: f,
-          q: q || undefined,
           page: p,
           pageSize: PAGE_SIZE,
         });
@@ -139,8 +139,8 @@ export default function AuditLog() {
   );
 
   useEffect(() => {
-    fetchLogs(page, debouncedFilters, debouncedSearch);
-  }, [fetchLogs, page, debouncedFilters, debouncedSearch]);
+    fetchLogs(page, debouncedFilters);
+  }, [fetchLogs, page, debouncedFilters]);
 
   const handleFilterChange = (name: keyof FilterState, value: string) => {
     setFilters((prev) => {
@@ -161,7 +161,6 @@ export default function AuditLog() {
         message: formatMessage(getTrad('auditlog.clear.success')),
       });
       setFilters({});
-      setSearchQuery('');
       setPage(1);
     } catch {
       toggleNotification({
@@ -177,7 +176,6 @@ export default function AuditLog() {
       const token = cookieMatch ? decodeURIComponent(cookieMatch[1]) : '';
       const queryString = buildQueryString({
         filters,
-        q: searchQuery || undefined,
       });
       const response = await fetch(`/strapi-plugin-oidc/audit-logs/export?${queryString}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -206,24 +204,52 @@ export default function AuditLog() {
 
   const clearFilters = () => {
     setFilters({});
-    setSearchQuery('');
     setPage(1);
   };
 
-  const hasActiveFilters =
-    !!(
-      filters.action?.length ||
-      filters.email?.length ||
-      filters.ip?.length ||
-      filters.createdAt
-    ) || searchQuery.length > 0;
+  const hasActiveFilters = !!(
+    filters.action?.length ||
+    filters.email?.length ||
+    filters.ip?.length ||
+    filters.createdAt?.length
+  );
+
+  const filterRowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = filterRowRef.current;
+    if (!el) return;
+
+    let rafId: number;
+
+    const measure = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const children = Array.from(el.querySelectorAll<HTMLElement>('[data-filter-input]'));
+        if (children.length === 0) return;
+        const containerWidth = el.getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(el).gap) || 8;
+        const totalMinWidth = children.reduce((sum, c) => {
+          const min = parseFloat(getComputedStyle(c).minWidth) || 0;
+          return sum + min + gap;
+        }, 0);
+        el.classList.toggle('expanded', containerWidth > totalMinWidth);
+      });
+    };
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(el, { box: 'border-box' });
+    measure();
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
-        <Typography variant="pi" textColor="neutral600">
-          {pagination.total} {pagination.total === 1 ? 'entry' : 'entries'}
-        </Typography>
+        {title ?? <span />}
         <Flex gap={2}>
           <Button
             size="S"
@@ -231,6 +257,7 @@ export default function AuditLog() {
             startIcon={<Download />}
             onClick={handleExport}
             disabled={pagination.total === 0}
+            style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
           >
             {formatMessage(getTrad('auditlog.export'))}
           </Button>
@@ -241,6 +268,7 @@ export default function AuditLog() {
                 variant="danger-light"
                 startIcon={<Trash />}
                 disabled={pagination.total === 0}
+                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('auditlog.clear'))}
               </Button>
@@ -261,49 +289,92 @@ export default function AuditLog() {
         </Flex>
       </Flex>
 
-      <Flex gap={2} alignItems="flex-end" wrap="wrap" marginBottom={4}>
-        <Box style={{ minWidth: '200px' }}>
+      <Box
+        background="neutral100"
+        hasRadius
+        padding={4}
+        marginBottom={4}
+        borderColor="neutral200"
+        borderWidth="1px"
+        borderStyle="solid"
+      >
+        <Flex gap={2} alignItems="center" marginBottom={3}>
+          <Icon>
+            <Filter size="1.6rem" />
+          </Icon>
+          <Typography variant="delta" tag="h3">
+            {formatMessage(getTrad('auditlog.filters'))}
+          </Typography>
+        </Flex>
+        <Flex gap={2} wrap="wrap" ref={filterRowRef} className="filter-row">
+          <TagDateInput
+            placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
+            value={filters.createdAt ?? []}
+            onChange={(selections) => {
+              if (selections.length > 0) {
+                setFilters((prev) => ({ ...prev, createdAt: selections }));
+              } else {
+                const { createdAt: _removed, ...rest } = filters;
+                setFilters(rest);
+              }
+              setPage(1);
+            }}
+            startIcon={
+              <Icon>
+                <Calendar width="1.4rem" height="1.4rem" />
+              </Icon>
+            }
+          />
           <TagInputWithOptions
             value={filters.action ?? []}
             onChange={(value) => setFilters((prev) => ({ ...prev, action: value }))}
             options={AUDIT_ACTIONS}
             placeholder={formatMessage(getTrad('auditlog.filters.action'))}
+            startIcon={
+              <Icon>
+                <ClipboardList size="1.4rem" />
+              </Icon>
+            }
           />
-        </Box>
-        <Box style={{ minWidth: '180px' }}>
           <TagInput
             value={filters.email ?? []}
             onChange={(value) => setFilters((prev) => ({ ...prev, email: value }))}
             placeholder={formatMessage(getTrad('auditlog.filters.email'))}
+            startIcon={
+              <Icon>
+                <Mail width="1.4rem" height="1.4rem" />
+              </Icon>
+            }
+            validate={(v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
           />
-        </Box>
-        <Box style={{ minWidth: '140px' }}>
           <TagInput
             value={filters.ip ?? []}
             onChange={(value) => setFilters((prev) => ({ ...prev, ip: value }))}
             placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
+            startIcon={
+              <Icon>
+                <Server size="1.4rem" />
+              </Icon>
+            }
+            validate={(v) =>
+              /^(?:(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?::[0-9a-fA-F]{1,4}){1,7}|::))$/.test(
+                v,
+              )
+            }
           />
-        </Box>
-        <TextInput
-          type="datetime-local"
-          placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
-          value={filters.createdAt ?? ''}
-          onChange={(e) => handleFilterChange('createdAt', e.target.value)}
-        />
-        <TextInput
-          placeholder={formatMessage(getTrad('auditlog.search.placeholder'))}
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setPage(1);
-          }}
-        />
-        {hasActiveFilters && (
-          <Button variant="danger-light" onClick={clearFilters}>
-            {formatMessage(getTrad('auditlog.filters.clear'))}
-          </Button>
-        )}
-      </Flex>
+          {hasActiveFilters && (
+            <Button
+              size="S"
+              variant="danger-light"
+              startIcon={<Trash />}
+              onClick={clearFilters}
+              style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
+            >
+              {formatMessage(getTrad('auditlog.filters.clear'))}
+            </Button>
+          )}
+        </Flex>
+      </Box>
 
       <CustomTable colCount={5} rowCount={records.length}>
         <Thead>
@@ -386,7 +457,12 @@ export default function AuditLog() {
         </Tbody>
       </CustomTable>
 
-      <TablePagination page={page} pageCount={pagination.pageCount} onPageChange={setPage} />
+      <TablePagination
+        page={page}
+        pageCount={pagination.pageCount}
+        onPageChange={setPage}
+        total={pagination.total}
+      />
     </Box>
   );
 }

@@ -128,12 +128,13 @@ function HomePage() {
           </Flex>
           {state.auditLogEnabled && (
             <Box background="neutral0" hasRadius shadow="filterShadow" padding={6}>
-              <Box paddingBottom={4}>
-                <Typography variant="beta" tag="h2">
-                  {formatMessage(getTrad('auditlog.title'))}
-                </Typography>
-              </Box>
-              <AuditLog />
+              <AuditLog
+                title={
+                  <Typography variant="beta" tag="h2">
+                    {formatMessage(getTrad('auditlog.title'))}
+                  </Typography>
+                }
+              />
             </Box>
           )}
         </Flex>

@@ -24,29 +24,34 @@ type StrapiWhereClause = Record<string, unknown>;
 
 const STRING_OP_MAP: Record<string, (v: unknown) => unknown> = {
   $eq: (v) => v,
-  $ne: (v) => ({ $ne: v }),
   $contains: (v) => ({ $containsi: v }),
-  $notContains: (v) => ({ $notContainsi: v }),
-  $startsWith: (v) => ({ $startsWith: v }),
   $endsWith: (v) => ({ $endsWith: v }),
   $null: (v) => (v === true ? null : undefined),
   $notNull: (v) => (v === true ? { $notNull: true } : undefined),
 };
 
 const DATE_OP_MAP: Record<string, (v: unknown) => unknown> = {
-  $eq: (v) => v,
-  $gt: (v) => ({ $gt: v }),
   $gte: (v) => ({ $gte: v }),
   $lt: (v) => ({ $lt: v }),
   $lte: (v) => ({ $lte: v }),
   $between: (v) => ({ $between: v }),
+  // $in is handled separately: each ISO day-start is expanded to a [day, day+1) range.
 };
+
+const DAY_MS = 86_400_000;
+
+function nextDayIso(iso: string): string {
+  return new Date(new Date(iso).getTime() + DAY_MS).toISOString();
+}
+
+function expandCreatedAtInToDayRanges(days: string[]): StrapiWhereClause {
+  const ranges = days.map((d) => ({ createdAt: { $gte: d, $lt: nextDayIso(d) } }));
+  return ranges.length === 1 ? ranges[0] : { $or: ranges };
+}
 
 const ACTION_OP_MAP: Record<string, (v: unknown) => unknown> = {
   $eq: (v) => v,
-  $ne: (v) => ({ $ne: v }),
   $in: (v) => ({ $in: v }),
-  $notIn: (v) => ({ $notIn: v }),
 };
 
 function mapFieldFilter(
@@ -69,12 +74,14 @@ function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
   if (filters.action) mapFieldFilter(conditions, 'action', filters.action, ACTION_OP_MAP);
   if (filters.email) mapFieldFilter(conditions, 'email', filters.email, STRING_OP_MAP);
   if (filters.ip) mapFieldFilter(conditions, 'ip', filters.ip, STRING_OP_MAP);
-  if (filters.createdAt) mapFieldFilter(conditions, 'createdAt', filters.createdAt, DATE_OP_MAP);
-
-  if (filters.q) {
-    conditions.push({
-      $or: [{ email: { $containsi: filters.q } }, { ip: { $containsi: filters.q } }],
-    });
+  if (filters.createdAt) {
+    const { $in: inDays, ...rest } = filters.createdAt;
+    if (Array.isArray(inDays) && inDays.length > 0) {
+      conditions.push(expandCreatedAtInToDayRanges(inDays));
+    }
+    if (Object.keys(rest).length > 0) {
+      mapFieldFilter(conditions, 'createdAt', rest, DATE_OP_MAP);
+    }
   }
 
   if (conditions.length === 0) return {};
