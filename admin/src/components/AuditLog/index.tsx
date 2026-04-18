@@ -229,19 +229,24 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
         if (children.length === 0) return;
         const containerWidth = el.getBoundingClientRect().width;
         const gap = parseFloat(getComputedStyle(el).gap) || 8;
-        const totalMinWidth = children.reduce((sum, c) => {
-          const min = parseFloat(getComputedStyle(c).minWidth) || 0;
-          return sum + min + gap;
-        }, 0);
-        el.classList.toggle('expanded', containerWidth > totalMinWidth);
+        const wasExpanded = el.classList.contains('expanded');
+        if (wasExpanded) el.classList.remove('expanded');
+        const totalRequired = children.reduce((sum, c) => sum + c.offsetWidth + gap, -gap);
+        const fits = totalRequired <= containerWidth;
+        el.classList.toggle('expanded', fits);
       });
     };
 
-    const observer = new ResizeObserver(measure);
-    observer.observe(el, { box: 'border-box' });
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(el, { box: 'border-box' });
+
+    const mutationObserver = new MutationObserver(measure);
+    mutationObserver.observe(el, { childList: true, subtree: true, characterData: true });
+
     measure();
     return () => {
-      observer.disconnect();
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
       cancelAnimationFrame(rafId);
     };
   }, []);
@@ -368,7 +373,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
               variant="danger-light"
               startIcon={<Trash />}
               onClick={clearFilters}
-              style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
+              style={{ height: '4rem' }}
             >
               {formatMessage(getTrad('auditlog.filters.clear'))}
             </Button>

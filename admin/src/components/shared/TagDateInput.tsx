@@ -14,7 +14,8 @@ const Tag = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 6px;
+  height: 2.2rem;
+  padding: 0 6px;
   border-radius: 4px;
   background-color: ${({ theme }) => theme.colors.neutral200};
   color: ${({ theme }) => theme.colors.neutral800};
@@ -34,6 +35,11 @@ const TagRemove = styled.button`
   cursor: pointer;
   color: ${({ theme }) => theme.colors.neutral600};
   transition: color 0.2s;
+
+  & svg {
+    width: 1rem;
+    height: 1rem;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.colors.neutral800};
@@ -375,7 +381,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
         }
       }}
     >
-      <Flex gap={2} wrap="wrap" alignItems="center">
+      <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
         {startIcon && (
           <span
             aria-hidden="true"
