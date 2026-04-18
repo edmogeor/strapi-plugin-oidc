@@ -406,22 +406,28 @@ async function logSuccessfulAuth(
   rolesUpdated: boolean,
   resolvedRoleNames: string[],
 ): Promise<void> {
-  if (userCreated) {
-    await auditLog.log({
-      action: 'user_created',
+  const roles = resolvedRoleNames.join(', ');
+  const entries: Promise<unknown>[] = [
+    auditLog.log({
+      action: 'login_success',
       email: user.email,
       ip: ctx.ip,
-      detailsKey: 'user_created',
-      detailsParams: { roles: resolvedRoleNames.join(', ') },
-    });
+      detailsKey: rolesUpdated ? 'roles_updated' : undefined,
+      detailsParams: rolesUpdated ? { roles } : undefined,
+    }),
+  ];
+  if (userCreated) {
+    entries.push(
+      auditLog.log({
+        action: 'user_created',
+        email: user.email,
+        ip: ctx.ip,
+        detailsKey: 'user_created',
+        detailsParams: { roles },
+      }),
+    );
   }
-  await auditLog.log({
-    action: 'login_success',
-    email: user.email,
-    ip: ctx.ip,
-    detailsKey: rolesUpdated ? 'roles_updated' : undefined,
-    detailsParams: rolesUpdated ? { roles: resolvedRoleNames.join(', ') } : undefined,
-  });
+  await Promise.all(entries);
 }
 
 async function handleCallbackError(
@@ -559,23 +565,22 @@ async function logout(ctx: StrapiContext) {
     return ctx.redirect(loginUrl);
   }
 
+  const logAudit = (action: AuditAction) =>
+    userEmail ? auditLog.log({ action, email: userEmail, ip: ctx.ip }) : Promise.resolve();
+
   if (logoutUrl && accessToken) {
-    // Check if provider session is still active before redirecting to end-session. Skip provider logout if token is expired to avoid a bare redirect page.
+    // Skip provider logout when the token is expired to avoid a bare redirect page.
     const active = await isProviderSessionActive(config.OIDC_USERINFO_ENDPOINT, accessToken);
     if (active) {
-      if (userEmail)
-        auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip }).catch(() => {});
+      // Fire-and-forget so the redirect isn't delayed by audit-log I/O.
+      logAudit('logout').catch(() => {});
       return ctx.redirect(logoutUrl);
     }
-    if (userEmail) {
-      await auditLog.log({ action: 'session_expired', email: userEmail, ip: ctx.ip });
-    }
+    await logAudit('session_expired');
     return ctx.redirect(loginUrl);
   }
 
-  if (userEmail) {
-    await auditLog.log({ action: 'logout', email: userEmail, ip: ctx.ip });
-  }
+  await logAudit('logout');
   ctx.redirect(logoutUrl || loginUrl);
 }
 
