@@ -11,6 +11,8 @@ import {
   Table,
   Typography,
 } from '@strapi/design-system';
+
+export { TagInput } from './TagInput';
 import { WarningCircle } from '@strapi/icons';
 import styled from 'styled-components';
 import { useIntl } from 'react-intl';

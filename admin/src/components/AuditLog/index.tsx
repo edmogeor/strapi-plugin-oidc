@@ -19,7 +19,7 @@ import { useFetchClient, useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import qs from 'qs';
 import getTrad from '../../utils/getTrad';
-import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
+import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination, TagInput } from '../shared';
 import { AUDIT_ACTIONS } from '../../../../shared/audit-actions';
 
 interface AuditLogRecord {
@@ -51,16 +51,16 @@ const DETAILS_TEXT_STYLE = {
 
 interface FilterState {
   action?: string;
-  email?: string;
-  ip?: string;
+  email?: string[];
+  ip?: string[];
   createdAt?: string;
 }
 
 function toWireFilters(f: FilterState) {
-  const out: Record<string, Record<string, string>> = {};
+  const out: Record<string, unknown> = {};
   if (f.action) out.action = { $eq: f.action };
-  if (f.email) out.email = { $contains: f.email };
-  if (f.ip) out.ip = { $contains: f.ip };
+  if (f.email?.length) out.email = { $or: f.email.map((v) => ({ $contains: v })) };
+  if (f.ip?.length) out.ip = { $or: f.ip.map((v) => ({ $contains: v })) };
   if (f.createdAt) out.createdAt = { $gte: f.createdAt };
   return out;
 }
@@ -205,7 +205,9 @@ export default function AuditLog() {
     setPage(1);
   };
 
-  const hasActiveFilters = Object.keys(filters).length > 0 || searchQuery.length > 0;
+  const hasActiveFilters =
+    !!(filters.action || filters.email?.length || filters.ip?.length || filters.createdAt) ||
+    searchQuery.length > 0;
 
   return (
     <Box>
@@ -252,7 +254,7 @@ export default function AuditLog() {
 
       <Flex gap={2} alignItems="flex-end" wrap="wrap" marginBottom={4}>
         <Combobox
-          value={filters.action ?? ''}
+          value={filters.action ?? null}
           onChange={(value) => handleFilterChange('action', value ?? '')}
           placeholder={formatMessage(getTrad('auditlog.filters.action'))}
           clearLabel={formatMessage(getTrad('auditlog.filters.clear'))}
@@ -264,16 +266,20 @@ export default function AuditLog() {
             </ComboboxOption>
           ))}
         </Combobox>
-        <TextInput
-          placeholder={formatMessage(getTrad('auditlog.filters.email'))}
-          value={filters.email ?? ''}
-          onChange={(e) => handleFilterChange('email', e.target.value)}
-        />
-        <TextInput
-          placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
-          value={filters.ip ?? ''}
-          onChange={(e) => handleFilterChange('ip', e.target.value)}
-        />
+        <Box style={{ minWidth: '180px' }}>
+          <TagInput
+            value={filters.email ?? []}
+            onChange={(value) => setFilters((prev) => ({ ...prev, email: value }))}
+            placeholder={formatMessage(getTrad('auditlog.filters.email'))}
+          />
+        </Box>
+        <Box style={{ minWidth: '140px' }}>
+          <TagInput
+            value={filters.ip ?? []}
+            onChange={(value) => setFilters((prev) => ({ ...prev, ip: value }))}
+            placeholder={formatMessage(getTrad('auditlog.filters.ip'))}
+          />
+        </Box>
         <TextInput
           type="datetime-local"
           placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
@@ -289,7 +295,7 @@ export default function AuditLog() {
           }}
         />
         {hasActiveFilters && (
-          <Button size="S" variant="danger-light" onClick={clearFilters}>
+          <Button variant="danger-light" onClick={clearFilters}>
             {formatMessage(getTrad('auditlog.filters.clear'))}
           </Button>
         )}
