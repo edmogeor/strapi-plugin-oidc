@@ -137,7 +137,7 @@ describe('OIDC E2E Tests', () => {
 
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain(userFacingMessages.missing_code);
+    expect(callbackRes.text).toContain(userFacingMessages('en').missing_code);
   });
 
   it('should fail if callback has invalid state', async () => {
@@ -147,7 +147,7 @@ describe('OIDC E2E Tests', () => {
 
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain(userFacingMessages.invalid_state);
+    expect(callbackRes.text).toContain(userFacingMessages('en').invalid_state);
   });
 
   // ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ describe('OIDC E2E Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
-      expect(res.text).toContain(userFacingMessages.invalid_state);
+      expect(res.text).toContain(userFacingMessages('en').invalid_state);
     });
 
     it('token_exchange_failed produces token_exchange_failed audit action', async () => {

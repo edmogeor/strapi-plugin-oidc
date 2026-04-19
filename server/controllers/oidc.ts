@@ -4,6 +4,7 @@ import { clearAuthCookies } from '../utils/cookies';
 import { isValidEmail } from '../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../error-strings';
 import { userFacingMessages } from '../audit-error-strings';
+import { negotiateLocale } from '../i18n';
 import { OidcError, OIDC_ERROR_DISPATCH } from '../oidc-errors';
 import {
   getOauthService,
@@ -454,24 +455,30 @@ async function handleCallbackError(
     detail: errorInfo.key ? getErrorDetail(errorInfo.key, errorInfo.params) : undefined,
     email: userInfo?.email,
   });
-  ctx.send(oauthService.renderSignUpError(userFacingMessages.signInError));
+  const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
+  ctx.send(oauthService.renderSignUpError(userFacingMessages(locale).signInError, locale));
 }
 
 async function oidcSignInCallback(ctx: StrapiContext) {
   const config = configValidation();
   const oauthService = getOauthService();
   const auditLog = getAuditLogService();
+  const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
 
   if (!ctx.query.code) {
     await auditLog.log({ action: 'missing_code', ip: ctx.ip });
-    return ctx.send(oauthService.renderSignUpError(userFacingMessages.missing_code));
+    return ctx.send(
+      oauthService.renderSignUpError(userFacingMessages(locale).missing_code, locale),
+    );
   }
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: ctx.ip });
-    return ctx.send(oauthService.renderSignUpError(userFacingMessages.invalid_state));
+    return ctx.send(
+      oauthService.renderSignUpError(userFacingMessages(locale).invalid_state, locale),
+    );
   }
 
   const params = new URLSearchParams({
@@ -526,7 +533,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
 
     const nonce = randomUUID();
     ctx.set('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
-    ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce));
+    ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce, locale));
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);
   }

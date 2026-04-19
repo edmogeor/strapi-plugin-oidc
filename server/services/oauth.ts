@@ -4,11 +4,12 @@ import { randomUUID } from 'node:crypto';
 import type { Core } from '@strapi/types';
 import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
+import { authPageMessages } from '../audit-error-strings';
 
-function renderHtmlTemplate(title: string, content: string): string {
+function renderHtmlTemplate(title: string, content: string, locale: string = 'en'): string {
   return `
 <!doctype html>
-<html lang="en">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -211,11 +212,17 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         provider: 'strapi-plugin-oidc',
       });
     },
-    renderSignUpSuccess(jwtToken: string, user: StrapiAdminUser, nonce: string) {
+    renderSignUpSuccess(
+      jwtToken: string,
+      user: StrapiAdminUser,
+      nonce: string,
+      locale: string = 'en',
+    ) {
       const config = strapi.config.get('plugin::strapi-plugin-oidc') as
         | { REMEMBER_ME?: boolean }
         | undefined;
       const isRememberMe = !!config?.REMEMBER_ME;
+      const messages = authPageMessages(locale);
 
       const content = `
     <noscript>
@@ -225,8 +232,8 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
             <path d="M20 6 9 17l-5-5"/>
           </svg>
         </div>
-        <h1>JavaScript Required</h1>
-        <p>JavaScript must be enabled for authentication to complete.</p>
+        <h1>${messages.noscriptHeading}</h1>
+        <p>${messages.noscriptBody}</p>
       </div>
     </noscript>
     <script nonce="${nonce}">
@@ -241,9 +248,10 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
      })
     </script>`;
 
-      return renderHtmlTemplate('Authenticating...', content);
+      return renderHtmlTemplate(messages.authenticatingTitle, content, locale);
     },
-    renderSignUpError(message: string) {
+    renderSignUpError(message: string, locale: string = 'en') {
+      const messages = authPageMessages(locale);
       const safeMessage = String(message)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -259,11 +267,11 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         <path d="M12 17h.01"/>
       </svg>
     </div>
-    <h1>Authentication Failed</h1>
+    <h1>${messages.errorTitle}</h1>
     <p>${safeMessage}</p>
-    <a href="${strapi.config.admin.url}" class="btn">Return to Login</a>
+    <a href="${strapi.config.admin.url}" class="btn">${messages.returnToLogin}</a>
   </div>`;
-      return renderHtmlTemplate('Authentication Failed', content);
+      return renderHtmlTemplate(messages.errorTitle, content, locale);
     },
     async generateToken(user: StrapiAdminUser, ctx: StrapiContext) {
       const sessionManager = (

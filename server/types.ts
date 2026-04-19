@@ -47,8 +47,13 @@ export interface OAuthService {
   localeFindByHeader(headers: Record<string, string>): string;
   triggerWebHook(user: StrapiAdminUser): Promise<void>;
   triggerSignInSuccess(user: StrapiAdminUser): void;
-  renderSignUpSuccess(jwtToken: string, user: StrapiAdminUser, nonce: string): string;
-  renderSignUpError(message: string): string;
+  renderSignUpSuccess(
+    jwtToken: string,
+    user: StrapiAdminUser,
+    nonce: string,
+    locale?: string,
+  ): string;
+  renderSignUpError(message: string, locale?: string): string;
   addGmailAlias(email: string, alias: string): string;
 }
 

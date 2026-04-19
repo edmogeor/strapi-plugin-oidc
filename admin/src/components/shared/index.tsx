@@ -164,7 +164,7 @@ export function TablePagination({ page, pageCount, onPageChange, total }: TableP
       <Flex justifyContent="space-between" alignItems="center">
         {total !== undefined && (
           <Typography variant="pi" textColor="neutral600">
-            {total} {total === 1 ? 'entry' : 'entries'}
+            {formatMessage(getTrad('pagination.total'), { count: total })}
           </Typography>
         )}
         {pageCount > 1 ? (
