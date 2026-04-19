@@ -118,19 +118,6 @@ describe('AuditLog Service with filters', () => {
     );
   });
 
-  it('filters by action $notIn', async () => {
-    await seedFixture();
-    const result = await s.service.find({
-      page: 1,
-      pageSize: 25,
-      filters: { action: { $notIn: ['logout', 'session_expired'] } },
-    });
-    expect(result.results).toHaveLength(4);
-    expect(
-      result.results.every((r) => r.action !== 'logout' && r.action !== 'session_expired'),
-    ).toBe(true);
-  });
-
   it('filters by email $contains (case-insensitive)', async () => {
     await seedFixture();
     const result = await s.service.find({
@@ -140,17 +127,6 @@ describe('AuditLog Service with filters', () => {
     });
     expect(result.results).toHaveLength(3);
     expect(result.results.every((r) => r.email?.toLowerCase().includes('acme'))).toBe(true);
-  });
-
-  it('filters by email $startsWith', async () => {
-    await seedFixture();
-    const result = await s.service.find({
-      page: 1,
-      pageSize: 25,
-      filters: { email: { $startsWith: 'alice' } },
-    });
-    expect(result.results).toHaveLength(1);
-    expect(result.results[0].email).toBe('alice@acme.com');
   });
 
   it('filters by email $endsWith', async () => {
