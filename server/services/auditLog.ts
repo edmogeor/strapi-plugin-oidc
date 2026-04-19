@@ -169,7 +169,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
     },
 
     async cleanup(retentionDays: number): Promise<void> {
-      const cutoff = new Date(Date.now() - retentionDays * 86_400_000);
+      const cutoff = new Date(Date.now() - retentionDays * DAY_MS);
       await strapi.db
         .query('plugin::strapi-plugin-oidc.audit-log')
         .deleteMany({ where: { createdAt: { $lt: cutoff } } });

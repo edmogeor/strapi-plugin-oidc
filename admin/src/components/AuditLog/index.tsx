@@ -142,17 +142,6 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
     fetchLogs(page, debouncedFilters);
   }, [fetchLogs, page, debouncedFilters]);
 
-  const handleFilterChange = (name: keyof FilterState, value: string) => {
-    setFilters((prev) => {
-      if (!value) {
-        const { [name]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [name]: value };
-    });
-    setPage(1);
-  };
-
   const handleClearAll = async () => {
     try {
       await del('/strapi-plugin-oidc/audit-logs');
@@ -241,7 +230,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
     resizeObserver.observe(el, { box: 'border-box' });
 
     const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(el, { childList: true, subtree: true, characterData: true });
+    mutationObserver.observe(el, { childList: true, subtree: true });
 
     measure();
     return () => {
@@ -316,12 +305,13 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
             placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
             value={filters.createdAt ?? []}
             onChange={(selections) => {
-              if (selections.length > 0) {
-                setFilters((prev) => ({ ...prev, createdAt: selections }));
-              } else {
-                const { createdAt: _removed, ...rest } = filters;
-                setFilters(rest);
-              }
+              setFilters((prev) => {
+                if (selections.length === 0) {
+                  const { createdAt: _removed, ...rest } = prev;
+                  return rest;
+                }
+                return { ...prev, createdAt: selections };
+              });
               setPage(1);
             }}
             startIcon={

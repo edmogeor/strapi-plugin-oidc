@@ -1,75 +1,14 @@
-import { useState, useRef, useEffect, useId, KeyboardEvent } from 'react';
-import { Box, Flex } from '@strapi/design-system';
+import { useState, useRef, useEffect, useId, FocusEvent, KeyboardEvent } from 'react';
+import { Flex } from '@strapi/design-system';
 import styled from 'styled-components';
-import { Cross } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
+import { StartIconSlot, TagChip, TagInputWrapper } from './tagPrimitives';
 
 export interface DateSelection {
   dates: string[];
   display: string;
 }
-
-const Tag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 2.2rem;
-  padding: 0 6px;
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.colors.neutral200};
-  color: ${({ theme }) => theme.colors.neutral800};
-  font-size: 1.4rem;
-  line-height: 2.2rem;
-  box-sizing: border-box;
-  white-space: nowrap;
-`;
-
-const TagRemove = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.neutral600};
-  transition: color 0.2s;
-
-  & svg {
-    width: 1rem;
-    height: 1rem;
-  }
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.neutral800};
-  }
-`;
-
-const InputWrapper = styled(Box)`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  padding: 8px 16px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.neutral200};
-  background-color: ${({ theme }) => theme.colors.neutral0};
-  cursor: text;
-  min-height: 4rem;
-  min-width: 180px;
-  flex: 0 0 auto;
-  position: relative;
-
-  .filter-row.expanded & {
-    flex: 1 0 auto;
-  }
-
-  &:focus-within {
-    border-color: ${({ theme }) => theme.colors.primary600};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary100};
-  }
-`;
 
 const PlaceholderText = styled.span`
   font-size: 1.4rem;
@@ -292,6 +231,20 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
 
   const isFutureMonth = viewDate > new Date(today.getFullYear(), today.getMonth(), 1);
 
+  const selectedIsoSet = new Set(value.flatMap((s) => s.dates));
+  const pendingSorted =
+    pendingDates.length >= 2
+      ? [...pendingDates].sort((a, b) => a.getTime() - b.getTime())
+      : pendingDates;
+  const rangeStart = pendingSorted[0] ?? null;
+  const rangeEnd = pendingSorted[pendingSorted.length - 1] ?? null;
+  const stateLabel = {
+    today: formatMessage(getTrad('auditlog.calendar.state.today')),
+    selected: formatMessage(getTrad('auditlog.calendar.state.selected')),
+    alreadyAdded: formatMessage(getTrad('auditlog.calendar.state.alreadyAdded')),
+    future: formatMessage(getTrad('auditlog.calendar.state.future')),
+  };
+
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const nextMonth = () => {
     if (!isFutureMonth) {
@@ -345,7 +298,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
   }, [isOpen]);
 
   return (
-    <InputWrapper
+    <TagInputWrapper
       ref={wrapperRef}
       as="div"
       tabIndex={0}
@@ -359,7 +312,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
         setViewDate(new Date());
         setIsOpen(true);
       }}
-      onBlur={(e) => {
+      onBlur={(e: FocusEvent<HTMLDivElement>) => {
         if (!wrapperRef.current?.contains(e.relatedTarget as Node)) {
           setIsOpen(false);
           setPendingDates([]);
@@ -382,25 +335,13 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
       }}
     >
       <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
-        {startIcon && (
-          <span
-            aria-hidden="true"
-            style={{ display: 'flex', alignItems: 'center', marginRight: '8px' }}
-          >
-            {startIcon}
-          </span>
-        )}
+        {startIcon && <StartIconSlot>{startIcon}</StartIconSlot>}
         {value.map((selection, index) => (
-          <Tag key={selection.display + index}>
-            {selection.display}
-            <TagRemove
-              type="button"
-              onClick={() => removeTag(index)}
-              aria-label={formatMessage(getTrad('common.remove'), { label: selection.display })}
-            >
-              <Cross aria-hidden="true" />
-            </TagRemove>
-          </Tag>
+          <TagChip
+            key={selection.display + index}
+            label={selection.display}
+            onRemove={() => removeTag(index)}
+          />
         ))}
         {value.length === 0 && <PlaceholderText>{placeholder}</PlaceholderText>}
         {isOpen && (
@@ -446,26 +387,18 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
                 <div key={`empty-${i}`} role="gridcell" />
               ))}
               {daysInMonth.map((date) => {
+                const iso = toUtcMidnightIso(date);
                 const isPending = pendingDates.some((d) => isSameDay(d, date));
                 const isToday = isSameDay(date, today);
                 const isFuture = date > today;
-                const isAlreadySelected = value.some((s) =>
-                  s.dates.includes(toUtcMidnightIso(date)),
-                );
-                const pendingSorted = [...pendingDates].sort((a, b) => a.getTime() - b.getTime());
-                const inRange =
-                  pendingDates.length >= 2 &&
-                  isInRange(date, pendingSorted[0], pendingSorted[pendingSorted.length - 1]);
+                const isAlreadySelected = selectedIsoSet.has(iso);
+                const inRange = pendingDates.length >= 2 && isInRange(date, rangeStart, rangeEnd);
                 const disabled = isFuture || isAlreadySelected;
                 const stateParts: string[] = [];
-                if (isToday)
-                  stateParts.push(formatMessage(getTrad('auditlog.calendar.state.today')));
-                if (isPending)
-                  stateParts.push(formatMessage(getTrad('auditlog.calendar.state.selected')));
-                if (isAlreadySelected)
-                  stateParts.push(formatMessage(getTrad('auditlog.calendar.state.alreadyAdded')));
-                if (isFuture)
-                  stateParts.push(formatMessage(getTrad('auditlog.calendar.state.future')));
+                if (isToday) stateParts.push(stateLabel.today);
+                if (isPending) stateParts.push(stateLabel.selected);
+                if (isAlreadySelected) stateParts.push(stateLabel.alreadyAdded);
+                if (isFuture) stateParts.push(stateLabel.future);
                 const dateStr = DATE_FORMATTER.format(date);
                 const label = stateParts.length
                   ? formatMessage(getTrad('auditlog.calendar.dayWithState'), {
@@ -476,7 +409,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
 
                 return (
                   <DayButton
-                    key={toUtcMidnightIso(date)}
+                    key={iso}
                     type="button"
                     role="gridcell"
                     $today={isToday}
@@ -503,6 +436,6 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
           </PopoverContainer>
         )}
       </Flex>
-    </InputWrapper>
+    </TagInputWrapper>
   );
 }
