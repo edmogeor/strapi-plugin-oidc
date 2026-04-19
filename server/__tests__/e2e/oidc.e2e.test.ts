@@ -6,6 +6,7 @@ import type { Core } from './test-types';
 import {
   MOCK_OIDC_CONFIG,
   setSettings,
+  applyDefaultOidcConfig,
   clearRateLimitMap,
   initiateLoginAndCallback,
   getDefaultOidcRoleIds,
@@ -20,6 +21,9 @@ import {
   setupGroupRoleMapping,
   fetchUserWithRoles,
   getFirstAvailableRole,
+  loginAndExpectSuccess,
+  expectAuditLogAfterCallback,
+  expectUserRoleIdsToContain,
 } from './test-helpers';
 import { userFacingMessages } from '../../audit-error-strings';
 import type { WhitelistService } from '../../types';
@@ -35,10 +39,7 @@ describe('OIDC E2E Tests', () => {
     agent = request.agent(strapi.server.httpServer);
 
     clearRateLimitMap();
-    strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-
-    // Disable whitelist for tests
-    await setSettings(strapi, false, false);
+    await applyDefaultOidcConfig(strapi);
   });
 
   afterAll(async () => {
@@ -124,11 +125,7 @@ describe('OIDC E2E Tests', () => {
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
     await setSettings(strapi, true, false);
 
-    const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
-    const state = getStateFromLoginRes(loginRes);
-    const callbackRes = await performCallback(agent, state);
-
-    expect(callbackRes.status).toBe(200);
+    const callbackRes = await loginAndExpectSuccess(agent);
     expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('Authentication failed. Please try again.');
   });
@@ -211,10 +208,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
       );
-      const callbackUrl = await initiateLogin(agent);
-      await agent.get(callbackUrl).redirects(0);
-      const logs = await queryAuditLog(strapi, 'token_exchange_failed');
-      expect(logs.length).toBeGreaterThan(0);
+      await expectAuditLogAfterCallback(agent, strapi, 'token_exchange_failed');
     });
 
     it('nonce_mismatch produces nonce_mismatch audit action', async () => {
@@ -231,10 +225,7 @@ describe('OIDC E2E Tests', () => {
           }),
         ),
       );
-      const callbackUrl = await initiateLogin(agent);
-      await agent.get(callbackUrl).redirects(0);
-      const logs = await queryAuditLog(strapi, 'nonce_mismatch');
-      expect(logs.length).toBeGreaterThan(0);
+      await expectAuditLogAfterCallback(agent, strapi, 'nonce_mismatch');
     });
 
     it('userinfo_fetch_failed produces login_failure audit action', async () => {
@@ -242,10 +233,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
       );
-      const callbackUrl = await initiateLogin(agent);
-      await agent.get(callbackUrl).redirects(0);
-      const logs = await queryAuditLog(strapi, 'login_failure');
-      expect(logs.length).toBeGreaterThan(0);
+      await expectAuditLogAfterCallback(agent, strapi, 'login_failure');
     });
 
     it('id_token_parse_failed produces login_failure audit action', async () => {
@@ -255,10 +243,7 @@ describe('OIDC E2E Tests', () => {
           HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
         ),
       );
-      const callbackUrl = await initiateLogin(agent);
-      await agent.get(callbackUrl).redirects(0);
-      const logs = await queryAuditLog(strapi, 'login_failure');
-      expect(logs.length).toBeGreaterThan(0);
+      await expectAuditLogAfterCallback(agent, strapi, 'login_failure');
     });
   });
 
@@ -416,11 +401,7 @@ describe('OIDC E2E Tests', () => {
     describe('oidc_authenticated cookie lifecycle', () => {
       it('sets oidc_authenticated cookie after a successful OIDC callback', async () => {
         await setSettings(strapi, false, false);
-        const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
-        const state = getStateFromLoginRes(loginRes);
-        const callbackRes = await performCallback(agent, state);
-
-        expect(callbackRes.status).toBe(200);
+        const callbackRes = await loginAndExpectSuccess(agent);
 
         const cookies = parseCookies(callbackRes);
         const oidcCookie = cookies.find((c) => c.startsWith('oidc_authenticated='));
@@ -611,8 +592,7 @@ describe('OIDC E2E Tests', () => {
         { 'some-other-group': ['SomeFakeRole'] },
       );
       expect(user).not.toBeNull();
-      const userRoleIds = user.roles.map((r: { id: number }) => String(r.id));
-      expect(userRoleIds).toEqual(expect.arrayContaining(defaultRoleIds));
+      expectUserRoleIdsToContain(user, defaultRoleIds);
     });
 
     it('new user with no groups claim → falls back to default OIDC roles', async () => {
@@ -626,8 +606,7 @@ describe('OIDC E2E Tests', () => {
         { 'any-group': ['SomeFakeRole'] },
       );
       expect(user).not.toBeNull();
-      const userRoleIds = user.roles.map((r: { id: number }) => String(r.id));
-      expect(userRoleIds).toEqual(expect.arrayContaining(defaultRoleIds));
+      expectUserRoleIdsToContain(user, defaultRoleIds);
     });
 
     it('group mapping takes priority over default OIDC role', async () => {
@@ -749,11 +728,7 @@ describe('OIDC E2E Tests', () => {
       await setSettings(strapi, true, false);
 
       const agent = createAgent();
-      const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
-      const state = getStateFromLoginRes(loginRes);
-      const callbackRes = await performCallback(agent, state);
-
-      expect(callbackRes.status).toBe(200);
+      const callbackRes = await loginAndExpectSuccess(agent);
       expect(callbackRes.text).toContain('jwtToken');
 
       const user = await fetchUserWithRoles(strapi, 'whitelist-group@test.com');

@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Box } from '@strapi/design-system';
+import { InputHTMLAttributes, ReactNode, RefObject, useRef, useState } from 'react';
+import { Box, Flex } from '@strapi/design-system';
 import styled from 'styled-components';
 import { Cross } from '@strapi/icons';
 import { useIntl } from 'react-intl';
@@ -66,7 +66,7 @@ export const TagInputWrapper = styled(Box)`
   }
 `;
 
-export const TagStyledInput = styled.input`
+const TagStyledInput = styled.input`
   border: none;
   background: transparent;
   outline: none;
@@ -109,5 +109,71 @@ export function TagChip({ label, onRemove }: TagChipProps) {
         <Cross aria-hidden="true" />
       </TagRemoveButton>
     </Tag>
+  );
+}
+
+interface UseTagStateOptions {
+  value: string[];
+  onChange: (next: string[]) => void;
+}
+
+export function useTagState({ value, onChange }: UseTagStateOptions) {
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addTag = (tag: string, predicate?: (t: string) => boolean) => {
+    const trimmed = tag.trim();
+    if (trimmed && !value.includes(trimmed) && (!predicate || predicate(trimmed))) {
+      onChange([...value, trimmed]);
+    }
+    setInputValue('');
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    onChange(value.filter((tag) => tag !== tagToRemove));
+  };
+
+  return { inputValue, setInputValue, inputRef, addTag, removeTag };
+}
+
+interface TagInputShellProps {
+  value: string[];
+  onRemoveTag: (tag: string) => void;
+  placeholder?: string;
+  startIcon?: ReactNode;
+  inputRef: RefObject<HTMLInputElement>;
+  wrapperRef?: RefObject<HTMLDivElement>;
+  inputProps: InputHTMLAttributes<HTMLInputElement>;
+  children?: ReactNode;
+}
+
+export function TagInputShell({
+  value,
+  onRemoveTag,
+  placeholder,
+  startIcon,
+  inputRef,
+  wrapperRef,
+  inputProps,
+  children,
+}: TagInputShellProps) {
+  return (
+    <TagInputWrapper ref={wrapperRef} data-filter-input onClick={() => inputRef.current?.focus()}>
+      <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
+        {startIcon && <StartIconSlot>{startIcon}</StartIconSlot>}
+        {value.map((tag) => (
+          <TagChip key={tag} label={tag} onRemove={() => onRemoveTag(tag)} />
+        ))}
+        <TagStyledInput
+          ref={inputRef}
+          type="text"
+          autoComplete="off"
+          placeholder={value.length === 0 ? placeholder : ''}
+          aria-label={placeholder}
+          {...inputProps}
+        />
+      </Flex>
+      {children}
+    </TagInputWrapper>
   );
 }

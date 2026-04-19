@@ -56,6 +56,39 @@ export function performCallback(agent: Agent, state: string | null): ReturnType<
   return agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
 }
 
+export async function loginAndExpectSuccess(agent: Agent) {
+  const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  const state = new URL(loginRes.headers.location).searchParams.get('state');
+  const callbackRes = await performCallback(agent, state);
+  expect(callbackRes.status).toBe(200);
+  return callbackRes;
+}
+
+export async function expectAuditLogAfterCallback(
+  agent: Agent,
+  strapi: Core.Strapi,
+  action: string,
+) {
+  const callbackUrl = await initiateLogin(agent);
+  await agent.get(callbackUrl).redirects(0);
+  const logs = await queryAuditLog(strapi, action);
+  expect(logs.length).toBeGreaterThan(0);
+  return logs;
+}
+
+export function expectUserRoleIdsToContain(
+  user: { roles: Array<{ id: number }> },
+  expectedRoleIds: string[],
+) {
+  const userRoleIds = user.roles.map((r: { id: number }) => String(r.id));
+  expect(userRoleIds).toEqual(expect.arrayContaining(expectedRoleIds));
+}
+
+export async function applyDefaultOidcConfig(strapi: Core.Strapi) {
+  strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+  await setSettings(strapi, false, false);
+}
+
 export function createOidcAgent(strapi: Core.Strapi): ReturnType<typeof request.agent> {
   return request.agent(strapi.server.httpServer);
 }

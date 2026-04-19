@@ -1,7 +1,7 @@
 import { useState, KeyboardEvent, useRef, useEffect, useId, ReactNode } from 'react';
-import { Flex, Typography } from '@strapi/design-system';
+import { Typography } from '@strapi/design-system';
 import styled from 'styled-components';
-import { StartIconSlot, TagChip, TagInputWrapper, TagStyledInput } from './tagPrimitives';
+import { TagInputShell, useTagState } from './tagPrimitives';
 
 const Dropdown = styled.div`
   position: absolute;
@@ -52,11 +52,13 @@ export function TagInputWithOptions({
   placeholder,
   startIcon,
 }: TagInputWithOptionsProps) {
-  const [inputValue, setInputValue] = useState('');
+  const { inputValue, setInputValue, inputRef, addTag, removeTag } = useTagState({
+    value,
+    onChange,
+  });
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const optionIdPrefix = useId();
 
@@ -64,54 +66,67 @@ export function TagInputWithOptions({
     (opt) => !value.includes(opt) && opt.toLowerCase().includes(inputValue.toLowerCase()),
   );
 
-  const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !value.includes(trimmed)) {
-      onChange([...value, trimmed]);
-    }
-    setInputValue('');
+  const closeDropdown = () => {
     setShowDropdown(false);
     setActiveIndex(-1);
   };
 
-  const removeTag = (tagToRemove: string) => {
-    onChange(value.filter((tag) => tag !== tagToRemove));
+  const selectTag = (tag: string) => {
+    addTag(tag);
+    closeDropdown();
+  };
+
+  const moveActive = (delta: 1 | -1) => {
+    if (filteredOptions.length === 0) return;
+    setShowDropdown(true);
+    setActiveIndex((i) => {
+      const len = filteredOptions.length;
+      return delta === 1 ? (i + 1) % len : i <= 0 ? len - 1 : i - 1;
+    });
+  };
+
+  const commitSelection = () => {
+    if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
+      selectTag(filteredOptions[activeIndex]);
+      return;
+    }
+    const match = options.find((opt) => opt.toLowerCase() === inputValue.toLowerCase());
+    if (match) selectTag(match);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (filteredOptions.length > 0) {
-        setShowDropdown(true);
-        setActiveIndex((i) => (i + 1) % filteredOptions.length);
-      }
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (filteredOptions.length > 0) {
-        setShowDropdown(true);
-        setActiveIndex((i) => (i <= 0 ? filteredOptions.length - 1 : i - 1));
-      }
-    } else if (e.key === 'Home' && showDropdown && filteredOptions.length > 0) {
-      e.preventDefault();
-      setActiveIndex(0);
-    } else if (e.key === 'End' && showDropdown && filteredOptions.length > 0) {
-      e.preventDefault();
-      setActiveIndex(filteredOptions.length - 1);
-    } else if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
-        addTag(filteredOptions[activeIndex]);
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        moveActive(1);
         return;
-      }
-      const matchedOption = options.find((opt) => opt.toLowerCase() === inputValue.toLowerCase());
-      if (matchedOption) {
-        addTag(matchedOption);
-      }
-    } else if (e.key === 'Backspace' && !inputValue && value.length > 0) {
-      removeTag(value[value.length - 1]);
-    } else if (e.key === 'Escape') {
-      setShowDropdown(false);
-      setActiveIndex(-1);
+      case 'ArrowUp':
+        e.preventDefault();
+        moveActive(-1);
+        return;
+      case 'Home':
+        if (showDropdown && filteredOptions.length > 0) {
+          e.preventDefault();
+          setActiveIndex(0);
+        }
+        return;
+      case 'End':
+        if (showDropdown && filteredOptions.length > 0) {
+          e.preventDefault();
+          setActiveIndex(filteredOptions.length - 1);
+        }
+        return;
+      case 'Enter':
+      case ',':
+        e.preventDefault();
+        commitSelection();
+        return;
+      case 'Backspace':
+        if (!inputValue && value.length > 0) removeTag(value[value.length - 1]);
+        return;
+      case 'Escape':
+        closeDropdown();
+        return;
     }
   };
 
@@ -131,35 +146,33 @@ export function TagInputWithOptions({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const dropdownOpen = showDropdown && filteredOptions.length > 0;
+  const activeDescendant =
+    dropdownOpen && activeIndex >= 0 && activeIndex < filteredOptions.length
+      ? `${optionIdPrefix}-${activeIndex}`
+      : undefined;
+
   return (
-    <TagInputWrapper ref={wrapperRef} data-filter-input onClick={() => inputRef.current?.focus()}>
-      <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
-        {startIcon && <StartIconSlot>{startIcon}</StartIconSlot>}
-        {value.map((tag) => (
-          <TagChip key={tag} label={tag} onRemove={() => removeTag(tag)} />
-        ))}
-        <TagStyledInput
-          ref={inputRef}
-          type="text"
-          autoComplete="off"
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setShowDropdown(true)}
-          placeholder={value.length === 0 ? placeholder : ''}
-          role="combobox"
-          aria-label={placeholder}
-          aria-autocomplete="list"
-          aria-expanded={showDropdown && filteredOptions.length > 0}
-          aria-controls={listboxId}
-          aria-activedescendant={
-            showDropdown && activeIndex >= 0 && activeIndex < filteredOptions.length
-              ? `${optionIdPrefix}-${activeIndex}`
-              : undefined
-          }
-        />
-      </Flex>
-      {showDropdown && filteredOptions.length > 0 && (
+    <TagInputShell
+      value={value}
+      onRemoveTag={removeTag}
+      placeholder={placeholder}
+      startIcon={startIcon}
+      inputRef={inputRef}
+      wrapperRef={wrapperRef}
+      inputProps={{
+        value: inputValue,
+        onChange: handleInputChange,
+        onKeyDown: handleKeyDown,
+        onFocus: () => setShowDropdown(true),
+        role: 'combobox',
+        'aria-autocomplete': 'list',
+        'aria-expanded': dropdownOpen,
+        'aria-controls': listboxId,
+        'aria-activedescendant': activeDescendant,
+      }}
+    >
+      {dropdownOpen && (
         <Dropdown id={listboxId} role="listbox">
           {filteredOptions.map((opt, i) => (
             <DropdownItem
@@ -171,7 +184,7 @@ export function TagInputWithOptions({
               onMouseEnter={() => {
                 if (i !== activeIndex) setActiveIndex(i);
               }}
-              onClick={() => addTag(opt)}
+              onClick={() => selectTag(opt)}
               style={
                 i === activeIndex
                   ? { outline: '2px solid currentColor', outlineOffset: '-2px' }
@@ -183,6 +196,6 @@ export function TagInputWithOptions({
           ))}
         </Dropdown>
       )}
-    </TagInputWrapper>
+    </TagInputShell>
   );
 }

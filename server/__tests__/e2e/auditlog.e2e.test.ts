@@ -4,8 +4,8 @@ import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core, AuditLogService } from './test-types';
 import {
-  MOCK_OIDC_CONFIG,
   setSettings,
+  applyDefaultOidcConfig,
   initiateLoginAndCallback,
   queryAuditLog,
   createAuditLogExportCtx,
@@ -336,8 +336,7 @@ describe('AuditLog E2E Integration', () => {
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
     agent = request.agent(strapi.server.httpServer);
-    strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-    await setSettings(strapi, false, false);
+    await applyDefaultOidcConfig(strapi);
   });
 
   afterAll(async () => {
