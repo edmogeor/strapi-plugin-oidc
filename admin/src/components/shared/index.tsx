@@ -31,7 +31,6 @@ export const Icon = styled.span<{ $size?: string }>`
 `;
 
 export { TagInput } from './TagInput';
-export { TagInputWithOptions } from './TagInputWithOptions';
 export { TagDateInput, type DateSelection } from './TagDateInput';
 
 export function LocalizedDate({

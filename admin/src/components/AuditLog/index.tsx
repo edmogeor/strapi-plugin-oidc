@@ -27,7 +27,6 @@ import {
   TablePagination,
   TagDateInput,
   TagInput,
-  TagInputWithOptions,
 } from '../shared';
 import { AUDIT_ACTIONS } from '../../../../shared/audit-actions';
 
@@ -320,7 +319,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
               </Icon>
             }
           />
-          <TagInputWithOptions
+          <TagInput
             value={filters.action ?? []}
             onChange={(value) => setFilters((prev) => ({ ...prev, action: value }))}
             options={AUDIT_ACTIONS}
