@@ -10,7 +10,7 @@ import {
   Tr,
   Typography,
 } from '@strapi/design-system';
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { Calendar, Download, Information, Mail, Trash } from '@strapi/icons';
 import { ClipboardList, Filter, Server } from 'lucide-react';
 import styled from 'styled-components';
@@ -202,43 +202,6 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
     filters.createdAt?.length
   );
 
-  const filterRowRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = filterRowRef.current;
-    if (!el) return;
-
-    let rafId: number;
-
-    const measure = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const children = Array.from(el.querySelectorAll<HTMLElement>('[data-filter-input]'));
-        if (children.length === 0) return;
-        const containerWidth = el.getBoundingClientRect().width;
-        const gap = parseFloat(getComputedStyle(el).gap) || 8;
-        const wasExpanded = el.classList.contains('expanded');
-        if (wasExpanded) el.classList.remove('expanded');
-        const totalRequired = children.reduce((sum, c) => sum + c.offsetWidth + gap, -gap);
-        const fits = totalRequired <= containerWidth;
-        el.classList.toggle('expanded', fits);
-      });
-    };
-
-    const resizeObserver = new ResizeObserver(measure);
-    resizeObserver.observe(el, { box: 'border-box' });
-
-    const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(el, { childList: true, subtree: true });
-
-    measure();
-    return () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-      cancelAnimationFrame(rafId);
-    };
-  }, []);
-
   return (
     <Box>
       <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
@@ -299,7 +262,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
             {formatMessage(getTrad('auditlog.filters'))}
           </Typography>
         </Flex>
-        <Flex gap={2} wrap="wrap" ref={filterRowRef} className="filter-row">
+        <Flex gap={2} wrap="wrap">
           <TagDateInput
             placeholder={formatMessage(getTrad('auditlog.filters.createdAt'))}
             value={filters.createdAt ?? []}

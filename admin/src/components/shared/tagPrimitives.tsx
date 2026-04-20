@@ -56,10 +56,6 @@ export const TagInputWrapper = styled(Box)`
   min-height: 4rem;
   flex: 0 0 auto;
 
-  .filter-row.expanded & {
-    flex: 1 0 auto;
-  }
-
   &:focus-within {
     border-color: ${({ theme }) => theme.colors.primary600};
     box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary100};
@@ -158,7 +154,7 @@ export function TagInputShell({
   children,
 }: TagInputShellProps) {
   return (
-    <TagInputWrapper ref={wrapperRef} data-filter-input onClick={() => inputRef.current?.focus()}>
+    <TagInputWrapper ref={wrapperRef} onClick={() => inputRef.current?.focus()}>
       <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
         {startIcon && <StartIconSlot>{startIcon}</StartIconSlot>}
         {value.map((tag) => (
