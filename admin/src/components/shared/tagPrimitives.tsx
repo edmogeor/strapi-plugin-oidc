@@ -62,7 +62,7 @@ export const TagInputWrapper = styled(Box)`
   }
 `;
 
-const TagStyledInput = styled.input`
+const TagStyledInput = styled.input.attrs({ autocomplete: 'off' })`
   border: none;
   background: transparent;
   outline: none;
