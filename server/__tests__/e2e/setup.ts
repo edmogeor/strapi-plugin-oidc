@@ -52,8 +52,35 @@ afterEach(() => {
   oidcServer.resetHandlers();
 });
 
+// Test fixtures create admin users via the OIDC callback path. Strapi's bootstrap
+// admin uses @strapi.test — everything else is fixture data that should be cleaned up.
+const TEST_EMAIL_DOMAINS = [
+  '@company.com',
+  '@test.com',
+  '@acme.com',
+  '@other.com',
+  '@b.com',
+  '@whitelist.com',
+];
+
+async function deleteFixtureAdminUsers(strapi: Core.Strapi): Promise<void> {
+  const query = strapi.db.query('admin::user');
+  await Promise.all(
+    TEST_EMAIL_DOMAINS.map((suffix) =>
+      query.deleteMany({ where: { email: { $endsWith: suffix } } }),
+    ),
+  );
+}
+
 afterAll(async () => {
   oidcServer.close();
+  if (globalThis.strapiInstance) {
+    try {
+      await deleteFixtureAdminUsers(globalThis.strapiInstance);
+    } catch (err) {
+      console.warn('[e2e teardown] failed to clean up fixture admin users:', err);
+    }
+  }
   if (globalThis.strapiInstance?.server?.httpServer) {
     globalThis.strapiInstance.server.httpServer.close();
   }
