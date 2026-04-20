@@ -225,7 +225,7 @@ export default function Whitelist({
                     <Td>{index + 1 + (page - 1) * PAGE_SIZE}</Td>
                     <Td>{user.email}</Td>
                     <Td>
-                      <LocalizedDate date={user.createdAt} options={{ month: 'long' }} />
+                      <LocalizedDate date={user.createdAt} options={{ second: '2-digit' }} />
                     </Td>
                     <Td style={{ paddingRight: 0 }}>
                       <Flex

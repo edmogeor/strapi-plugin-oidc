@@ -205,6 +205,22 @@ const DATE_FORMATTER = new Intl.DateTimeFormat(userLocale, {
   day: 'numeric',
 });
 
+function formatRange(start: Date, end: Date): string {
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+
+  const startStr = DATE_FORMATTER.format(start);
+  const endStr = DATE_FORMATTER.format(end);
+
+  if (sameMonth) {
+    return `${start.getDate()} – ${endStr}`;
+  }
+  if (sameYear) {
+    return `${startStr.split(' ').slice(0, 2).join(' ')} – ${endStr}`;
+  }
+  return `${startStr} – ${endStr}`;
+}
+
 // Mirror Strapi's admin (`FormInputs/Date.js`): treat the picked calendar day as
 // UTC midnight and serialise with `toISOString()`. This is the wire format used
 // across Strapi's admin for date/datetime fields.
@@ -270,7 +286,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
     const display =
       sortedPending.length === 1
         ? DATE_FORMATTER.format(sortedPending[0])
-        : `${DATE_FORMATTER.format(sortedPending[0])} – ${DATE_FORMATTER.format(sortedPending[sortedPending.length - 1])}`;
+        : formatRange(sortedPending[0], sortedPending[sortedPending.length - 1]);
 
     const datesStr =
       sortedPending.length === 1
