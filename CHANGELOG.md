@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-20
+
+### Added
+
+- **Audit log filtering** — Filter audit logs by action, email, IP address, and creation date directly from the UI, with multi-value tag inputs for emails/IPs, a dropdown-backed tag input for actions, and a tag-based date input for `createdAt`.
+- **Locale-negotiated auth pages** — Server-rendered authentication pages now negotiate the request locale and use drop-in translations.
+- **Audit log API** — Documented filtering options, the clear endpoint, and the updated response shape.
+
+### Changed
+
+- Audit log filter row now relies on native flex wrapping for a more stable layout.
+- Audit log queries run in parallel and duplicate logout log entries have been removed.
+
+### Fixed
+
+- Stabilized audit log filter row layout when tags are present.
+- Resolved miscellaneous Tag input issues surfaced while consolidating shared primitives.
+
+### Refactored
+
+- Consolidated TagInput / TagInputWithOptions and extracted shared Tag primitives.
+- Deduplicated shared code across admin/server, simplified the audit log reducer and filter implementation, and trimmed complexity hotspots.
+- Removed a `rootDir` violation and eliminated dead code.
+
+### Chores
+
+- Regenerated `package-lock.json` to match the manifest.
+- Bumped `@strapi/strapi` and test-app dependencies to v5.42.1.
+- Added fallow suppression config and `qs` to `ignoreDeps`.
+- E2E tests now clean up fixture admin users after running; removed stale tests for removed filter operators.
+
 ## [1.6.6] - 2026-04-17
 
 ### Changed
