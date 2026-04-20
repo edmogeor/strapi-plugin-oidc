@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Date filter chip format** — Filter chips for date ranges now display in the same date-only format as the audit log table (e.g. "Apr 20, 2026") instead of the verbose full format.
+- **Tag filter input width** — Increased minimum width of tag filter inputs from 180px to 220px to better accommodate longer values.
 
 ## [1.7.2] - 2026-04-20
 

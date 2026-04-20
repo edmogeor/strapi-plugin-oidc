@@ -52,7 +52,7 @@ export const TagInputWrapper = styled(Box)`
   border: 1px solid ${({ theme }) => theme.colors.neutral200};
   background-color: ${({ theme }) => theme.colors.neutral0};
   cursor: text;
-  min-width: 180px;
+  min-width: 220px;
   min-height: 4rem;
   flex: 0 0 auto;
 
