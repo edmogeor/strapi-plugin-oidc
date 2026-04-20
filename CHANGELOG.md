@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.5] - 2026-04-20
+
+### Fixed
+
+- **Tag input autofill** — Suppress Chrome heuristic autofill and password-manager injections (1Password, LastPass) on tag inputs, which previously ignored `autocomplete="off"`. Applied on the shared input shell so both freeform and combobox tag inputs are covered.
+
 ## [1.7.4] - 2026-04-20
 
 ### Added

@@ -239,7 +239,6 @@ function ComboboxTagInput({ value, onChange, placeholder, startIcon, options }: 
         'aria-expanded': dropdownOpen,
         'aria-controls': listboxId,
         'aria-activedescendant': activeDescendant,
-        autoComplete: 'off',
       }}
     >
       {dropdownOpen && (

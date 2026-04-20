@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, ReactNode, RefObject, useRef, useState } from 'react';
+import { InputHTMLAttributes, ReactNode, RefObject, useId, useRef, useState } from 'react';
 import { Box, Flex } from '@strapi/design-system';
 import styled from 'styled-components';
 import { Cross } from '@strapi/icons';
@@ -153,6 +153,7 @@ export function TagInputShell({
   inputProps,
   children,
 }: TagInputShellProps) {
+  const inputId = useId();
   return (
     <TagInputWrapper ref={wrapperRef} onClick={() => inputRef.current?.focus()}>
       <Flex gap={2} wrap="wrap" alignItems="center" style={{ flex: 1, minWidth: 0 }}>
@@ -165,6 +166,14 @@ export function TagInputShell({
           type="text"
           placeholder={value.length === 0 ? placeholder : ''}
           aria-label={placeholder}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          name={`tag-input-${inputId}`}
+          data-form-type="other"
+          data-lpignore="true"
+          data-1p-ignore="true"
           {...inputProps}
         />
       </Flex>
