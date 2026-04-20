@@ -62,7 +62,7 @@ export const TagInputWrapper = styled(Box)`
   }
 `;
 
-const TagStyledInput = styled.input.attrs({ autocomplete: 'off' })`
+const TagStyledInput = styled.input`
   border: none;
   background: transparent;
   outline: none;
@@ -163,7 +163,6 @@ export function TagInputShell({
         <TagStyledInput
           ref={inputRef}
           type="text"
-          autoComplete="off"
           placeholder={value.length === 0 ? placeholder : ''}
           aria-label={placeholder}
           {...inputProps}
