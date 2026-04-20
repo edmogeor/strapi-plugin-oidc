@@ -199,8 +199,11 @@ function getDaysInMonth(year: number, month: number): Date[] {
 const userLocale = (typeof navigator !== 'undefined' && navigator.language) || 'en-US';
 const MONTH_FORMATTER = new Intl.DateTimeFormat(userLocale, { month: 'long' });
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(userLocale, { weekday: 'short' });
-// Matches Strapi's filter chip label format (admin Filters.js: `dateStyle: 'full'`).
-const DATE_FORMATTER = new Intl.DateTimeFormat(userLocale, { dateStyle: 'full' });
+const DATE_FORMATTER = new Intl.DateTimeFormat(userLocale, {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
 
 // Mirror Strapi's admin (`FormInputs/Date.js`): treat the picked calendar day as
 // UTC midnight and serialise with `toISOString()`. This is the wire format used
