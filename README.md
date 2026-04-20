@@ -79,7 +79,7 @@ Manage the plugin under **Settings → OIDC Plugin**.
 - Bulk delete with confirmation
 - Unsaved changes are held in the UI until **Save Changes** is clicked
 
-**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. A **Download** button exports all records as NDJSON (newline-delimited JSON), compatible with SIEM tools and log processors. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
+**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. Entries can be filtered by action, email, IP address, and date, and a **Download** button exports the current (filtered) view as NDJSON (newline-delimited JSON), compatible with SIEM tools and log processors. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
 
 **Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
 
@@ -187,17 +187,19 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
 
 Audit log entries can be fetched programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
 
-| Method | Path                                        | Description                    |
-| ------ | ------------------------------------------- | ------------------------------ |
-| `GET`  | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries  |
-| `GET`  | `/api/strapi-plugin-oidc/audit-logs/export` | All records as NDJSON download |
+| Method   | Path                                        | Description                         |
+| -------- | ------------------------------------------- | ----------------------------------- |
+| `GET`    | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries       |
+| `GET`    | `/api/strapi-plugin-oidc/audit-logs/export` | Matching records as NDJSON download |
+| `DELETE` | `/api/strapi-plugin-oidc/audit-logs`        | Delete all audit log entries (204)  |
 
-### Query parameters (`GET /audit-logs`)
+### Query parameters (`GET /audit-logs`, `GET /audit-logs/export`)
 
-| Parameter  | Default | Description      |
-| ---------- | ------- | ---------------- |
-| `page`     | `1`     | Page number      |
-| `pageSize` | `25`    | Results per page |
+| Parameter  | Default | Description                                    |
+| ---------- | ------- | ---------------------------------------------- |
+| `page`     | `1`     | Page number (list endpoint only)               |
+| `pageSize` | `25`    | Results per page, max `100` (list only)        |
+| `filters`  | —       | Field/operator filters, same on both endpoints |
 
 Results are sorted newest-first. The response shape is:
 
@@ -205,14 +207,41 @@ Results are sorted newest-first. The response shape is:
 {
   "results": [
     {
-      "datetime": "2026-04-08T12:00:00.000Z",
+      "id": 42,
       "action": "login_success",
       "email": "alice@example.com",
-      "ip": "203.0.113.42"
+      "ip": "203.0.113.42",
+      "details": null,
+      "createdAt": "2026-04-08T12:00:00.000Z",
+      "updatedAt": "2026-04-08T12:00:00.000Z"
     }
   ],
   "pagination": { "page": 1, "pageSize": 25, "total": 1, "pageCount": 1 }
 }
+```
+
+The NDJSON export emits one row per line with `{ datetime, action, email, ip, details }` where `datetime` is the entry's `createdAt` timestamp.
+
+### Filtering
+
+Use `filters[<field>][<operator>]=<value>` to narrow results. Invalid filters return a `400`.
+
+| Field       | Operators                                            | Value                                                   |
+| ----------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| `action`    | `$eq`, `$in`                                         | One of the [recorded actions](#recorded-actions)        |
+| `email`     | `$eq`, `$contains`, `$endsWith`, `$null`, `$notNull` | String (use `true`/`false` with `$null` / `$notNull`)   |
+| `ip`        | `$eq`, `$contains`, `$endsWith`, `$null`, `$notNull` | String (use `true`/`false` with `$null` / `$notNull`)   |
+| `createdAt` | `$gte`, `$lt`, `$lte`, `$between`, `$in`             | ISO-8601 UTC timestamp, e.g. `2026-04-08T00:00:00.000Z` |
+
+`$between` takes a `[start, end]` pair. `$in` on `createdAt` takes a list of day-start timestamps and matches anything within that UTC day.
+
+```bash
+# Failed logins on one day
+curl -H "Authorization: Bearer <token>" -G \
+  --data-urlencode 'filters[action][$eq]=login_failure' \
+  --data-urlencode 'filters[createdAt][$gte]=2026-04-08T00:00:00.000Z' \
+  --data-urlencode 'filters[createdAt][$lt]=2026-04-09T00:00:00.000Z' \
+  http://localhost:1337/api/strapi-plugin-oidc/audit-logs
 ```
 
 ### Recorded actions
@@ -221,7 +250,8 @@ Results are sorted newest-first. The response shape is:
 | ----------------------- | --------------------------------------------------- |
 | `login_success`         | Successful OIDC authentication                      |
 | `user_created`          | New Strapi admin user created during login          |
-| `login_failure`         | Generic authentication error (missing code, etc.)   |
+| `login_failure`         | Unexpected error during the OIDC login flow         |
+| `missing_code`          | Callback received without an authorisation code     |
 | `state_mismatch`        | CSRF state cookie does not match callback parameter |
 | `nonce_mismatch`        | ID token nonce does not match the session nonce     |
 | `token_exchange_failed` | Provider returned an error during token exchange    |
