@@ -16,6 +16,19 @@ import { WarningCircle } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 
+// Matches the height of Strapi's `Field.Input` at both breakpoints, which jumps from
+// 4rem to 4.8rem below 768px (padding-block spaces[2]→spaces[3]).
+export const SizedButton = styled(Button)`
+  && {
+    height: 4.8rem;
+  }
+  ${({ theme }) => theme.breakpoints.medium} {
+    && {
+      height: 4rem;
+    }
+  }
+`;
+
 export const Icon = styled.span<{ $size?: string }>`
   display: inline-flex;
   align-items: center;

@@ -47,14 +47,20 @@ export const TagInputWrapper = styled(Box)`
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
-  padding: 8px 16px;
+  padding-inline: ${({ theme }) => theme.spaces[4]};
+  padding-block: ${({ theme }) => theme.spaces[3]};
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.neutral200};
   background-color: ${({ theme }) => theme.colors.neutral0};
   cursor: text;
   min-width: 220px;
-  min-height: 4rem;
+  min-height: 4.8rem;
   flex: 0 0 auto;
+
+  ${({ theme }) => theme.breakpoints.medium} {
+    padding-block: ${({ theme }) => theme.spaces[2]};
+    min-height: 4rem;
+  }
 
   &:focus-within {
     border-color: ${({ theme }) => theme.colors.primary600};

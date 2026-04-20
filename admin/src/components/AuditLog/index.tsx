@@ -1,15 +1,4 @@
-import {
-  Box,
-  Button,
-  Flex,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tooltip,
-  Tr,
-  Typography,
-} from '@strapi/design-system';
+import { Box, Flex, Tbody, Td, Th, Thead, Tooltip, Tr, Typography } from '@strapi/design-system';
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { Calendar, Download, Information, Mail, Trash } from '@strapi/icons';
 import { ClipboardList, Filter, Server } from 'lucide-react';
@@ -24,6 +13,7 @@ import {
   type DateSelection,
   Icon,
   LocalizedDate,
+  SizedButton,
   TablePagination,
   TagDateInput,
   TagInput,
@@ -207,27 +197,25 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
       <Flex justifyContent="space-between" alignItems="center" marginBottom={4}>
         {title ?? <span />}
         <Flex gap={2}>
-          <Button
+          <SizedButton
             size="S"
             variant="tertiary"
             startIcon={<Download />}
             onClick={handleExport}
             disabled={pagination.total === 0}
-            style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
           >
             {formatMessage(getTrad('auditlog.export'))}
-          </Button>
+          </SizedButton>
           <ConfirmDialog
             trigger={
-              <Button
+              <SizedButton
                 size="S"
                 variant="danger-light"
                 startIcon={<Trash />}
                 disabled={pagination.total === 0}
-                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('auditlog.clear'))}
-              </Button>
+              </SizedButton>
             }
             title={formatMessage(getTrad('auditlog.clear.title'))}
             body={
@@ -320,15 +308,14 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
             }
           />
           {hasActiveFilters && (
-            <Button
+            <SizedButton
               size="S"
               variant="danger-light"
               startIcon={<Trash />}
               onClick={clearFilters}
-              style={{ height: '4rem' }}
             >
               {formatMessage(getTrad('auditlog.filters.clear'))}
-            </Button>
+            </SizedButton>
           )}
         </Flex>
       </Box>

@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Divider,
   Field,
   Flex,
@@ -17,7 +16,7 @@ import { Download, Plus, Trash, Upload } from '@strapi/icons';
 import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
-import { ConfirmDialog, CustomTable, LocalizedDate, TablePagination } from '../shared';
+import { ConfirmDialog, CustomTable, LocalizedDate, SizedButton, TablePagination } from '../shared';
 
 export interface WhitelistUser {
   email: string;
@@ -117,7 +116,14 @@ export default function Whitelist({
 
       {useWhitelist && (
         <>
-          <Flex gap={8} marginTop={5} marginBottom={5} alignItems="stretch" wrap="wrap">
+          <Flex
+            gap={8}
+            marginTop={5}
+            marginBottom={5}
+            alignItems="stretch"
+            wrap="wrap"
+            style={{ rowGap: '0.8rem' }}
+          >
             <Flex gap={2} alignItems="center" style={{ minWidth: '280px', flex: '1 1 280px' }}>
               <Box style={{ flex: 1, minWidth: '200px' }}>
                 <Field.Root>
@@ -132,37 +138,34 @@ export default function Whitelist({
                   />
                 </Field.Root>
               </Box>
-              <Button
+              <SizedButton
                 size="S"
                 startIcon={<Plus />}
-                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
                 disabled={loading || email.trim() === '' || !EMAIL_REGEX.test(email)}
                 loading={loading}
                 onClick={onSaveEmail}
               >
                 {formatMessage(getTrad('page.add'))}
-              </Button>
+              </SizedButton>
             </Flex>
             <Flex gap={2} alignItems="center">
-              <Button
+              <SizedButton
                 size="S"
                 variant="tertiary"
                 startIcon={<Download />}
                 onClick={onExport}
                 disabled={users.length === 0}
-                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('whitelist.export'))}
-              </Button>
-              <Button
+              </SizedButton>
+              <SizedButton
                 size="S"
                 variant="tertiary"
                 startIcon={<Upload />}
                 onClick={() => fileInputRef.current?.click()}
-                style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
               >
                 {formatMessage(getTrad('whitelist.import'))}
-              </Button>
+              </SizedButton>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -172,15 +175,14 @@ export default function Whitelist({
               />
               <ConfirmDialog
                 trigger={
-                  <Button
+                  <SizedButton
                     size="S"
                     variant="danger-light"
                     startIcon={<Trash />}
                     disabled={users.length === 0}
-                    style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem', height: 'auto' }}
                   >
                     {formatMessage(getTrad('whitelist.delete.all.label'))}
-                  </Button>
+                  </SizedButton>
                 }
                 title={formatMessage(getTrad('whitelist.delete.all.title'))}
                 body={

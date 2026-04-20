@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.6] - 2026-04-20
 
+### Fixed
+
+- **Button/input height parity across breakpoints** — Whitelist and audit log buttons now match the height of their adjacent inputs at both breakpoints (4rem ≥ 768px, 4.8rem below) instead of only above 768px. Extracted as a shared `SizedButton` for reuse.
+- **Tag filter input sizing below 768px** — Custom tag inputs now follow Strapi's `Field.Input` padding behaviour (`padding-block` switches from 8px to 12px below 768px), so the audit log filter row lines up with native fields on narrow screens.
+
+### Changed
+
+- **Whitelist wrap spacing** — Reduced vertical gap between the email row and the action buttons when the whitelist toolbar wraps.
+
 ### Reverted
 
 - **Tag input autofill suppression (1.7.5)** — Reverted the autofill/password-manager suppression attributes on tag inputs. The behaviour they were meant to suppress is acceptable and the extra attributes are no longer needed.
