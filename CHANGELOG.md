@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Whitelist wrap spacing** — Reduced vertical gap between the email row and the action buttons when the whitelist toolbar wraps.
+- **Save button spacing** — Added extra spacing between the Save changes button and the audit log section below it.
 
 ### Reverted
 

@@ -116,7 +116,7 @@ function HomePage() {
                 )}
             </Flex>
           </Box>
-          <Flex justifyContent="flex-end">
+          <Flex justifyContent="flex-end" marginBottom={8}>
             <Button
               size="L"
               onClick={actions.onSaveAll}
