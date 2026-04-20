@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.6] - 2026-04-20
+
+### Reverted
+
+- **Tag input autofill suppression (1.7.5)** — Reverted the autofill/password-manager suppression attributes on tag inputs. The behaviour they were meant to suppress is acceptable and the extra attributes are no longer needed.
+
 ## [1.7.5] - 2026-04-20
 
 ### Fixed
