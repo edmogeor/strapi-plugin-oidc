@@ -13,6 +13,7 @@ import {
   getAuditLogService,
   getAdminUserService,
 } from '../utils/services';
+import { getClientIp } from '../utils/ip';
 import type {
   StrapiContext,
   OidcUserInfo,
@@ -412,7 +413,7 @@ async function logSuccessfulAuth(
     auditLog.log({
       action: 'login_success',
       email: user.email,
-      ip: ctx.ip,
+      ip: getClientIp(ctx),
       detailsKey: rolesUpdated ? 'roles_updated' : undefined,
       detailsParams: rolesUpdated ? { roles } : undefined,
     }),
@@ -422,7 +423,7 @@ async function logSuccessfulAuth(
       auditLog.log({
         action: 'user_created',
         email: user.email,
-        ip: ctx.ip,
+        ip: getClientIp(ctx),
         detailsKey: 'user_created',
         detailsParams: { roles },
       }),
@@ -444,7 +445,7 @@ async function handleCallbackError(
   await auditLog.log({
     action: errorInfo.action,
     email: userInfo?.email,
-    ip: ctx.ip,
+    ip: getClientIp(ctx),
     detailsKey: errorInfo.action,
     detailsParams: errorInfo.action === 'login_failure' ? { message } : undefined,
   });
@@ -466,7 +467,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
 
   if (!ctx.query.code) {
-    await auditLog.log({ action: 'missing_code', ip: ctx.ip });
+    await auditLog.log({ action: 'missing_code', ip: getClientIp(ctx) });
     return ctx.send(
       oauthService.renderSignUpError(userFacingMessages(locale).missing_code, locale),
     );
@@ -475,7 +476,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
-    await auditLog.log({ action: 'state_mismatch', ip: ctx.ip });
+    await auditLog.log({ action: 'state_mismatch', ip: getClientIp(ctx) });
     return ctx.send(
       oauthService.renderSignUpError(userFacingMessages(locale).invalid_state, locale),
     );
@@ -573,7 +574,9 @@ async function logout(ctx: StrapiContext) {
   }
 
   const logAudit = (action: AuditAction) =>
-    userEmail ? auditLog.log({ action, email: userEmail, ip: ctx.ip }) : Promise.resolve();
+    userEmail
+      ? auditLog.log({ action, email: userEmail, ip: getClientIp(ctx) })
+      : Promise.resolve();
 
   if (logoutUrl && accessToken) {
     // Skip provider logout when the token is expired to avoid a bare redirect page.
