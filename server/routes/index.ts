@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
+import { getClientIp } from '../utils/ip';
 
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60_000;
@@ -9,7 +10,7 @@ const MAX_REQUESTS = 1_000;
 export const clearRateLimitMap = (): void => rateLimitMap.clear();
 
 function getRateLimitKey(ctx: StrapiContext): string {
-  const ip = ctx.request.ip;
+  const ip = getClientIp(ctx);
   const ua = ctx.request.header['user-agent'] ?? '';
   const uaHash = createHash('sha256').update(ua).digest('hex').slice(0, 16);
   return `${ip}:${uaHash}`;
