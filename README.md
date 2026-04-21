@@ -161,7 +161,15 @@ Role names are the **display names** shown in **Settings → Roles** (e.g. `"Edi
 
 ## Whitelist API
 
-The whitelist can be managed programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). All endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+The whitelist can be managed programmatically using a Strapi **API token**. All endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+
+**Full-access tokens** can call all routes. **Custom tokens** must be granted one of the following scopes (Settings → API Tokens → Custom → plugin permissions):
+
+| Scope                                         | Routes                                          |
+| --------------------------------------------- | ----------------------------------------------- |
+| `plugin::strapi-plugin-oidc.whitelist.read`   | `GET /whitelist`, `GET /whitelist/export`       |
+| `plugin::strapi-plugin-oidc.whitelist.write`  | `POST /whitelist`, `POST /whitelist/import`     |
+| `plugin::strapi-plugin-oidc.whitelist.delete` | `DELETE /whitelist`, `DELETE /whitelist/:email` |
 
 | Method   | Path                                       | Description            |
 | -------- | ------------------------------------------ | ---------------------- |
@@ -217,7 +225,14 @@ curl -X DELETE -H "Authorization: Bearer <token>" \
 
 ## Audit Log API
 
-Audit log entries can be fetched programmatically using a Strapi **API token** (Settings → API Tokens → Full Access). Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+Audit log entries can be fetched programmatically using a Strapi **API token**. Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+
+**Full-access tokens** can call all routes. **Custom tokens** must be granted one of the following scopes:
+
+| Scope                                     | Routes                                      |
+| ----------------------------------------- | ------------------------------------------- |
+| `plugin::strapi-plugin-oidc.audit.read`   | `GET /audit-logs`, `GET /audit-logs/export` |
+| `plugin::strapi-plugin-oidc.audit.delete` | `DELETE /audit-logs`                        |
 
 | Method   | Path                                        | Description                         |
 | -------- | ------------------------------------------- | ----------------------------------- |

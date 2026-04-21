@@ -187,6 +187,7 @@ export default {
   // API-token-authenticated routes for programmatic whitelist management.
   // Accessible at /strapi-plugin-oidc/... using a Strapi API token
   // (full-access or custom) in the Authorization: Bearer <token> header.
+  // Custom tokens must be granted one or more of the semantic scopes below.
   'content-api': {
     type: 'content-api',
     routes: [
@@ -194,46 +195,55 @@ export default {
         method: 'GET',
         path: '/whitelist',
         handler: 'whitelist.info',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
       },
       {
         method: 'POST',
         path: '/whitelist',
         handler: 'whitelist.register',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
       },
       {
         method: 'POST',
         path: '/whitelist/import',
         handler: 'whitelist.importUsers',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist/:email',
         handler: 'whitelist.removeEmail',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
       },
       {
         method: 'GET',
         path: '/whitelist/export',
         handler: 'whitelist.exportWhitelist',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
       },
       {
         method: 'GET',
         path: '/audit-logs',
         handler: 'auditLog.find',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
       },
       {
         method: 'GET',
         path: '/audit-logs/export',
         handler: 'auditLog.export',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
       },
       {
         method: 'DELETE',
         path: '/audit-logs',
         handler: 'auditLog.clearAll',
+        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.delete'] } },
       },
     ],
   },
