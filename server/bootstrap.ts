@@ -3,10 +3,12 @@ import type { Context, Next } from 'koa';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
+import { applyDiscovery } from './utils/discovery';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
+  await applyDiscovery(strapi);
   const adminUrl = strapi.config.get('admin.url', '/admin') as string;
   const tokenRefreshPath = `${adminUrl}/token/refresh`;
 

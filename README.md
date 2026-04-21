@@ -31,20 +31,16 @@ module.exports = ({ env }) => ({
   'strapi-plugin-oidc': {
     enabled: true,
     config: {
-      // Required — find these in your provider's OIDC discovery document
+      // Required
+      OIDC_DISCOVERY_URL: env('OIDC_DISCOVERY_URL'), // https://your-provider/.well-known/openid-configuration
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
       OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
-      OIDC_AUTHORIZATION_ENDPOINT: env('OIDC_AUTHORIZATION_ENDPOINT'),
-      OIDC_TOKEN_ENDPOINT: env('OIDC_TOKEN_ENDPOINT'),
-      OIDC_USERINFO_ENDPOINT: env('OIDC_USERINFO_ENDPOINT'),
 
       // Optional — defaults shown
       OIDC_SCOPE: 'openid profile email',
-      OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL (from discovery `end_session_endpoint`)
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
@@ -53,19 +49,17 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
       OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
-      OIDC_JWKS_URI: '', // Provider's JWKS URI (from discovery `jwks_uri`) — enables ID token signature verification
-      OIDC_ISSUER: '', // Provider's issuer (from discovery `issuer`) — verified against ID token's `iss`
       OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
     },
   },
 });
 ```
 
-All OIDC values come from your provider's discovery document, typically available at `https://your-provider/.well-known/openid-configuration`.
+`OIDC_DISCOVERY_URL` is the URL of your provider's OpenID Connect discovery document (`/.well-known/openid-configuration`). The plugin fetches it at startup and automatically configures all endpoints, JWKS URI, and issuer.
 
 ### Security features
 
-- **ID token verification** — `OIDC_JWKS_URI` and `OIDC_ISSUER` enable signature, issuer, audience, and expiry validation via [`jose`](https://github.com/panva/jose)
+- **ID token verification** — Enabled automatically when the discovery document includes a `jwks_uri`. Validates signature, issuer, audience, and expiry via [`jose`](https://github.com/panva/jose)
 - **Email verification** — `OIDC_REQUIRE_EMAIL_VERIFIED: true` (default) rejects unverified emails
 - **CSRF protection** — OIDC state/nonce and POST-only logout endpoint
 - **Rate limiting** — 1 000 req/min per IP+UA (in-process; use a reverse-proxy-level limiter for multi-node)
@@ -83,7 +77,7 @@ Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Lo
 
 ## Logout
 
-When `OIDC_END_SESSION_ENDPOINT` is set, clicking logout redirects to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
+When the discovery document includes an `end_session_endpoint`, clicking logout redirects to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
 
 The logout endpoint is `POST /strapi-plugin-oidc/logout`. Using POST instead of GET prevents CSRF-forced-logout attacks.
 

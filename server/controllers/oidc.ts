@@ -35,15 +35,17 @@ function toMessage(e: unknown): string {
 }
 
 const REQUIRED_CONFIG_KEYS = [
+  'OIDC_DISCOVERY_URL',
   'OIDC_CLIENT_ID',
   'OIDC_CLIENT_SECRET',
   'OIDC_REDIRECT_URI',
   'OIDC_SCOPE',
-  'OIDC_TOKEN_ENDPOINT',
-  'OIDC_USERINFO_ENDPOINT',
   'OIDC_GRANT_TYPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
+  // Populated at bootstrap from OIDC_DISCOVERY_URL — checked here as a runtime safety net
+  'OIDC_TOKEN_ENDPOINT',
+  'OIDC_USERINFO_ENDPOINT',
   'OIDC_AUTHORIZATION_ENDPOINT',
 ] as const;
 

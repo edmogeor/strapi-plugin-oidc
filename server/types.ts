@@ -73,6 +73,7 @@ export interface RoleService {
 
 export interface PluginConfig {
   REMEMBER_ME: boolean;
+  OIDC_DISCOVERY_URL: string;
   OIDC_REDIRECT_URI: string;
   OIDC_CLIENT_ID: string;
   OIDC_CLIENT_SECRET: string;
