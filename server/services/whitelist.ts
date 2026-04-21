@@ -56,13 +56,5 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
     async deleteAllUsers(): Promise<void> {
       await getWhitelistQuery().deleteMany({});
     },
-    async countAdminUsersByEmails(emails: string[]): Promise<number> {
-      if (emails.length === 0) return 0;
-      const rows = await strapi.query('admin::user').findMany({
-        where: { email: { $in: emails } },
-        select: ['id'],
-      });
-      return rows.length;
-    },
   };
 }

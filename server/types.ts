@@ -106,7 +106,6 @@ export interface WhitelistService {
   checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null>;
   hasUser(email: string): Promise<boolean>;
   deleteAllUsers(): Promise<void>;
-  countAdminUsersByEmails(emails: string[]): Promise<number>;
 }
 
 export interface AdminUserService {
