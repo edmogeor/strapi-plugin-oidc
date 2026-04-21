@@ -121,6 +121,7 @@ export default {
         if (!isAuthRoute(window.location.pathname)) return;
         injectSSOButton(buttonText);
         if (enforced) removeEnforcedElements();
+        if (ssoButtonInjected && !enforced) loginObserver?.disconnect();
       };
 
       tick();
@@ -144,6 +145,8 @@ export default {
     };
     applySettings();
 
+    if (window.__strapiOidcFetchPatched) return;
+    window.__strapiOidcFetchPatched = true;
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;

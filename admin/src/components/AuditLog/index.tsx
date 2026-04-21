@@ -10,7 +10,7 @@ import {
   Tr,
   Typography,
 } from '@strapi/design-system';
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Calendar, Download, Information, Mail, Trash } from '@strapi/icons';
 import { ClipboardList, Filter, Server } from 'lucide-react';
 import styled from 'styled-components';
@@ -113,11 +113,13 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({});
+  const fetchGenRef = useRef(0);
 
   const debouncedFilters = useDebounced(filters);
 
   const fetchLogs = useCallback(
     async (p: number, f: FilterState) => {
+      const gen = ++fetchGenRef.current;
       setLoading(true);
       const startTime = Date.now();
       let newRecords: AuditLogRecord[] = [];
@@ -133,10 +135,11 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
           pageCount: 1,
         };
       } catch {
-        // newRecords stays []
+        // ignored — newRecords stays []
       }
       const remaining = MIN_SPINNER_MS - (Date.now() - startTime);
       if (remaining > 0) await new Promise<void>((r) => setTimeout(r, remaining));
+      if (gen !== fetchGenRef.current) return;
       // Update records and clear loading in one render so old rows never flash between states.
       setRecords(newRecords);
       setPagination(newPagination);
@@ -338,7 +341,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
         </Flex>
       </Box>
 
-      <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+      <div style={{ position: 'relative', width: '100%' }}>
         <CustomTable colCount={5} rowCount={records.length}>
           <Thead>
             <Tr>
