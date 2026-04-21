@@ -677,7 +677,7 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
 
-      it('logout with unreachable IdP completes within 5s and redirects to admin login', async () => {
+      it('logout with unreachable IdP completes within 5s and redirects to OIDC provider', async () => {
         oidcServer.use(http.get('https://mock-oidc.com/userinfo', () => new Promise(() => {})));
 
         const startTime = Date.now();
@@ -693,7 +693,7 @@ describe('OIDC E2E Tests', () => {
         const elapsed = Date.now() - startTime;
 
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('/admin/auth/login');
+        expect(res.headers.location).toBe('https://mock-oidc.com/logout');
         expect(elapsed).toBeLessThan(5000);
       });
     });
