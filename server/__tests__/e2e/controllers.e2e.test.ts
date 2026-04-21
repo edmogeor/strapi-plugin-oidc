@@ -335,11 +335,11 @@ describe('Controllers E2E', () => {
       expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
     });
 
-    it('should redirect to Strapi login when provider session has expired', async () => {
+    it('should redirect to Strapi login when provider explicitly rejects the token (401)', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
         OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        // .invalid TLD is reserved and guaranteed to fail DNS — triggers the catch block
-        OIDC_USERINFO_ENDPOINT: 'https://provider.invalid/userinfo',
+        // mock-oidc.com/userinfo is intercepted by MSW; 'expired-token' returns 401
+        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
       });
       strapi.config.set('admin.url', '/admin');
 
@@ -350,6 +350,23 @@ describe('Controllers E2E', () => {
       await oidcController.logout(ctxLogout);
 
       expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
+    });
+
+    it('should still redirect to OIDC provider when userinfo endpoint is unreachable', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
+        // .invalid TLD is guaranteed to fail DNS — network error should not block provider logout
+        OIDC_USERINFO_ENDPOINT: 'https://provider.invalid/userinfo',
+      });
+      strapi.config.set('admin.url', '/admin');
+
+      const ctxLogout = makeLogoutCtx({
+        oidc_authenticated: '1',
+        oidc_access_token: 'some-token',
+      });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
     });
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {

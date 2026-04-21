@@ -104,6 +104,12 @@ export default {
         config: { auth: false, middlewares: [rateLimitMiddleware] },
       },
       {
+        method: 'GET',
+        path: '/logout',
+        handler: 'oidc.logout',
+        config: { auth: false },
+      },
+      {
         method: 'POST',
         path: '/logout',
         handler: 'oidc.logout',

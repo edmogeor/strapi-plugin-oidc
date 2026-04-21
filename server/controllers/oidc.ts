@@ -31,7 +31,7 @@ import type {
 } from '../types';
 
 function toMessage(e: unknown): string {
-  return toMessage(e);
+  return e instanceof Error ? e.message : String(e);
 }
 
 const REQUIRED_CONFIG_KEYS = [
@@ -47,7 +47,7 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_AUTHORIZATION_ENDPOINT',
 ] as const;
 
-const LOGOUT_USERINFO_TIMEOUT_MS = 3000;
+const LOGOUT_USERINFO_TIMEOUT_MS = 1500;
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 let jwksDisabledWarned = false;
@@ -601,7 +601,9 @@ async function oidcSignInCallback(ctx: StrapiContext) {
   }
 }
 
-async function isProviderSessionActive(
+// Returns true only when the provider explicitly rejects the token (4xx).
+// Timeouts and network errors return false so we still redirect to the provider.
+async function isProviderSessionExpired(
   userinfoEndpoint: string,
   accessToken: string,
 ): Promise<boolean> {
@@ -610,7 +612,7 @@ async function isProviderSessionActive(
       headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(LOGOUT_USERINFO_TIMEOUT_MS),
     });
-    return response.ok;
+    return !response.ok;
   } catch {
     return false;
   }
@@ -640,15 +642,15 @@ async function logout(ctx: StrapiContext) {
       : Promise.resolve();
 
   if (logoutUrl && accessToken) {
-    // Skip provider logout when the token is expired to avoid a bare redirect page.
-    const active = await isProviderSessionActive(config.OIDC_USERINFO_ENDPOINT, accessToken);
-    if (active) {
-      // Fire-and-forget so the redirect isn't delayed by audit-log I/O.
-      logAudit('logout').catch(() => {});
-      return ctx.redirect(logoutUrl);
+    // Skip provider logout only when the provider confirms the token is expired (4xx).
+    // On timeout or network error we still redirect to the provider.
+    const expired = await isProviderSessionExpired(config.OIDC_USERINFO_ENDPOINT, accessToken);
+    if (expired) {
+      await logAudit('session_expired');
+      return ctx.redirect(loginUrl);
     }
-    await logAudit('session_expired');
-    return ctx.redirect(loginUrl);
+    logAudit('logout').catch(() => {});
+    return ctx.redirect(logoutUrl);
   }
 
   await logAudit('logout');

@@ -1,6 +1,9 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
 import pluginPkg from '../../package.json';
 import pluginId from './pluginId';
 import Initializer from './components/Initializer';
+import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
 
 const name = pluginPkg.strapi.displayName;
@@ -36,6 +39,10 @@ export default {
   },
 
   bootstrap() {
+    const overlayContainer = document.createElement('div');
+    document.body.appendChild(overlayContainer);
+    createRoot(overlayContainer).render(React.createElement(LogoutOverlay));
+
     const defaultButtonText = t('login.sso');
 
     const isAuthRoute = (path: string) =>
@@ -142,25 +149,23 @@ export default {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       const isLogout = url?.endsWith('/admin/logout') && args[1]?.method?.toUpperCase() === 'POST';
 
-      const response = await originalFetch(...args);
-
-      if (isLogout && response.ok) {
+      if (isLogout) {
+        window.dispatchEvent(new CustomEvent(LOGOUT_EVENT));
         window.localStorage.removeItem('jwtToken');
         window.localStorage.removeItem('isLoggedIn');
         window.sessionStorage.removeItem('jwtToken');
         window.sessionStorage.removeItem('isLoggedIn');
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
-        // POST to prevent CSRF (SameSite=Lax allows top-level GET navigations).
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/strapi-plugin-oidc/logout';
-        document.body.appendChild(form);
-        form.submit();
+        // Fire Strapi logout in the background so the server revokes the refresh token,
+        // then navigate to the OIDC logout endpoint. We don't await Strapi's response
+        // because navigating away would abort it anyway.
+        originalFetch(...args).catch(() => {});
+        window.location.href = '/strapi-plugin-oidc/logout';
         return new Promise(() => {});
       }
 
-      return response;
+      return originalFetch(...args);
     };
   },
 

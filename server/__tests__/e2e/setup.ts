@@ -14,7 +14,10 @@ export const oidcServer = setupServer(
   http.post('https://mock-oidc.com/token', () => {
     return HttpResponse.json({ access_token: 'fake-jwt-token' });
   }),
-  http.get('https://mock-oidc.com/userinfo', () => {
+  http.get('https://mock-oidc.com/userinfo', ({ request }) => {
+    if (request.headers.get('authorization') === 'Bearer expired-token') {
+      return new HttpResponse(null, { status: 401 });
+    }
     return HttpResponse.json({
       email: 'test@company.com',
       email_verified: true,
