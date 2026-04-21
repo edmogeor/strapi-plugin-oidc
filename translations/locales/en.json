@@ -92,6 +92,7 @@
   "auditlog.action.nonce_mismatch": "The nonce in the ID token did not match the one generated at login. This may indicate a token replay attack.",
   "auditlog.action.token_exchange_failed": "The authorisation code could not be exchanged for tokens. The OIDC provider rejected the request.",
   "auditlog.action.whitelist_rejected": "The user's email address is not on the whitelist. Access was denied.",
+  "auditlog.action.email_not_verified": "The OIDC provider did not confirm the user's email address as verified. Access was denied.",
   "auth.page.authenticating.title": "Authenticating...",
   "auth.page.authenticating.noscript.heading": "JavaScript Required",
   "auth.page.authenticating.noscript.body": "JavaScript must be enabled for authentication to complete.",

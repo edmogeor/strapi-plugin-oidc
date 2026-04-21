@@ -334,6 +334,15 @@ async function handleUserAuthentication(
     throw new OidcError('invalid_email', errorMessages.INVALID_EMAIL);
   }
 
+  // OIDC Core §5.7: email_verified SHOULD accompany email. Treat missing as unverified.
+  if (config.OIDC_REQUIRE_EMAIL_VERIFIED !== false) {
+    const emailVerified = userResponseData.email_verified;
+    const isVerified = emailVerified === true || emailVerified === 'true';
+    if (!isVerified) {
+      throw new OidcError('email_not_verified', errorMessages.EMAIL_NOT_VERIFIED);
+    }
+  }
+
   await whitelistService.checkWhitelistForEmail(email);
 
   const resolved = await resolveRoles(userResponseData, config, roleService);

@@ -6,6 +6,7 @@ export const AUDIT_ACTIONS = [
   'nonce_mismatch',
   'token_exchange_failed',
   'whitelist_rejected',
+  'email_not_verified',
   'logout',
   'session_expired',
   'user_created',

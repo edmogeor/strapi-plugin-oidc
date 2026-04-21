@@ -51,12 +51,19 @@ module.exports = ({ env }) => ({
       AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
+      OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when the provider does not report email_verified=true
     },
   },
 });
 ```
 
 All required values come from your provider's OIDC discovery document, typically available at `https://your-provider/.well-known/openid-configuration`.
+
+### Verified email requirement
+
+By default the plugin refuses to authenticate users unless the userinfo response includes `email_verified=true` (boolean) or `"true"` (string), per [OIDC Core §5.7](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). A missing claim is treated as unverified. This prevents account takeover when a provider permits unverified addresses — without it, an attacker could register `victim@company.com` at the IdP and gain access if that email is whitelisted.
+
+If your provider does not emit this claim at all, set `OIDC_REQUIRE_EMAIL_VERIFIED: false`. **This disables a security-relevant check** — only opt out when the provider's enrolment flow independently guarantees email ownership.
 
 ## Login
 
@@ -256,6 +263,7 @@ curl -H "Authorization: Bearer <token>" -G \
 | `nonce_mismatch`        | ID token nonce does not match the session nonce     |
 | `token_exchange_failed` | Provider returned an error during token exchange    |
 | `whitelist_rejected`    | Email not present in the active whitelist           |
+| `email_not_verified`    | Provider did not report `email_verified=true`       |
 | `logout`                | User logged out via `/logout`                       |
 | `session_expired`       | Logout attempted but provider session already stale |
 

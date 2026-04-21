@@ -247,6 +247,68 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // email_verified enforcement (Task 1)
+  // ---------------------------------------------------------------------------
+  describe('email_verified enforcement', () => {
+    const userinfoWith = (overrides: Record<string, unknown>) =>
+      http.get('https://mock-oidc.com/userinfo', () =>
+        HttpResponse.json({
+          email: 'verify-test@company.com',
+          family_name: 'Doe',
+          given_name: 'John',
+          ...overrides,
+        }),
+      );
+
+    beforeEach(async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+      await setSettings(strapi, false, false);
+      await strapi.db
+        .query('admin::user')
+        .deleteMany({ where: { email: 'verify-test@company.com' } });
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+    });
+
+    it('accepts email_verified: true (boolean)', async () => {
+      oidcServer.use(userinfoWith({ email_verified: true }));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('jwtToken');
+    });
+
+    it('accepts email_verified: "true" (string)', async () => {
+      oidcServer.use(userinfoWith({ email_verified: 'true' }));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('jwtToken');
+    });
+
+    it('rejects email_verified: false and emits email_not_verified audit action', async () => {
+      oidcServer.use(userinfoWith({ email_verified: false }));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('Authentication Failed');
+      const logs = await queryAuditLog(strapi, 'email_not_verified');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('rejects when email_verified claim is missing (default)', async () => {
+      oidcServer.use(userinfoWith({}));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('Authentication Failed');
+      const logs = await queryAuditLog(strapi, 'email_not_verified');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('allows missing email_verified when OIDC_REQUIRE_EMAIL_VERIFIED is disabled', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_REQUIRE_EMAIL_VERIFIED: false,
+      });
+      oidcServer.use(userinfoWith({}));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('jwtToken');
+    });
+  });
+
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
     const parseCookies = (res: Response): string[] => {
@@ -533,6 +595,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'group-match@test.com',
+            email_verified: true,
             family_name: 'Test',
             given_name: 'User',
             groups: ['test-group'],
@@ -562,6 +625,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'audit-role@test.com',
+            email_verified: true,
             family_name: 'Test',
             given_name: 'User',
             groups: ['audit-group'],
@@ -647,6 +711,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'role-removed@test.com',
+            email_verified: true,
             family_name: 'Existing',
             given_name: 'User',
             groups: ['no-longer-mapped-group'],
@@ -684,6 +749,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'group-changed@test.com',
+            email_verified: true,
             family_name: 'Existing',
             given_name: 'User',
             groups: ['group-b'],
@@ -717,6 +783,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'whitelist-group@test.com',
+            email_verified: true,
             family_name: 'Test',
             given_name: 'User',
             groups: ['special-group'],
@@ -755,6 +822,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'existing-group@test.com',
+            email_verified: true,
             family_name: 'Existing',
             given_name: 'User',
             groups: ['some-group'],
@@ -791,6 +859,7 @@ describe('OIDC E2E Tests', () => {
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
             email: 'no-role-user@test.com',
+            email_verified: true,
             family_name: 'Existing',
             given_name: 'User',
             groups: ['group-a'],

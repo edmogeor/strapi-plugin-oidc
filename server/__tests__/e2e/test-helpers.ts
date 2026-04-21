@@ -174,6 +174,7 @@ export function mswUserInfoHandler(
   return http.get('https://mock-oidc.com/userinfo', () =>
     HttpResponse.json({
       email,
+      email_verified: true,
       family_name: lastName,
       given_name: firstName,
       groups,
