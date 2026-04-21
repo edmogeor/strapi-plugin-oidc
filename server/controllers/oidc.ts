@@ -30,6 +30,10 @@ import type {
   GroupRoleMap,
 } from '../types';
 
+function toMessage(e: unknown): string {
+  return toMessage(e);
+}
+
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_CLIENT_ID',
   'OIDC_CLIENT_SECRET',
@@ -85,7 +89,7 @@ async function verifyIdToken(idToken: string, config: PluginConfig): Promise<JWT
       e instanceof joseErrors.JWTInvalid ||
       e instanceof joseErrors.JWSInvalid
     ) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = toMessage(e);
       throw new OidcError('id_token_invalid', msg, e);
     }
     throw e;
@@ -163,8 +167,7 @@ async function exchangeTokenAndFetchUserInfo(
   };
 
   if (tokenData.id_token) {
-    // When OIDC_JWKS_URI is set, jose verifies signature, iss, aud, exp, nbf and returns the payload.
-    // Otherwise fall back to parsing the unverified payload — nonce check still runs.
+    // null when OIDC_JWKS_URI is unset; nonce check still validates replay either way.
     const verifiedPayload = await verifyIdToken(tokenData.id_token, config);
     try {
       const idTokenPayload =
@@ -349,7 +352,7 @@ async function ensureUser(
       );
       return { user, userCreated: true, rolesUpdated: true };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = toMessage(e);
       throw new OidcError('user_creation_failed', msg, e);
     }
   }
@@ -428,7 +431,7 @@ type OidcErrorInfo = {
 function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
   const kind = e instanceof OidcError ? e.kind : 'unknown';
   const dispatch = OIDC_ERROR_DISPATCH[kind];
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = toMessage(e);
 
   let params: Record<string, string | number> | undefined;
   if (kind === 'id_token_parse_failed' || kind === 'id_token_invalid' || kind === 'unknown') {
@@ -499,7 +502,7 @@ async function handleCallbackError(
   ctx: StrapiContext,
 ): Promise<void> {
   const errorInfo = classifyOidcError(e, userInfo);
-  const message = e instanceof Error ? e.message : String(e);
+  const message = toMessage(e);
 
   await auditLog.log({
     action: errorInfo.action,

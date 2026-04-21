@@ -1,13 +1,13 @@
 import type { StrapiContext, PluginConfig } from '../types';
 
-const TRUSTED_HEADER_WHITELIST = new Set(['cf-connecting-ip']);
+const TRUSTED_IP_HEADER = 'cf-connecting-ip';
 
 function getTrustedHeaderName(): string | undefined {
   const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
   const raw = config.OIDC_TRUSTED_IP_HEADER;
   if (typeof raw !== 'string' || !raw) return undefined;
   const normalized = raw.trim().toLowerCase();
-  return TRUSTED_HEADER_WHITELIST.has(normalized) ? normalized : undefined;
+  return normalized === TRUSTED_IP_HEADER ? normalized : undefined;
 }
 
 export function getClientIp(ctx: StrapiContext): string {

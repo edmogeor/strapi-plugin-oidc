@@ -11,8 +11,7 @@ export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boole
   if (ctx.request.secure) return true;
 
   const proxyTrusted = ctx.app?.proxy === true;
-  if (proxyTrusted && typeof ctx.get === 'function' && ctx.get('x-forwarded-proto') === 'https')
-    return true;
+  if (proxyTrusted && ctx.get('x-forwarded-proto') === 'https') return true;
 
   return false;
 }
