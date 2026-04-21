@@ -20,6 +20,8 @@ export default {
     OIDC_GROUP_ROLE_MAP: '{}',
     OIDC_REQUIRE_EMAIL_VERIFIED: true,
     OIDC_TRUSTED_IP_HEADER: '',
+    OIDC_JWKS_URI: '',
+    OIDC_ISSUER: '',
   },
   validator() {},
 };

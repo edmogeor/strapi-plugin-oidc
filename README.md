@@ -53,6 +53,8 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when the provider does not report email_verified=true
       OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
+      OIDC_JWKS_URI: '', // Recommended: provider's jwks_uri — enables ID token signature verification
+      OIDC_ISSUER: '', // Recommended: provider's issuer claim — verified against the ID token's iss
     },
   },
 });
@@ -71,6 +73,15 @@ If your provider does not emit this claim at all, set `OIDC_REQUIRE_EMAIL_VERIFI
 The plugin attributes rate-limit buckets and audit-log IP fields to the client's IP address. When Strapi runs behind a reverse proxy or load balancer, **you must set `server.proxy: true`** in Strapi's server config so Koa trusts `X-Forwarded-For`; otherwise all logs and rate-limit buckets will show the proxy's address.
 
 By default the plugin ignores all forwarding headers. Set `OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip'` when running behind Cloudflare to use `CF-Connecting-IP`. The header is only honoured when `server.proxy: true` is set, so arbitrary clients cannot spoof it.
+
+### ID token signature verification
+
+When `OIDC_JWKS_URI` is configured, the plugin verifies the ID token's signature, `iss`, `aud`, `exp`, and `nbf` claims using the provider's JWKS endpoint (via [`jose`](https://github.com/panva/jose)). Both values come from your provider's OIDC discovery document:
+
+- `OIDC_JWKS_URI` — the `jwks_uri` field
+- `OIDC_ISSUER` — the `issuer` field (verified against the token's `iss` claim)
+
+When `OIDC_JWKS_URI` is unset the plugin falls back to a nonce-only check and logs a one-time warning at boot. This keeps existing installs working on upgrade but leaves ID token integrity dependent on TLS to the IdP — set both values to close that gap.
 
 ## Login
 
@@ -260,19 +271,20 @@ curl -H "Authorization: Bearer <token>" -G \
 
 ### Recorded actions
 
-| Action                  | Trigger                                             |
-| ----------------------- | --------------------------------------------------- |
-| `login_success`         | Successful OIDC authentication                      |
-| `user_created`          | New Strapi admin user created during login          |
-| `login_failure`         | Unexpected error during the OIDC login flow         |
-| `missing_code`          | Callback received without an authorisation code     |
-| `state_mismatch`        | CSRF state cookie does not match callback parameter |
-| `nonce_mismatch`        | ID token nonce does not match the session nonce     |
-| `token_exchange_failed` | Provider returned an error during token exchange    |
-| `whitelist_rejected`    | Email not present in the active whitelist           |
-| `email_not_verified`    | Provider did not report `email_verified=true`       |
-| `logout`                | User logged out via `/logout`                       |
-| `session_expired`       | Logout attempted but provider session already stale |
+| Action                  | Trigger                                                           |
+| ----------------------- | ----------------------------------------------------------------- |
+| `login_success`         | Successful OIDC authentication                                    |
+| `user_created`          | New Strapi admin user created during login                        |
+| `login_failure`         | Unexpected error during the OIDC login flow                       |
+| `missing_code`          | Callback received without an authorisation code                   |
+| `state_mismatch`        | CSRF state cookie does not match callback parameter               |
+| `nonce_mismatch`        | ID token nonce does not match the session nonce                   |
+| `token_exchange_failed` | Provider returned an error during token exchange                  |
+| `whitelist_rejected`    | Email not present in the active whitelist                         |
+| `email_not_verified`    | Provider did not report `email_verified=true`                     |
+| `id_token_invalid`      | ID token failed signature, issuer, audience, or expiry validation |
+| `logout`                | User logged out via `/logout`                                     |
+| `session_expired`       | Logout attempted but provider session already stale               |
 
 Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc::auth.<action>`, which Enterprise audit log listeners pick up automatically.
 

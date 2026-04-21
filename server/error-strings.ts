@@ -12,6 +12,7 @@ export const errorCodes = {
   MISSING_CODE: 'MISSING_CODE',
   INVALID_EMAIL: 'INVALID_EMAIL',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
+  ID_TOKEN_INVALID: 'ID_TOKEN_INVALID',
   WHITELIST_NOT_PRESENT: 'WHITELIST_NOT_PRESENT',
   SESSION_MANAGER_UNSUPPORTED: 'SESSION_MANAGER_UNSUPPORTED',
   MISSING_CONFIG: 'MISSING_CONFIG',
@@ -28,6 +29,7 @@ const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   sign_in_unknown: 'Unknown sign-in error: {error}',
   invalid_email: 'Invalid email address received from OIDC provider',
   email_not_verified: 'Email address has not been verified by the OIDC provider',
+  id_token_invalid: 'ID token verification failed: {error}',
   whitelist_not_present: 'Email not present in whitelist',
   session_manager_unsupported:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
@@ -55,6 +57,7 @@ export const errorMessages = {
   NONCE_MISMATCH: 'Nonce mismatch',
   INVALID_EMAIL: 'Invalid email address received from OIDC provider',
   EMAIL_NOT_VERIFIED: 'Email address has not been verified by the OIDC provider',
+  ID_TOKEN_INVALID: 'ID token verification failed',
   WHITELIST_NOT_PRESENT: 'Not present in whitelist',
   SESSION_MANAGER_UNSUPPORTED:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',

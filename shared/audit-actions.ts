@@ -7,6 +7,7 @@ export const AUDIT_ACTIONS = [
   'token_exchange_failed',
   'whitelist_rejected',
   'email_not_verified',
+  'id_token_invalid',
   'logout',
   'session_expired',
   'user_created',

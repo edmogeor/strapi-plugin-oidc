@@ -309,6 +309,177 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // ID token signature verification (Task 3)
+  // ---------------------------------------------------------------------------
+  describe('ID token verification', () => {
+    const JWKS_URL = 'https://mock-oidc.com/.well-known/jwks.json';
+    const ISSUER = 'https://mock-oidc.com/';
+
+    let generateKeyPair: typeof import('jose').generateKeyPair;
+    let exportJWK: typeof import('jose').exportJWK;
+    let SignJWT: typeof import('jose').SignJWT;
+    let privateKey: import('jose').KeyLike;
+    let publicJwk: import('jose').JWK;
+    const kid = 'test-key-1';
+
+    beforeAll(async () => {
+      const jose = await import('jose');
+      generateKeyPair = jose.generateKeyPair;
+      exportJWK = jose.exportJWK;
+      SignJWT = jose.SignJWT;
+      const kp = await generateKeyPair('RS256');
+      privateKey = kp.privateKey;
+      publicJwk = { ...(await exportJWK(kp.publicKey)), alg: 'RS256', use: 'sig', kid };
+    });
+
+    beforeEach(async () => {
+      // Clear module-level JWKS cache between tests by reloading the controller.
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+      await setSettings(strapi, false, false);
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      oidcServer.use(http.get(JWKS_URL, () => HttpResponse.json({ keys: [publicJwk] })));
+    });
+
+    const signIdToken = async (
+      overrides: {
+        nonce?: string;
+        iss?: string;
+        aud?: string;
+        exp?: number;
+        extraPayload?: Record<string, unknown>;
+      } = {},
+    ): Promise<string> => {
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        sub: 'user-1',
+        nonce: overrides.nonce ?? '__will_replace__',
+        ...(overrides.extraPayload ?? {}),
+      };
+      return new SignJWT(payload)
+        .setProtectedHeader({ alg: 'RS256', kid })
+        .setIssuer(overrides.iss ?? ISSUER)
+        .setAudience(overrides.aud ?? 'mock-client-id')
+        .setIssuedAt(now)
+        .setExpirationTime(overrides.exp ?? now + 300)
+        .sign(privateKey);
+    };
+
+    const runCallback = async (idTokenNonceCapture: {
+      build: (nonce: string) => Promise<string>;
+    }) => {
+      // Intercept token endpoint to build an id_token using the actual nonce cookie.
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', async ({ request }) => {
+          const body = new URLSearchParams(await request.text());
+          void body; // nonce is not in the body — it's the session cookie on our side
+          return HttpResponse.json({
+            access_token: 'fake-jwt-token',
+            id_token: '__TOKEN_PLACEHOLDER__',
+          });
+        }),
+      );
+
+      const localAgent = createAgent();
+      const loginRes = await localAgent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      const state = new URL(loginRes.headers.location).searchParams.get('state')!;
+      // Read the nonce cookie from the login response
+      const setCookieHeader = loginRes.headers['set-cookie'] as string[] | string | undefined;
+      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader ?? ''];
+      const nonceCookie = cookies
+        .map((c) => (c ?? '').split(';')[0])
+        .find((c) => c.startsWith('oidc_nonce='))
+        ?.split('=')[1];
+      if (!nonceCookie) throw new Error('Missing oidc_nonce cookie');
+
+      const idToken = await idTokenNonceCapture.build(nonceCookie);
+
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: idToken }),
+        ),
+      );
+
+      return localAgent
+        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
+        .redirects(0);
+    };
+
+    it('accepts a valid, signed ID token when JWKS is configured', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: JWKS_URL,
+        OIDC_ISSUER: ISSUER,
+      });
+      const res = await runCallback({ build: (nonce) => signIdToken({ nonce }) });
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('jwtToken');
+    });
+
+    it('rejects an expired ID token', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: JWKS_URL,
+        OIDC_ISSUER: ISSUER,
+      });
+      const past = Math.floor(Date.now() / 1000) - 10;
+      const res = await runCallback({
+        build: (nonce) => signIdToken({ nonce, exp: past }),
+      });
+      expect(res.text).toContain('Authentication Failed');
+      const logs = await queryAuditLog(strapi, 'id_token_invalid');
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('rejects an ID token with the wrong audience', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: JWKS_URL,
+        OIDC_ISSUER: ISSUER,
+      });
+      const res = await runCallback({
+        build: (nonce) => signIdToken({ nonce, aud: 'different-client' }),
+      });
+      expect(res.text).toContain('Authentication Failed');
+    });
+
+    it('rejects an ID token with the wrong issuer', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: JWKS_URL,
+        OIDC_ISSUER: ISSUER,
+      });
+      const res = await runCallback({
+        build: (nonce) => signIdToken({ nonce, iss: 'https://evil.example.com/' }),
+      });
+      expect(res.text).toContain('Authentication Failed');
+    });
+
+    it('rejects an ID token with a tampered signature', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_JWKS_URI: JWKS_URL,
+        OIDC_ISSUER: ISSUER,
+      });
+      const res = await runCallback({
+        build: async (nonce) => {
+          const tok = await signIdToken({ nonce });
+          const parts = tok.split('.');
+          parts[2] = 'A' + parts[2].slice(1);
+          return parts.join('.');
+        },
+      });
+      expect(res.text).toContain('Authentication Failed');
+    });
+
+    it('falls back to nonce-only check when OIDC_JWKS_URI is unset', async () => {
+      // Default MOCK_OIDC_CONFIG has no JWKS URI
+      const res = await runCallback({ build: (nonce) => signIdToken({ nonce }) });
+      // With no verification, nonce check alone passes → success.
+      expect(res.text).toContain('jwtToken');
+    });
+  });
+
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
     const parseCookies = (res: Response): string[] => {

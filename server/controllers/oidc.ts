@@ -1,5 +1,7 @@
 import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
+import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from 'jose';
+import type { JWTPayload } from 'jose';
 import { clearAuthCookies } from '../utils/cookies';
 import { isValidEmail } from '../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../error-strings';
@@ -42,6 +44,53 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 const LOGOUT_USERINFO_TIMEOUT_MS = 3000;
+
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+let jwksDisabledWarned = false;
+
+function getJwks(uri: string) {
+  let jwks = jwksCache.get(uri);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(uri));
+    jwksCache.set(uri, jwks);
+  }
+  return jwks;
+}
+
+async function verifyIdToken(idToken: string, config: PluginConfig): Promise<JWTPayload | null> {
+  const jwksUri = config.OIDC_JWKS_URI;
+  const issuer = config.OIDC_ISSUER;
+  if (!jwksUri) {
+    if (!jwksDisabledWarned) {
+      jwksDisabledWarned = true;
+      strapi.log.warn(
+        "[OIDC] OIDC_JWKS_URI is not configured — ID token signature verification is disabled. Set OIDC_JWKS_URI and OIDC_ISSUER from your provider's discovery document.",
+      );
+    }
+    return null;
+  }
+
+  try {
+    const jwks = getJwks(jwksUri);
+    const { payload } = await jwtVerify(idToken, jwks, {
+      issuer: issuer || undefined,
+      audience: config.OIDC_CLIENT_ID,
+    });
+    return payload;
+  } catch (e) {
+    if (
+      e instanceof joseErrors.JWTClaimValidationFailed ||
+      e instanceof joseErrors.JWSSignatureVerificationFailed ||
+      e instanceof joseErrors.JWTExpired ||
+      e instanceof joseErrors.JWTInvalid ||
+      e instanceof joseErrors.JWSInvalid
+    ) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new OidcError('id_token_invalid', msg, e);
+    }
+    throw e;
+  }
+}
 
 function configValidation(): PluginConfig {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
@@ -115,18 +164,21 @@ async function exchangeTokenAndFetchUserInfo(
     id_token?: string;
   };
 
-  // Validate nonce in the ID token (JWT payload is the second base64url segment).
   if (tokenData.id_token) {
+    // When OIDC_JWKS_URI is set, jose verifies signature, iss, aud, exp, nbf and returns the payload.
+    // Otherwise fall back to parsing the unverified payload — nonce check still runs.
+    const verifiedPayload = await verifyIdToken(tokenData.id_token, config);
     try {
-      const payloadB64 = tokenData.id_token.split('.')[1];
-      const idTokenPayload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as {
-        nonce?: string;
-      };
+      const idTokenPayload =
+        verifiedPayload ??
+        (JSON.parse(
+          Buffer.from(tokenData.id_token.split('.')[1], 'base64url').toString('utf8'),
+        ) as { nonce?: string });
       if (idTokenPayload.nonce !== expectedNonce) {
         throw new OidcError('nonce_mismatch', errorMessages.NONCE_MISMATCH);
       }
     } catch (e) {
-      if (e instanceof OidcError && e.kind === 'nonce_mismatch') throw e;
+      if (e instanceof OidcError) throw e;
       throw new OidcError('id_token_parse_failed', errorMessages.ID_TOKEN_PARSE_FAILED, e);
     }
   }
@@ -381,7 +433,7 @@ function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
   const msg = e instanceof Error ? e.message : String(e);
 
   let params: Record<string, string | number> | undefined;
-  if (kind === 'id_token_parse_failed' || kind === 'unknown') {
+  if (kind === 'id_token_parse_failed' || kind === 'id_token_invalid' || kind === 'unknown') {
     params = { error: msg };
   } else if (kind === 'user_creation_failed' && userInfo?.email) {
     params = { email: userInfo.email, error: msg };
