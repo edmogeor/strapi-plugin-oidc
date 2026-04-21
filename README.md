@@ -83,6 +83,10 @@ When `OIDC_JWKS_URI` is configured, the plugin verifies the ID token's signature
 
 When `OIDC_JWKS_URI` is unset the plugin falls back to a nonce-only check and logs a one-time warning at boot. This keeps existing installs working on upgrade but leaves ID token integrity dependent on TLS to the IdP — set both values to close that gap.
 
+### Rate limiter — single-process note
+
+The built-in rate limiter (`1 000 req/min per IP+UA`) is an **in-process Map** that resets when the Node.js process restarts. In multi-node deployments each instance maintains its own counter, so the effective limit per client is `1 000 × N`. The limiter is intended as a basic safety net only. For stronger per-client limits across multiple instances, place the OIDC endpoints behind a reverse-proxy-level rate limiter (e.g. nginx `limit_req`, Cloudflare rate limiting, or an API gateway).
+
 ## Login
 
 Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button injected into the Strapi login page.

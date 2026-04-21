@@ -6,8 +6,28 @@ import { getClientIp } from '../utils/ip';
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60_000;
 const MAX_REQUESTS = 1_000;
+const MAX_MAP_SIZE = 10_000;
+const PRUNE_THRESHOLD = 1_000;
 
 export const clearRateLimitMap = (): void => rateLimitMap.clear();
+
+export const getRateLimitMapSize = (): number => rateLimitMap.size;
+
+function pruneExpiredEntries(now: number): void {
+  const windowStart = now - RATE_LIMIT_WINDOW;
+  for (const [key, stamps] of rateLimitMap) {
+    if (stamps.length === 0 || stamps[stamps.length - 1] <= windowStart) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
+
+function evictOldestEntry(): void {
+  const oldest = rateLimitMap.keys().next().value;
+  if (oldest !== undefined) {
+    rateLimitMap.delete(oldest);
+  }
+}
 
 function getRateLimitKey(ctx: StrapiContext): string {
   const ip = getClientIp(ctx);
@@ -21,6 +41,10 @@ function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
 
+  if (rateLimitMap.size > PRUNE_THRESHOLD) {
+    pruneExpiredEntries(now);
+  }
+
   const requestStamps = (rateLimitMap.get(key) ?? []).filter((ts) => ts > windowStart);
 
   if (requestStamps.length >= MAX_REQUESTS) {
@@ -30,6 +54,10 @@ function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
   }
 
   requestStamps.push(now);
+
+  if (!rateLimitMap.has(key) && rateLimitMap.size >= MAX_MAP_SIZE) {
+    evictOldestEntry();
+  }
   rateLimitMap.set(key, requestStamps);
 
   return next();

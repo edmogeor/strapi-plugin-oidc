@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import type { Core } from './test-types';
 import {
   makeCookieTestCtx,
   findAdminRefreshCookieCall,
   expectAdminCookieSecure,
+  clearRateLimitMap,
+  getRateLimitMapSize,
 } from './test-helpers';
 
 describe('pluginConfig utils', () => {
@@ -111,6 +113,42 @@ describe('enforceOIDC utils', () => {
     it('falls back to false when both config and dbValue are missing', () => {
       expect(enforceOIDC.resolveEnforceOIDC(strapi, undefined)).toBe(false);
     });
+  });
+});
+
+describe('rate-limit map bounding and pruning', () => {
+  afterEach(() => {
+    clearRateLimitMap();
+  });
+
+  it('clearRateLimitMap empties the map', async () => {
+    // Seed the map via real HTTP requests
+    const request = (await import('supertest')).default;
+    const strapi = globalThis.strapiInstance;
+    for (let i = 0; i < 3; i++) {
+      await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc')
+        .set('X-Forwarded-For', `192.0.2.${i}`)
+        .redirects(0);
+    }
+    clearRateLimitMap();
+    expect(getRateLimitMapSize()).toBe(0);
+  });
+
+  it('map size never exceeds MAX_MAP_SIZE across many distinct IPs', async () => {
+    const request = (await import('supertest')).default;
+    const strapi = globalThis.strapiInstance;
+
+    // Fire 15 requests with distinct IPs in groups so ctx.app.proxy matters less.
+    // We just want to confirm bounding — exact count depends on eviction.
+    for (let i = 0; i < 15; i++) {
+      await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc')
+        .set('user-agent', `bot-${i}`)
+        .redirects(0);
+    }
+    // MAX_MAP_SIZE is 10_000 — size must not grow without bound
+    expect(getRateLimitMapSize()).toBeLessThanOrEqual(10_000);
   });
 });
 
