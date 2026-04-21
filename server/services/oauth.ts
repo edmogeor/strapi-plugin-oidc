@@ -5,6 +5,7 @@ import type { Core } from '@strapi/types';
 import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
 import { authPageMessages } from '../audit-error-strings';
+import { shouldMarkSecure } from '../utils/cookies';
 
 function renderHtmlTemplate(title: string, content: string, locale: string = 'en'): string {
   return `
@@ -307,7 +308,6 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         },
       );
 
-      const isProduction = strapi.config.get('environment') === 'production';
       const domain =
         (strapi.config.get('admin.auth.cookie.domain') as string | undefined) ||
         (strapi.config.get('admin.auth.domain') as string | undefined);
@@ -321,7 +321,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
 
       const cookieOptions: Parameters<StrapiContext['cookies']['set']>[2] = {
         httpOnly: true,
-        secure: isProduction && ctx.request.secure,
+        secure: shouldMarkSecure(strapi, ctx),
         overwrite: true,
         domain,
         path,

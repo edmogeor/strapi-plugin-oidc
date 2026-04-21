@@ -55,6 +55,7 @@ module.exports = ({ env }) => ({
       OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
       OIDC_JWKS_URI: '', // Recommended: provider's jwks_uri — enables ID token signature verification
       OIDC_ISSUER: '', // Recommended: provider's issuer claim — verified against the ID token's iss
+      OIDC_FORCE_SECURE_COOKIES: false, // Set true to always mark cookies Secure when proxy-proto detection fails
     },
   },
 });

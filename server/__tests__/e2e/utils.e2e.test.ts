@@ -262,6 +262,64 @@ describe('getClientIp utils', () => {
   });
 });
 
+describe('shouldMarkSecure', () => {
+  let strapi: Core.Strapi;
+  let cookiesUtils: typeof import('../../utils/cookies');
+
+  beforeAll(async () => {
+    strapi = globalThis.strapiInstance;
+    cookiesUtils = await import('../../utils/cookies');
+  });
+
+  const makeCtx = (opts: { secure?: boolean; proxy?: boolean; xfp?: string } = {}) => ({
+    request: { secure: opts.secure ?? false },
+    app: { proxy: opts.proxy ?? false },
+    get(name: string) {
+      if (name === 'x-forwarded-proto' && opts.xfp) return opts.xfp;
+      return '';
+    },
+  });
+
+  it('returns false in development regardless', () => {
+    strapi.config.set('environment', 'development');
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(false);
+  });
+
+  it('returns true in production when request is secure', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(true);
+  });
+
+  it('returns false in production when request is not secure and proxy is off', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: false }) as never)).toBe(false);
+  });
+
+  it('returns true when proxy is trusted and x-forwarded-proto is https', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(
+      cookiesUtils.shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'https' }) as never),
+    ).toBe(true);
+  });
+
+  it('returns false when proxy is trusted but x-forwarded-proto is http', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(
+      cookiesUtils.shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'http' }) as never),
+    ).toBe(false);
+  });
+
+  it('returns true when OIDC_FORCE_SECURE_COOKIES is set', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: true });
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx() as never)).toBe(true);
+  });
+});
+
 describe('cookies utils', () => {
   let strapi: Core.Strapi;
   let cookiesUtils: typeof import('../../utils/cookies');
@@ -317,6 +375,7 @@ describe('cookies utils', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
 
     const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
@@ -330,6 +389,7 @@ describe('cookies utils', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('admin.auth.cookie.domain', 'example.com');
     strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
 
     const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);

@@ -2,7 +2,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from 'jose';
 import type { JWTPayload } from 'jose';
-import { clearAuthCookies } from '../utils/cookies';
+import { clearAuthCookies, shouldMarkSecure } from '../utils/cookies';
 import { isValidEmail } from '../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../error-strings';
 import { userFacingMessages } from '../audit-error-strings';
@@ -113,12 +113,10 @@ async function oidcSignIn(ctx: StrapiContext) {
   // Generate nonce to prevent ID token replay attacks.
   const nonce = randomBytes(32).toString('base64url');
 
-  // Cookie options aligned with Strapi's session management.
-  const isProduction = strapi.config.get('environment') === 'production';
   const cookieOptions = {
     httpOnly: true,
     maxAge: 600000,
-    secure: isProduction && ctx.request.secure,
+    secure: shouldMarkSecure(strapi, ctx),
     sameSite: 'lax' as const,
   };
 
@@ -557,8 +555,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     const exchangeResult = await exchangeTokenAndFetchUserInfo(config, params, oidcNonce ?? '');
     userInfo = exchangeResult.userInfo;
 
-    const isProduction = strapi.config.get('environment') === 'production';
-    const secureFlag = isProduction && ctx.request.secure;
+    const secureFlag = shouldMarkSecure(strapi, ctx);
     ctx.cookies.set('oidc_access_token', exchangeResult.accessToken, {
       httpOnly: true,
       maxAge: 300000,

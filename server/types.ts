@@ -94,6 +94,7 @@ export interface PluginConfig {
   OIDC_TRUSTED_IP_HEADER: string;
   OIDC_JWKS_URI: string;
   OIDC_ISSUER: string;
+  OIDC_FORCE_SECURE_COOKIES?: boolean;
 }
 
 export interface WhitelistService {

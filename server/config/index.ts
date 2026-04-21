@@ -22,6 +22,7 @@ export default {
     OIDC_TRUSTED_IP_HEADER: '',
     OIDC_JWKS_URI: '',
     OIDC_ISSUER: '',
+    OIDC_FORCE_SECURE_COOKIES: false,
   },
   validator() {},
 };
