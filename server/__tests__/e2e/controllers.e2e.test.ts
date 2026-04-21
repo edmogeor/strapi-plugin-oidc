@@ -8,6 +8,10 @@ import type {
   WhitelistController,
   RoleController,
   OidcController,
+  MockCtx,
+  WhitelistInfoBody,
+  RegisterBody,
+  ImportBody,
 } from './test-types';
 import { makeLogoutCtx, expectCookieCleared } from './test-helpers';
 
@@ -44,36 +48,26 @@ describe('Controllers E2E', () => {
     });
 
     it('should get and update settings via controller', async () => {
-      const ctxUpdate = {
-        request: {
-          body: { useWhitelist: false, enforceOIDC: true },
-        },
-        body: null,
+      const ctxUpdate: MockCtx = {
+        request: { body: { useWhitelist: false, enforceOIDC: true } },
       };
 
       await whitelistController.updateSettings(ctxUpdate);
       expect(ctxUpdate.body).toEqual({ useWhitelist: false, enforceOIDC: true });
 
-      const ctxInfo = { body: null };
+      const ctxInfo: MockCtx = {};
       await whitelistController.info(ctxInfo);
 
-      expect(ctxInfo.body).toMatchObject({
-        useWhitelist: false,
-        enforceOIDC: true,
-      });
-      // @ts-ignore
-      expect(Array.isArray(ctxInfo.body.whitelistUsers)).toBe(true);
+      expect(ctxInfo.body).toMatchObject({ useWhitelist: false, enforceOIDC: true });
+      expect(Array.isArray((ctxInfo.body as WhitelistInfoBody).whitelistUsers)).toBe(true);
     });
 
     it('should force enforceOIDC to false if whitelist is enabled but empty', async () => {
       // Ensure the whitelist is empty
       await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
 
-      const ctxUpdate = {
-        request: {
-          body: { useWhitelist: true, enforceOIDC: true },
-        },
-        body: null as any,
+      const ctxUpdate: MockCtx = {
+        request: { body: { useWhitelist: true, enforceOIDC: true } },
       };
 
       await whitelistController.updateSettings(ctxUpdate);
@@ -84,7 +78,6 @@ describe('Controllers E2E', () => {
       // Restore settings for the next test
       await whitelistController.updateSettings({
         request: { body: { useWhitelist: false, enforceOIDC: true } },
-        body: null as any,
       });
     });
 
@@ -96,76 +89,68 @@ describe('Controllers E2E', () => {
     });
 
     it('should register and remove whitelist users via controller', async () => {
-      const ctxRegister = {
-        request: {
-          body: { email: 'controller-test@whitelist.com' },
-        },
-        body: null as any,
+      const ctxRegister: MockCtx = {
+        request: { body: { email: 'controller-test@whitelist.com' } },
       };
 
       await whitelistController.register(ctxRegister);
-      expect(ctxRegister.body.acceptedCount).toBeGreaterThanOrEqual(0);
-      expect(Array.isArray(ctxRegister.body.rejectedEmails)).toBe(true);
+      const registerBody = ctxRegister.body as RegisterBody;
+      expect(registerBody.acceptedCount).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(registerBody.rejectedEmails)).toBe(true);
 
       // Verify it fails without an email
-      const ctxRegisterFail = {
-        request: {
-          body: { email: '' },
-        },
-        body: null as any,
-      };
+      const ctxRegisterFail: MockCtx = { request: { body: { email: '' } } };
       await whitelistController.register(ctxRegisterFail);
-      expect(ctxRegisterFail.body.message).toBe('Please enter a valid email address');
+      expect((ctxRegisterFail.body as RegisterBody).message).toBe(
+        'Please enter a valid email address',
+      );
 
       // Verify it's added
-      const ctxInfo = { body: null as any };
+      const ctxInfo: MockCtx = {};
       await whitelistController.info(ctxInfo);
-      const addedUser = ctxInfo.body.whitelistUsers.find(
-        (u: WhitelistEntry) => u.email === 'controller-test@whitelist.com',
+      const addedUser = (ctxInfo.body as WhitelistInfoBody).whitelistUsers.find(
+        (u) => u.email === 'controller-test@whitelist.com',
       );
       expect(addedUser).toBeDefined();
 
       // Remove it
-      const ctxRemove = {
-        params: { email: addedUser.email },
-        body: null,
-      };
+      const ctxRemove: MockCtx = { params: { email: addedUser!.email } };
       await whitelistController.removeEmail(ctxRemove);
 
       // Verify it's removed
       await whitelistController.info(ctxInfo);
-      const removedUser = ctxInfo.body.whitelistUsers.find(
-        (u: WhitelistEntry) => u.email === 'controller-test@whitelist.com',
+      const removedUser = (ctxInfo.body as WhitelistInfoBody).whitelistUsers.find(
+        (u) => u.email === 'controller-test@whitelist.com',
       );
       expect(removedUser).toBeUndefined();
     });
 
     describe('register email validation', () => {
       it('rejects invalid email addresses and returns them in rejectedEmails', async () => {
-        const ctx = {
+        const ctx: MockCtx = {
           request: { body: { email: 'not-an-email' } },
           status: 200,
-          body: null as any,
         };
         await whitelistController.register(ctx);
+        const body = ctx.body as RegisterBody;
         expect(ctx.status).toBe(400);
-        expect(ctx.body.error).toBe('No valid email addresses supplied');
-        expect(ctx.body.rejectedEmails).toContain('not-an-email');
+        expect(body.error).toBe('No valid email addresses supplied');
+        expect(body.rejectedEmails).toContain('not-an-email');
       });
 
       it('accepts valid emails and separates invalid ones', async () => {
         await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
           where: { email: 'valid@validation-test.com' },
         });
-        const ctx = {
+        const ctx: MockCtx = {
           request: { body: { email: ['valid@validation-test.com', 'bad-email', 'also bad'] } },
           status: 200,
-          body: null as any,
         };
         await whitelistController.register(ctx);
+        const body = ctx.body as RegisterBody;
         expect(ctx.status).toBe(200);
-        expect(ctx.body.acceptedCount).toBe(1);
-        expect(ctx.body.rejectedEmails).toEqual(expect.arrayContaining(['bad-email', 'also bad']));
+        expect(body.acceptedCount).toBe(1);
+        expect(body.rejectedEmails).toEqual(expect.arrayContaining(['bad-email', 'also bad']));
         await strapi.db
           .query('plugin::strapi-plugin-oidc.whitelists')
           .deleteMany({ where: { email: 'valid@validation-test.com' } });
@@ -188,32 +173,21 @@ describe('Controllers E2E', () => {
           data: { email: duplicate.email },
         });
 
-        const ctx = {
-          request: { body: { users: whitelistFixture } },
-          status: 200,
-          body: null as any,
-        };
-
+        const ctx: MockCtx = { request: { body: { users: whitelistFixture } }, status: 200 };
         await whitelistController.importUsers(ctx);
 
         // All fixture entries minus the one pre-inserted duplicate
-        expect(ctx.body.importedCount).toBe(whitelistFixture.length - 1);
+        expect((ctx.body as ImportBody).importedCount).toBe(whitelistFixture.length - 1);
       });
 
       it('should return 400 for non-array body', async () => {
-        const ctx = {
-          request: { body: { users: 'not-an-array' } },
-          status: 200,
-          body: null as any,
-        };
-
+        const ctx: MockCtx = { request: { body: { users: 'not-an-array' } }, status: 200 };
         await whitelistController.importUsers(ctx);
-
         expect(ctx.status).toBe(400);
       });
 
       it('should skip entries without an email field', async () => {
-        const ctx = {
+        const ctx: MockCtx = {
           request: {
             body: {
               users: [
@@ -224,12 +198,11 @@ describe('Controllers E2E', () => {
             },
           },
           status: 200,
-          body: null as any,
         };
 
         await whitelistController.importUsers(ctx);
 
-        expect(ctx.body.importedCount).toBe(0);
+        expect((ctx.body as ImportBody).importedCount).toBe(0);
       });
     });
 
@@ -237,13 +210,8 @@ describe('Controllers E2E', () => {
       // Create some initial users
       await strapi.plugin('strapi-plugin-oidc').service('whitelist').registerUser('sync1@test.com');
 
-      const ctxSync = {
-        request: {
-          body: {
-            users: [{ email: 'sync2@test.com' }, { email: 'sync3@test.com' }],
-          },
-        },
-        body: null as any,
+      const ctxSync: MockCtx = {
+        request: { body: { users: [{ email: 'sync2@test.com' }, { email: 'sync3@test.com' }] } },
       };
 
       await whitelistController.syncUsers(ctxSync);
@@ -251,10 +219,10 @@ describe('Controllers E2E', () => {
       expect(ctxSync.body).toBeDefined();
 
       // sync1 should be deleted, sync2 and sync3 should be added
-      const ctxInfo = { body: null as any };
+      const ctxInfo: MockCtx = {};
       await whitelistController.info(ctxInfo);
 
-      const userEmails = ctxInfo.body.whitelistUsers.map((u: WhitelistEntry) => u.email);
+      const userEmails = (ctxInfo.body as WhitelistInfoBody).whitelistUsers.map((u) => u.email);
       expect(userEmails).not.toContain('sync1@test.com');
       expect(userEmails).toContain('sync2@test.com');
       expect(userEmails).toContain('sync3@test.com');
@@ -271,50 +239,44 @@ describe('Controllers E2E', () => {
         .service('whitelist')
         .registerUser('deleteall2@test.com');
 
-      const ctxDeleteAll = { body: null as any };
+      const ctxDeleteAll: MockCtx = {};
       await whitelistController.deleteAll(ctxDeleteAll);
       expect(ctxDeleteAll.body).toEqual({});
 
-      const ctxInfo = { body: null as any };
+      const ctxInfo: MockCtx = {};
       await whitelistController.info(ctxInfo);
-      expect(ctxInfo.body.whitelistUsers).toHaveLength(0);
+      expect((ctxInfo.body as WhitelistInfoBody).whitelistUsers).toHaveLength(0);
     });
   });
 
   describe('Role Controller', () => {
     it('should find roles', async () => {
-      const ctxFind = {
-        body: null as any,
-        send: function (data: unknown) {
+      const ctxFind: MockCtx = {
+        send(data: unknown) {
           this.body = data;
         },
       };
       await roleController.find(ctxFind);
 
-      expect(Array.isArray(ctxFind.body)).toBe(true);
-      expect(ctxFind.body.length).toBeGreaterThan(0);
+      const roles = ctxFind.body as OidcRole[];
+      expect(Array.isArray(roles)).toBe(true);
+      expect(roles.length).toBeGreaterThan(0);
     });
 
     it('should update roles', async () => {
       // 1. Fetch original roles to restore later
-      const ctxFindOriginal = {
-        body: null as any,
-        send: function (data: unknown) {
+      const ctxFindOriginal: MockCtx = {
+        send(data: unknown) {
           this.body = data;
         },
       };
       await roleController.find(ctxFindOriginal);
-      const originalRoles = ctxFindOriginal.body;
-      const originalRole4 = originalRoles.find((r: OidcRole) => r.oauth_type === '4')?.role || [];
+      const originalRoles = ctxFindOriginal.body as OidcRole[];
+      const originalRole4 = originalRoles.find((r) => r.oauth_type === '4')?.role ?? [];
 
-      const ctxUpdate = {
-        request: {
-          body: {
-            roles: [{ oauth_type: '4', role: [1, 2] }],
-          },
-        },
-        body: null,
-        send: function (data: unknown, status: number) {
+      const ctxUpdate: MockCtx = {
+        request: { body: { roles: [{ oauth_type: '4', role: [1, 2] }] } },
+        send(data: unknown, status?: number) {
           this.body = { data, status };
         },
       };
@@ -322,26 +284,20 @@ describe('Controllers E2E', () => {
       await roleController.update(ctxUpdate);
       expect(ctxUpdate.body).toMatchObject({ data: {}, status: 204 });
 
-      const ctxFind = {
-        body: null as any,
-        send: function (data: unknown) {
+      const ctxFind: MockCtx = {
+        send(data: unknown) {
           this.body = data;
         },
       };
       await roleController.find(ctxFind);
 
-      const updatedRole = ctxFind.body.find((r: OidcRole) => r.oauth_type === '4');
-      expect(updatedRole.role).toEqual(expect.arrayContaining([1, 2]));
+      const updatedRole = (ctxFind.body as OidcRole[]).find((r) => r.oauth_type === '4');
+      expect(updatedRole?.role).toEqual(expect.arrayContaining([1, 2]));
 
       // Restore the original roles
-      const ctxRestore = {
-        request: {
-          body: {
-            roles: [{ oauth_type: '4', role: originalRole4 }],
-          },
-        },
-        body: null,
-        send: function (data: unknown, status: number) {
+      const ctxRestore: MockCtx = {
+        request: { body: { roles: [{ oauth_type: '4', role: originalRole4 }] } },
+        send(data: unknown, status?: number) {
           this.body = { data, status };
         },
       };

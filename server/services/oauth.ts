@@ -1,7 +1,7 @@
 import strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
-import type { Core } from '@strapi/types';
+import type { Core, UID } from '@strapi/types';
 import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
 import { authPageMessages } from '../audit-error-strings';
@@ -189,11 +189,18 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         ENTRY_CREATE = webhookStore.allowedEvents.get('ENTRY_CREATE');
       }
       const modelDef = strapi.getModel('admin::user');
+      type SanitizeCtx = Parameters<
+        typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
+      >[0];
+      type SanitizeData = Parameters<
+        typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
+      >[1];
       const sanitizedEntity = (await strapiUtils.sanitize.sanitizers.defaultSanitizeOutput(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { schema: modelDef, getModel: (uid2: any) => strapi.getModel(uid2) } as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        user as any,
+        {
+          schema: modelDef,
+          getModel: (uid2: string) => strapi.getModel(uid2 as UID.Schema),
+        } as unknown as SanitizeCtx,
+        user as unknown as SanitizeData,
       )) as unknown as StrapiAdminUser;
       eventHub?.emit(ENTRY_CREATE ?? 'entry.create', {
         model: modelDef.modelName,

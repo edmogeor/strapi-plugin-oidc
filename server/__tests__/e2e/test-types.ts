@@ -27,6 +27,27 @@ declare global {
 
 export type { Core };
 
+// Controller response body shapes used in controller tests.
+export interface WhitelistInfoBody {
+  useWhitelist: boolean;
+  enforceOIDC: boolean;
+  enforceOIDCConfig: unknown;
+  whitelistUsers: WhitelistEntry[];
+  auditLogEnabled: boolean;
+}
+
+export interface RegisterBody {
+  acceptedCount: number;
+  alreadyWhitelistedCount: number;
+  rejectedEmails: string[];
+  message?: string;
+  error?: string;
+}
+
+export interface ImportBody {
+  importedCount: number;
+}
+
 // A role record as stored by the plugin's roles content-type.
 export interface OidcRole {
   id: number;
