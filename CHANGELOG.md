@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.1] - 2026-04-21
 
+### Changed
+
+- **OIDC discovery document support** — Replaced the six individual endpoint env vars (`OIDC_AUTHORIZATION_URL`, `OIDC_TOKEN_URL`, `OIDC_USERINFO_URL`, `OIDC_END_SESSION_URL`, `OIDC_JWKS_URI`, `OIDC_ISSUER`) with a single `OIDC_DISCOVERY_URL`. The plugin fetches the discovery document at bootstrap and auto-configures all endpoints. Minimum required config is now `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_REDIRECT_URI`.
+- **Removed `OIDC_GRANT_TYPE`** — `authorization_code` is now hardcoded; the env var is no longer read or required.
+
 ### Fixed
 
 - **Audit log loading UX** — Table now retains its height while new results load (rows stay in the DOM at reduced opacity). A minimum 400 ms spinner duration prevents jarring flashes on fast connections. The initial render no longer flashes an empty-state message before data arrives.
