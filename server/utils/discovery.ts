@@ -35,9 +35,10 @@ export async function applyDiscovery(strapi: Core.Strapi): Promise<void> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     doc = (await res.json()) as DiscoveryDocument;
   } catch (e) {
-    throw new Error(
+    strapi.log.error(
       errorMessages.DISCOVERY_FETCH_ERROR(discoveryUrl, e instanceof Error ? e.message : String(e)),
     );
+    return;
   }
 
   const updates: Partial<PluginConfig> = {};
