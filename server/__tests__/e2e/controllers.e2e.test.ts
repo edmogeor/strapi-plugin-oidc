@@ -104,7 +104,8 @@ describe('Controllers E2E', () => {
       };
 
       await whitelistController.register(ctxRegister);
-      expect(ctxRegister.body.matchedExistingUsersCount).toBeGreaterThanOrEqual(0);
+      expect(ctxRegister.body.acceptedCount).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(ctxRegister.body.rejectedEmails)).toBe(true);
 
       // Verify it fails without an email
       const ctxRegisterFail = {
@@ -137,6 +138,38 @@ describe('Controllers E2E', () => {
         (u: WhitelistEntry) => u.email === 'controller-test@whitelist.com',
       );
       expect(removedUser).toBeUndefined();
+    });
+
+    describe('register email validation', () => {
+      it('rejects invalid email addresses and returns them in rejectedEmails', async () => {
+        const ctx = {
+          request: { body: { email: 'not-an-email' } },
+          status: 200,
+          body: null as any,
+        };
+        await whitelistController.register(ctx);
+        expect(ctx.status).toBe(400);
+        expect(ctx.body.error).toBe('No valid email addresses supplied');
+        expect(ctx.body.rejectedEmails).toContain('not-an-email');
+      });
+
+      it('accepts valid emails and separates invalid ones', async () => {
+        await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
+          where: { email: 'valid@validation-test.com' },
+        });
+        const ctx = {
+          request: { body: { email: ['valid@validation-test.com', 'bad-email', 'also bad'] } },
+          status: 200,
+          body: null as any,
+        };
+        await whitelistController.register(ctx);
+        expect(ctx.status).toBe(200);
+        expect(ctx.body.acceptedCount).toBe(1);
+        expect(ctx.body.rejectedEmails).toEqual(expect.arrayContaining(['bad-email', 'also bad']));
+        await strapi.db
+          .query('plugin::strapi-plugin-oidc.whitelists')
+          .deleteMany({ where: { email: 'valid@validation-test.com' } });
+      });
     });
 
     describe('importUsers', () => {
@@ -214,7 +247,8 @@ describe('Controllers E2E', () => {
       };
 
       await whitelistController.syncUsers(ctxSync);
-      expect(ctxSync.body.matchedExistingUsersCount).toBeGreaterThanOrEqual(0);
+      // syncUsers returns an empty object — just verify it doesn't throw
+      expect(ctxSync.body).toBeDefined();
 
       // sync1 should be deleted, sync2 and sync3 should be added
       const ctxInfo = { body: null as any };
