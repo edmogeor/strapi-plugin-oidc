@@ -28,12 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.0] - 2026-04-21
 
-### Security
-
-- **Content-API permission scopes** — All content-API routes now carry explicit permission scopes (`plugin::strapi-plugin-oidc.whitelist.read`, `.whitelist.write`, `.whitelist.delete`, `.audit.read`, `.audit.delete`). Full-access tokens are unaffected. Custom tokens that previously relied on the auto-generated handler-name scopes (e.g. `plugin::strapi-plugin-oidc.whitelist.info`) must be re-issued and granted the new semantic scope(s).
-
 ### Changed
 
+- **Content-API permission scopes** — All content-API routes now carry explicit permission scopes (`plugin::strapi-plugin-oidc.whitelist.read`, `.whitelist.write`, `.whitelist.delete`, `.audit.read`, `.audit.delete`). Full-access tokens are unaffected. Custom tokens that previously relied on the auto-generated handler-name scopes (e.g. `plugin::strapi-plugin-oidc.whitelist.info`) must be re-issued and granted the new semantic scope(s).
 - **README simplification** — Removed verbose wording throughout, consolidated security features into a dedicated section, and clarified config option descriptions with discovery document field references
 - Config comments now reference the OIDC discovery document field names for all relevant options
 
