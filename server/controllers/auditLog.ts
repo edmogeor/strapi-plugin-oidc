@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { errorMessages } from '../error-strings';
 import type { StrapiContext, AuditLogService } from '../types';
 import { getAuditLogService } from '../utils/services';
 import { setNdjsonAttachmentHeaders } from '../utils/http';
@@ -41,7 +42,7 @@ function errorAwareNdjsonStream(
   const gen = ndjsonRowStream(service, filters);
   const readable = Readable.from(gen);
   readable.on('error', (err) => {
-    strapi.log.error({ phase: 'audit_log_export', err }, 'NDJSON export stream failed');
+    strapi.log.error({ phase: 'audit_log_export', err }, errorMessages.AUDIT_LOG_EXPORT_ERROR);
   });
   return readable;
 }

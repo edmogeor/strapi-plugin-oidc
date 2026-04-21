@@ -68,9 +68,7 @@ async function verifyIdToken(idToken: string, config: PluginConfig): Promise<JWT
   if (!jwksUri) {
     if (!jwksDisabledWarned) {
       jwksDisabledWarned = true;
-      strapi.log.warn(
-        "[OIDC] OIDC_JWKS_URI is not configured — ID token signature verification is disabled. Set OIDC_JWKS_URI and OIDC_ISSUER from your provider's discovery document.",
-      );
+      strapi.log.warn(errorMessages.JWKS_URI_NOT_CONFIGURED);
     }
     return null;
   }

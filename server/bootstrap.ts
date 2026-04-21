@@ -1,5 +1,6 @@
 import type { Core } from '@strapi/types';
 import type { Context, Next } from 'koa';
+import { errorMessages } from './error-strings';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
@@ -52,7 +53,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           return;
         }
       } catch (err) {
-        strapi.log.error('Error checking OIDC enforcement in middleware:', err);
+        strapi.log.error(errorMessages.ENFORCE_MIDDLEWARE_ERROR, err);
       }
     }
 
@@ -95,7 +96,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
         );
       }
     } catch (err) {
-      strapi.log.error('[strapi-plugin-oidc] Failed to sync OIDC_ENFORCE to database:', err);
+      strapi.log.error(errorMessages.ENFORCE_SYNC_ERROR, err);
     }
   }
 
@@ -116,7 +117,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
       }
     }
   } catch (err) {
-    strapi.log.warn('Could not initialize default OIDC role:', (err as Error).message);
+    strapi.log.warn(errorMessages.DEFAULT_ROLE_INIT_ERROR, (err as Error).message);
   }
 
   strapi.cron.add({
@@ -126,7 +127,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           const retentionDays = getRetentionDays();
           await getAuditLogService().cleanup(retentionDays);
         } catch (err) {
-          strapi.log.warn('[strapi-plugin-oidc] Audit log cleanup failed:', (err as Error).message);
+          strapi.log.warn(errorMessages.AUDIT_LOG_CLEANUP_ERROR, (err as Error).message);
         }
       },
       options: { rule: '0 0 * * *' },

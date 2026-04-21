@@ -15,7 +15,6 @@ export const errorCodes = {
   ID_TOKEN_INVALID: 'ID_TOKEN_INVALID',
   WHITELIST_NOT_PRESENT: 'WHITELIST_NOT_PRESENT',
   SESSION_MANAGER_UNSUPPORTED: 'SESSION_MANAGER_UNSUPPORTED',
-  MISSING_CONFIG: 'MISSING_CONFIG',
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
@@ -33,7 +32,6 @@ const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   whitelist_not_present: 'Email not present in whitelist',
   session_manager_unsupported:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
-  missing_config: 'Missing required config keys: {keys}',
 };
 
 function interpolate(template: string, params?: Record<string, string | number>): string {
@@ -61,5 +59,14 @@ export const errorMessages = {
   WHITELIST_NOT_PRESENT: 'Not present in whitelist',
   SESSION_MANAGER_UNSUPPORTED:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
+  JWKS_URI_NOT_CONFIGURED:
+    "[OIDC] OIDC_JWKS_URI is not configured — ID token signature verification is disabled. Set OIDC_JWKS_URI and OIDC_ISSUER from your provider's discovery document.",
+  ENFORCE_MIDDLEWARE_ERROR: 'Error checking OIDC enforcement in middleware:',
+  ENFORCE_SYNC_ERROR: '[strapi-plugin-oidc] Failed to sync OIDC_ENFORCE to database:',
+  DEFAULT_ROLE_INIT_ERROR: 'Could not initialize default OIDC role:',
+  AUDIT_LOG_CLEANUP_ERROR: '[strapi-plugin-oidc] Audit log cleanup failed:',
+  AUDIT_LOG_EXPORT_ERROR: 'NDJSON export stream failed',
+  DISCOVERY_FETCH_ERROR: (url: string, reason: string) =>
+    `[strapi-plugin-oidc] Failed to fetch OIDC discovery document from ${url}: ${reason}`,
   MISSING_CONFIG: (keys: string) => `Missing required config keys: ${keys}`,
 } as const;

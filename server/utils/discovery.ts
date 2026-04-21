@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/types';
+import { errorMessages } from '../error-strings';
 import type { PluginConfig } from '../types';
 
 interface DiscoveryDocument {
@@ -34,10 +35,9 @@ export async function applyDiscovery(strapi: Core.Strapi): Promise<void> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     doc = (await res.json()) as DiscoveryDocument;
   } catch (e) {
-    strapi.log.error(
-      `[strapi-plugin-oidc] Failed to fetch OIDC discovery document from ${discoveryUrl}: ${e instanceof Error ? e.message : String(e)}`,
+    throw new Error(
+      errorMessages.DISCOVERY_FETCH_ERROR(discoveryUrl, e instanceof Error ? e.message : String(e)),
     );
-    return;
   }
 
   const updates: Partial<PluginConfig> = {};
