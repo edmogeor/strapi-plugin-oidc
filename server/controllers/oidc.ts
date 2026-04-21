@@ -40,7 +40,6 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_CLIENT_SECRET',
   'OIDC_REDIRECT_URI',
   'OIDC_SCOPE',
-  'OIDC_GRANT_TYPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
   // Populated at bootstrap from OIDC_DISCOVERY_URL — checked here as a runtime safety net
@@ -551,7 +550,7 @@ async function oidcSignInCallback(ctx: StrapiContext) {
     client_id: config.OIDC_CLIENT_ID,
     client_secret: config.OIDC_CLIENT_SECRET,
     redirect_uri: config.OIDC_REDIRECT_URI,
-    grant_type: config.OIDC_GRANT_TYPE,
+    grant_type: 'authorization_code',
     code_verifier: codeVerifier ?? '',
   });
 

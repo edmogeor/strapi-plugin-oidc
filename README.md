@@ -38,7 +38,7 @@ module.exports = ({ env }) => ({
       OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
 
       // Optional — defaults shown
-      OIDC_SCOPE: 'openid profile email',
+      OIDC_SCOPE: 'openid profile email', // space-separated scopes
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',

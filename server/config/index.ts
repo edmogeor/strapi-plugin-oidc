@@ -7,7 +7,6 @@ export default {
     OIDC_CLIENT_ID: '',
     OIDC_CLIENT_SECRET: '',
     OIDC_SCOPE: 'openid profile email',
-    OIDC_GRANT_TYPE: 'authorization_code',
     OIDC_FAMILY_NAME_FIELD: 'family_name',
     OIDC_GIVEN_NAME_FIELD: 'given_name',
     OIDC_SSO_BUTTON_TEXT: 'Login via SSO',

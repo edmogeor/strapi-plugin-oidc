@@ -13,7 +13,6 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
         'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
       ),
       OIDC_SCOPE: env('OIDC_SCOPE', 'openid profile email'),
-      OIDC_GRANT_TYPE: env('OIDC_GRANT_TYPE', 'authorization_code'),
       OIDC_FAMILY_NAME_FIELD: env('OIDC_FAMILY_NAME_FIELD', 'family_name'),
       OIDC_GIVEN_NAME_FIELD: env('OIDC_GIVEN_NAME_FIELD', 'given_name'),
       OIDC_ENFORCE: env('OIDC_ENFORCE', null),

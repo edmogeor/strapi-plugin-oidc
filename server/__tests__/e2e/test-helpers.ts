@@ -21,7 +21,6 @@ export const MOCK_OIDC_CONFIG = {
   OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
   OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
   OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-  OIDC_GRANT_TYPE: 'authorization_code',
   OIDC_FAMILY_NAME_FIELD: 'family_name',
   OIDC_GIVEN_NAME_FIELD: 'given_name',
   OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',

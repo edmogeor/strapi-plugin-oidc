@@ -81,7 +81,6 @@ export interface PluginConfig {
   OIDC_AUTHORIZATION_ENDPOINT: string;
   OIDC_TOKEN_ENDPOINT: string;
   OIDC_USERINFO_ENDPOINT: string;
-  OIDC_GRANT_TYPE: string;
   OIDC_FAMILY_NAME_FIELD: string;
   OIDC_GIVEN_NAME_FIELD: string;
   OIDC_END_SESSION_ENDPOINT: string;
