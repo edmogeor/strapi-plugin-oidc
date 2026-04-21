@@ -5,11 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.8.0] - 2026-04-21
+
+### Breaking / Behavioral changes
+
+- **Email verification required by default** — The plugin now rejects logins when the IdP does not report `email_verified: true`. Set `OIDC_REQUIRE_EMAIL_VERIFIED: false` to opt out when your provider does not emit the claim. See [Verified email requirement](README.md#verified-email-requirement).
+- **Logout changed from GET to POST** — The `/strapi-plugin-oidc/logout` endpoint now requires a POST request. The admin UI adapts automatically; external scripts that issue `GET /logout` must switch to POST.
+- **Content-API custom token scopes** — Content-API routes now require explicit semantic scopes. Full-access tokens are unaffected. Custom tokens previously issued against auto-generated handler-name scopes (e.g. `plugin::strapi-plugin-oidc.whitelist.info`) must be re-issued with the new scope(s): `whitelist.read`, `whitelist.write`, `whitelist.delete`, `audit.read`, or `audit.delete`.
 
 ### Security
 
-- **Content-API permission scopes** — All content-API routes now carry explicit permission scopes (`plugin::strapi-plugin-oidc.whitelist.read`, `.whitelist.write`, `.whitelist.delete`, `.audit.read`, `.audit.delete`). Full-access tokens are unaffected. Custom tokens that previously relied on the auto-generated handler-name scopes (e.g. `plugin::strapi-plugin-oidc.whitelist.info`) must be re-issued and granted the new semantic scope(s).
+- **Require verified email from IdP** — `handleUserAuthentication` now checks `email_verified` before creating or signing in a user. Missing claim is treated as unverified (per OIDC Core §5.7). New config key `OIDC_REQUIRE_EMAIL_VERIFIED` (default `true`).
+- **Gate proxy headers behind explicit allowlist** — `getClientIp` now only reads a custom forwarding header (e.g. `CF-Connecting-IP`) when both `server.proxy: true` is set and the header name is listed in `OIDC_TRUSTED_IP_HEADER`. Prevents IP spoofing via arbitrary request headers.
+- **ID token signature verification** — When `OIDC_JWKS_URI` is set, the ID token is verified against the provider's JWKS (RS256 / ES256) with `iss`, `aud`, `exp`, and `nonce` claim checks. New config keys `OIDC_JWKS_URI` and `OIDC_ISSUER`.
+- **Rate-limit map bounding** — The in-process rate-limit map is now capped at 10,000 entries with amortized pruning of expired windows, preventing unbounded memory growth under large numbers of distinct client IPs.
+- **Email format validation in whitelist.register** — Submitted addresses are now validated against RFC 5322 before insertion; invalid entries are rejected with a 400 response rather than silently stored.
+- **CSRF protection on /logout** — Logout endpoint changed to POST; `SameSite=Lax` semantics block cross-origin forced-logout attacks that were possible with a plain GET.
+- **Cookie Secure flag hardening** — The `Secure` attribute on auth cookies is now set based on the actual request protocol (including `X-Forwarded-Proto` when `server.proxy: true`) rather than a static environment check. New config key `OIDC_FORCE_SECURE_COOKIES`.
+- **Admin existence not leaked from whitelist.register** — The API response no longer reveals which submitted emails already exist as Strapi admin users.
+- **Content-API permission scopes** — Content-API routes now carry explicit per-operation scopes so custom tokens can be granted minimum required access (read, write, or delete) independently for the whitelist and audit log APIs.
 
 ---
 
