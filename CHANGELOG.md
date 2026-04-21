@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`OIDC_TRUSTED_IP_HEADER` whitelist removed** — Previously, only `cf-connecting-ip` was accepted as a trusted IP header; any other value was silently ignored. The header name is now used as-is (lowercased), so headers such as `x-real-ip` work correctly.
+- **`OIDC_TRUSTED_IP_HEADER` allowlist expanded** — Previously only `cf-connecting-ip` was accepted; any other value was silently ignored. The allowlist now includes all headers that CDN/proxy vendors guarantee to strip from client requests: `cf-connecting-ip` (Cloudflare), `true-client-ip` (Cloudflare Enterprise / Akamai), `x-real-ip` (nginx), and `fastly-client-ip` (Fastly).
 
 ---
 

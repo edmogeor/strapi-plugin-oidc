@@ -1,10 +1,23 @@
 import type { StrapiContext, PluginConfig } from '../types';
 
+// Headers that CDN/proxy vendors guarantee to strip from client requests,
+// so only the infrastructure itself can set them.
+// cf-connecting-ip / true-client-ip: Cloudflare (+ Akamai for the latter)
+// x-real-ip: nginx proxy_set_header X-Real-IP $remote_addr
+// fastly-client-ip: Fastly CDN
+const TRUSTED_IP_HEADERS = new Set([
+  'cf-connecting-ip',
+  'true-client-ip',
+  'x-real-ip',
+  'fastly-client-ip',
+]);
+
 function getTrustedHeaderName(): string | undefined {
   const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
   const raw = config.OIDC_TRUSTED_IP_HEADER;
   if (typeof raw !== 'string' || !raw) return undefined;
-  return raw.trim().toLowerCase();
+  const normalized = raw.trim().toLowerCase();
+  return TRUSTED_IP_HEADERS.has(normalized) ? normalized : undefined;
 }
 
 export function getClientIp(ctx: StrapiContext): string {
