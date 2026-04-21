@@ -22,6 +22,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       OIDC_ENFORCE: env('OIDC_ENFORCE', null),
       OIDC_GROUP_FIELD: env('OIDC_GROUP_FIELD', 'groups'),
       OIDC_GROUP_ROLE_MAP: env('OIDC_GROUP_ROLE_MAP', '{}'),
+      OIDC_JWKS_URI: env('OIDC_JWKS_URI', ''),
+      OIDC_ISSUER: env('OIDC_ISSUER', ''),
+      OIDC_TRUSTED_IP_HEADER: env('OIDC_TRUSTED_IP_HEADER', ''),
     },
   },
 });

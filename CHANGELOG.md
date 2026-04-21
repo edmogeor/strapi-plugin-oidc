@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-04-21
+
+### Changed
+
+- **README simplification** — Removed verbose wording throughout, consolidated security features into a dedicated section, and clarified config option descriptions with discovery document field references
+- Config comments now reference the OIDC discovery document field names for all relevant options
+
 ## [1.7.6] - 2026-04-20
 
 ### Fixed
