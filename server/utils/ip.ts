@@ -5,11 +5,15 @@ import type { StrapiContext, PluginConfig } from '../types';
 // cf-connecting-ip / true-client-ip: Cloudflare (+ Akamai for the latter)
 // x-real-ip: nginx proxy_set_header X-Real-IP $remote_addr
 // fastly-client-ip: Fastly CDN
+// fly-client-ip: Fly.io (reflects the IP Fly Proxy accepted the connection from)
+// x-nf-client-connection-ip: Netlify
 const TRUSTED_IP_HEADERS = new Set([
   'cf-connecting-ip',
   'true-client-ip',
   'x-real-ip',
   'fastly-client-ip',
+  'fly-client-ip',
+  'x-nf-client-connection-ip',
 ]);
 
 function getTrustedHeaderName(): string | undefined {

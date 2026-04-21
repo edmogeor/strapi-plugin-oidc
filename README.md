@@ -48,7 +48,7 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
-      OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
+      OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when server.proxy: true
       OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
     },
   },
@@ -69,7 +69,18 @@ module.exports = ({ env }) => ({
 
 The plugin logs client IPs for rate-limit buckets and audit logs. When Strapi runs behind a reverse proxy, **set `server.proxy: true`** so Koa trusts `X-Forwarded-For`; otherwise all IPs will be the proxy's.
 
-Set `OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip'` when behind Cloudflare. The header is only honoured when `server.proxy: true` is set.
+Set `OIDC_TRUSTED_IP_HEADER` to the header your CDN or proxy uses to forward the real client IP. The header is only honoured when `server.proxy: true` is set. Accepted values (all others are silently ignored):
+
+| Header                      | Provider                                          |
+| --------------------------- | ------------------------------------------------- |
+| `cf-connecting-ip`          | Cloudflare                                        |
+| `true-client-ip`            | Cloudflare Enterprise, Akamai                     |
+| `fastly-client-ip`          | Fastly                                            |
+| `fly-client-ip`             | Fly.io                                            |
+| `x-nf-client-connection-ip` | Netlify                                           |
+| `x-real-ip`                 | nginx (`proxy_set_header X-Real-IP $remote_addr`) |
+
+Only headers that CDN/proxy vendors guarantee to strip from inbound client requests are accepted, preventing IP spoofing via forged headers.
 
 ## Login
 
