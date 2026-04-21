@@ -214,7 +214,7 @@ export default function Whitelist({
               {users.length === 0 ? (
                 <Tr>
                   <Td colSpan={4}>
-                    <Flex justifyContent="center" padding={4}>
+                    <Flex justifyContent="center" alignItems="center" style={{ minHeight: '80px' }}>
                       <Typography textColor="neutral600">
                         {formatMessage(getTrad('whitelist.table.empty'))}
                       </Typography>

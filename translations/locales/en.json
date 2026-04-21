@@ -61,7 +61,6 @@
   "auditlog.table.ip": "IP",
   "auditlog.table.details": "Details",
   "auditlog.table.empty": "No audit log entries",
-  "auditlog.loading": "Loading…",
   "auditlog.clear": "Clear Logs",
   "auditlog.clear.title": "Clear All Logs",
   "auditlog.clear.description": "This will permanently delete all {count, plural, one {# audit log entry} other {# audit log entries}}. This action cannot be undone.",

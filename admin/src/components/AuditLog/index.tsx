@@ -1,4 +1,15 @@
-import { Box, Flex, Tbody, Td, Th, Thead, Tooltip, Tr, Typography } from '@strapi/design-system';
+import {
+  Box,
+  Flex,
+  Loader,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tooltip,
+  Tr,
+  Typography,
+} from '@strapi/design-system';
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { Calendar, Download, Information, Mail, Trash } from '@strapi/icons';
 import { ClipboardList, Filter, Server } from 'lucide-react';
@@ -37,6 +48,7 @@ interface PaginationInfo {
 }
 
 const PAGE_SIZE = 10;
+const MIN_SPINNER_MS = 400;
 
 const DETAILS_TEXT_STYLE = {
   display: 'block',
@@ -99,7 +111,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
     pageCount: 1,
   });
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({});
 
   const debouncedFilters = useDebounced(filters);
@@ -107,22 +119,28 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
   const fetchLogs = useCallback(
     async (p: number, f: FilterState) => {
       setLoading(true);
+      const startTime = Date.now();
+      let newRecords: AuditLogRecord[] = [];
+      let newPagination = { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 };
       try {
-        const queryString = buildQueryString({
-          filters: f,
+        const queryString = buildQueryString({ filters: f, page: p, pageSize: PAGE_SIZE });
+        const response = await get(`/strapi-plugin-oidc/audit-logs?${queryString}`);
+        newRecords = response.data.results ?? [];
+        newPagination = response.data.pagination ?? {
           page: p,
           pageSize: PAGE_SIZE,
-        });
-        const response = await get(`/strapi-plugin-oidc/audit-logs?${queryString}`);
-        setRecords(response.data.results ?? []);
-        setPagination(
-          response.data.pagination ?? { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 },
-        );
+          total: 0,
+          pageCount: 1,
+        };
       } catch {
-        setRecords([]);
-      } finally {
-        setLoading(false);
+        // newRecords stays []
       }
+      const remaining = MIN_SPINNER_MS - (Date.now() - startTime);
+      if (remaining > 0) await new Promise<void>((r) => setTimeout(r, remaining));
+      // Update records and clear loading in one render so old rows never flash between states.
+      setRecords(newRecords);
+      setPagination(newPagination);
+      setLoading(false);
     },
     [get],
   );
@@ -320,44 +338,40 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
         </Flex>
       </Box>
 
-      <CustomTable colCount={5} rowCount={records.length}>
-        <Thead>
-          <Tr>
-            <Th>{formatMessage(getTrad('auditlog.table.timestamp'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.action'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.email'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.ip'))}</Th>
-            <Th>{formatMessage(getTrad('auditlog.table.details'))}</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {loading && (
+      <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+        <CustomTable colCount={5} rowCount={records.length}>
+          <Thead>
             <Tr>
-              <Td colSpan={5}>
-                <Flex justifyContent="center" padding={4}>
-                  <Typography textColor="neutral600">
-                    {formatMessage(getTrad('auditlog.loading'))}
-                  </Typography>
-                </Flex>
-              </Td>
+              <Th>{formatMessage(getTrad('auditlog.table.timestamp'))}</Th>
+              <Th>{formatMessage(getTrad('auditlog.table.action'))}</Th>
+              <Th>{formatMessage(getTrad('auditlog.table.email'))}</Th>
+              <Th>{formatMessage(getTrad('auditlog.table.ip'))}</Th>
+              <Th>{formatMessage(getTrad('auditlog.table.details'))}</Th>
             </Tr>
-          )}
-          {!loading && records.length === 0 && (
-            <Tr>
-              <Td colSpan={5}>
-                <Flex justifyContent="center" padding={4}>
-                  <Typography textColor="neutral600">
-                    {hasActiveFilters
-                      ? formatMessage(getTrad('auditlog.filters.empty'))
-                      : formatMessage(getTrad('auditlog.table.empty'))}
-                  </Typography>
-                </Flex>
-              </Td>
-            </Tr>
-          )}
-          {!loading &&
-            records.map((record) => (
-              <Tr key={record.id}>
+          </Thead>
+          <Tbody>
+            {records.length === 0 && (
+              <Tr>
+                <Td colSpan={5}>
+                  <Flex justifyContent="center" alignItems="center" style={{ minHeight: '80px' }}>
+                    {loading ? (
+                      <Loader small />
+                    ) : (
+                      <Typography textColor="neutral600">
+                        {hasActiveFilters
+                          ? formatMessage(getTrad('auditlog.filters.empty'))
+                          : formatMessage(getTrad('auditlog.table.empty'))}
+                      </Typography>
+                    )}
+                  </Flex>
+                </Td>
+              </Tr>
+            )}
+            {records.map((record) => (
+              <Tr
+                key={record.id}
+                style={{ opacity: loading ? 0.4 : 1, transition: 'opacity 0.15s' }}
+              >
                 <Td>
                   <Typography variant="omega">
                     <LocalizedDate date={record.createdAt} options={{ second: '2-digit' }} />
@@ -398,8 +412,19 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
                 </Td>
               </Tr>
             ))}
-        </Tbody>
-      </CustomTable>
+          </Tbody>
+        </CustomTable>
+
+        {loading && records.length > 0 && (
+          <Flex
+            justifyContent="center"
+            alignItems="center"
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+          >
+            <Loader small />
+          </Flex>
+        )}
+      </div>
 
       <TablePagination
         page={page}
