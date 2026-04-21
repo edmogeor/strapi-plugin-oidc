@@ -78,24 +78,6 @@ describe('OIDC Services E2E', () => {
       users = await whitelistService.getUsers();
       expect(users).toHaveLength(0);
     });
-
-    it('countAdminUsersByEmails returns correct count', async () => {
-      const superAdmin = await strapi.db.query('admin::user').findOne({
-        where: { email: 'admin@strapi.test' },
-      });
-
-      const countAll = await whitelistService.countAdminUsersByEmails([
-        'admin@strapi.test',
-        'nonexistent@test.com',
-      ]);
-      expect(countAll).toBe(superAdmin ? 1 : 0);
-
-      const countNone = await whitelistService.countAdminUsersByEmails(['nonexistent@test.com']);
-      expect(countNone).toBe(0);
-
-      const countEmpty = await whitelistService.countAdminUsersByEmails([]);
-      expect(countEmpty).toBe(0);
-    });
   });
 
   describe('Role Service', () => {

@@ -17,6 +17,7 @@ export const oidcServer = setupServer(
   http.get('https://mock-oidc.com/userinfo', () => {
     return HttpResponse.json({
       email: 'test@company.com',
+      email_verified: true,
       family_name: 'Doe',
       given_name: 'John',
     });

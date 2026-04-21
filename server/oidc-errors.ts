@@ -9,6 +9,8 @@ type OidcErrorKind =
   | 'user_creation_failed'
   | 'whitelist_rejected'
   | 'invalid_email'
+  | 'email_not_verified'
+  | 'id_token_invalid'
   | 'unknown';
 
 export class OidcError extends Error {
@@ -55,6 +57,16 @@ export const OIDC_ERROR_DISPATCH: Record<
     action: 'login_failure',
     code: errorCodes.TOKEN_EXCHANGE_FAILED,
     key: 'sign_in_unknown',
+  },
+  email_not_verified: {
+    action: 'email_not_verified',
+    code: errorCodes.EMAIL_NOT_VERIFIED,
+    key: 'email_not_verified',
+  },
+  id_token_invalid: {
+    action: 'id_token_invalid',
+    code: errorCodes.ID_TOKEN_INVALID,
+    key: 'id_token_invalid',
   },
   unknown: {
     action: 'login_failure',

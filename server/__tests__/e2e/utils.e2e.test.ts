@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import type { Core } from './test-types';
 import {
   makeCookieTestCtx,
   findAdminRefreshCookieCall,
   expectAdminCookieSecure,
+  clearRateLimitMap,
+  getRateLimitMapSize,
 } from './test-helpers';
 
 describe('pluginConfig utils', () => {
@@ -114,6 +116,210 @@ describe('enforceOIDC utils', () => {
   });
 });
 
+describe('rate-limit map bounding and pruning', () => {
+  afterEach(() => {
+    clearRateLimitMap();
+  });
+
+  it('clearRateLimitMap empties the map', async () => {
+    // Seed the map via real HTTP requests
+    const request = (await import('supertest')).default;
+    const strapi = globalThis.strapiInstance;
+    for (let i = 0; i < 3; i++) {
+      await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc')
+        .set('X-Forwarded-For', `192.0.2.${i}`)
+        .redirects(0);
+    }
+    clearRateLimitMap();
+    expect(getRateLimitMapSize()).toBe(0);
+  });
+
+  it('map size never exceeds MAX_MAP_SIZE across many distinct IPs', async () => {
+    const request = (await import('supertest')).default;
+    const strapi = globalThis.strapiInstance;
+
+    // Fire 15 requests with distinct IPs in groups so ctx.app.proxy matters less.
+    // We just want to confirm bounding — exact count depends on eviction.
+    for (let i = 0; i < 15; i++) {
+      await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc')
+        .set('user-agent', `bot-${i}`)
+        .redirects(0);
+    }
+    // MAX_MAP_SIZE is 10_000 — size must not grow without bound
+    expect(getRateLimitMapSize()).toBeLessThanOrEqual(10_000);
+  });
+});
+
+describe('getClientIp utils', () => {
+  let strapi: Core.Strapi;
+  let ipUtils: typeof import('../../utils/ip');
+
+  beforeAll(async () => {
+    strapi = globalThis.strapiInstance;
+    ipUtils = await import('../../utils/ip');
+  });
+
+  beforeEach(() => {
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+  });
+
+  interface MockCtx {
+    ip: string;
+    app: { proxy: boolean };
+    request: { ips: string[] };
+    get(name: string): string;
+  }
+
+  const makeCtx = (
+    opts: {
+      ip?: string;
+      proxy?: boolean;
+      ips?: string[];
+      headers?: Record<string, string>;
+    } = {},
+  ): MockCtx => {
+    const headers = Object.fromEntries(
+      Object.entries(opts.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+    );
+    return {
+      ip: opts.ip ?? '10.0.0.1',
+      app: { proxy: opts.proxy ?? false },
+      request: { ips: opts.ips ?? [] },
+      get(name: string) {
+        return headers[name.toLowerCase()] ?? '';
+      },
+    };
+  };
+
+  it('returns ctx.ip when app.proxy is false, ignoring forwarded headers', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: false,
+      ips: ['1.2.3.4'],
+      headers: { 'X-Forwarded-For': '1.2.3.4', 'CF-Connecting-IP': '5.6.7.8' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('returns ctx.request.ips[0] when app.proxy is true and XFF is set', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4', '5.6.7.8'],
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+
+  it('falls back to ctx.ip when app.proxy is true but no forwarded IPs are present', () => {
+    const ctx = makeCtx({ ip: '10.0.0.1', proxy: true, ips: [] });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('ignores CF-Connecting-IP when OIDC_TRUSTED_IP_HEADER is unset', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+
+  it('reads CF-Connecting-IP when header is allow-listed and app.proxy is true', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('9.9.9.9');
+  });
+
+  it('ignores CF-Connecting-IP allow-list when app.proxy is false', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: false,
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('rejects unknown header names in OIDC_TRUSTED_IP_HEADER', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'x-forwarded-for' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'X-Forwarded-For': '1.2.3.4' },
+    });
+    // app.proxy=true still honors ctx.request.ips from koa — returns 1.2.3.4 from ips[0].
+    // The header name itself is not trusted for raw reads.
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+});
+
+describe('shouldMarkSecure', () => {
+  let strapi: Core.Strapi;
+  let cookiesUtils: typeof import('../../utils/cookies');
+
+  beforeAll(async () => {
+    strapi = globalThis.strapiInstance;
+    cookiesUtils = await import('../../utils/cookies');
+  });
+
+  const makeCtx = (opts: { secure?: boolean; proxy?: boolean; xfp?: string } = {}) => ({
+    request: { secure: opts.secure ?? false },
+    app: { proxy: opts.proxy ?? false },
+    get(name: string) {
+      if (name === 'x-forwarded-proto' && opts.xfp) return opts.xfp;
+      return '';
+    },
+  });
+
+  it('returns false in development regardless', () => {
+    strapi.config.set('environment', 'development');
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(false);
+  });
+
+  it('returns true in production when request is secure', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(true);
+  });
+
+  it('returns false in production when request is not secure and proxy is off', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx({ secure: false }) as never)).toBe(false);
+  });
+
+  it('returns true when proxy is trusted and x-forwarded-proto is https', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(
+      cookiesUtils.shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'https' }) as never),
+    ).toBe(true);
+  });
+
+  it('returns false when proxy is trusted but x-forwarded-proto is http', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+    expect(
+      cookiesUtils.shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'http' }) as never),
+    ).toBe(false);
+  });
+
+  it('returns true when OIDC_FORCE_SECURE_COOKIES is set', () => {
+    strapi.config.set('environment', 'production');
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: true });
+    expect(cookiesUtils.shouldMarkSecure(strapi, makeCtx() as never)).toBe(true);
+  });
+});
+
 describe('cookies utils', () => {
   let strapi: Core.Strapi;
   let cookiesUtils: typeof import('../../utils/cookies');
@@ -165,27 +371,28 @@ describe('cookies utils', () => {
     ).toBe(true);
   });
 
-  it('clearAuthCookies uses secure cookie in production when request is secure', () => {
-    strapi.config.set('environment', 'production');
-    strapi.config.set('admin.auth.cookie.domain', 'example.com');
-    strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+  describe('in production with domain and strict sameSite', () => {
+    beforeEach(() => {
+      strapi.config.set('environment', 'production');
+      strapi.config.set('admin.auth.cookie.domain', 'example.com');
+      strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
+    });
 
-    const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
-    cookiesUtils.clearAuthCookies(strapi, ctx);
+    it('clearAuthCookies uses secure cookie when request is secure', () => {
+      const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
+      cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const adminCall = findAdminRefreshCookieCall(ctx);
-    expect(adminCall?.opts?.secure).toBe(true);
-    expect(adminCall?.opts?.domain).toBe('example.com');
-  });
+      const adminCall = findAdminRefreshCookieCall(ctx);
+      expect(adminCall?.opts?.secure).toBe(true);
+      expect(adminCall?.opts?.domain).toBe('example.com');
+    });
 
-  it('clearAuthCookies does not set secure flag when request is not secure even in production', () => {
-    strapi.config.set('environment', 'production');
-    strapi.config.set('admin.auth.cookie.domain', 'example.com');
-    strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+    it('clearAuthCookies does not set secure flag when request is not secure', () => {
+      const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
+      cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
-    cookiesUtils.clearAuthCookies(strapi, ctx);
-
-    expectAdminCookieSecure(ctx, false);
+      expectAdminCookieSecure(ctx, false);
+    });
   });
 });

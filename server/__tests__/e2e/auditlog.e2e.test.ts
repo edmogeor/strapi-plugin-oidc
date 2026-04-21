@@ -372,7 +372,7 @@ describe('AuditLog E2E Integration', () => {
     await initiateLoginAndCallback(agent);
     await strapi.db.query(AUDIT_LOG_UID).deleteMany({});
 
-    await agent.get('/strapi-plugin-oidc/logout').redirects(0);
+    await agent.post('/strapi-plugin-oidc/logout').redirects(0);
 
     const rows = await queryAuditLog(strapi, 'logout');
     expect(rows.length).toBeGreaterThan(0);

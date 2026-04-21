@@ -90,6 +90,11 @@ export interface PluginConfig {
   OIDC_GROUP_FIELD: string;
   // JSON-encoded GroupRoleMap (e.g. '{"admins":["1"],"editors":["2"]}').
   OIDC_GROUP_ROLE_MAP: string;
+  OIDC_REQUIRE_EMAIL_VERIFIED: boolean;
+  OIDC_TRUSTED_IP_HEADER: string;
+  OIDC_JWKS_URI: string;
+  OIDC_ISSUER: string;
+  OIDC_FORCE_SECURE_COOKIES?: boolean;
 }
 
 export interface WhitelistService {
@@ -101,7 +106,6 @@ export interface WhitelistService {
   checkWhitelistForEmail(email: string): Promise<WhitelistEntry | null>;
   hasUser(email: string): Promise<boolean>;
   deleteAllUsers(): Promise<void>;
-  countAdminUsersByEmails(emails: string[]): Promise<number>;
 }
 
 export interface AdminUserService {

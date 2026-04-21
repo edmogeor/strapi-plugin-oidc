@@ -70,6 +70,17 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
 
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
 
+  const contentApiScopeUids = [
+    'plugin::strapi-plugin-oidc.whitelist.read',
+    'plugin::strapi-plugin-oidc.whitelist.write',
+    'plugin::strapi-plugin-oidc.whitelist.delete',
+    'plugin::strapi-plugin-oidc.audit.read',
+    'plugin::strapi-plugin-oidc.audit.delete',
+  ];
+  for (const uid of contentApiScopeUids) {
+    strapi.contentAPI.permissions.providers.action.register(uid, { uid });
+  }
+
   const enforceOIDCConfig = getEnforceOIDCConfig(strapi);
   if (enforceOIDCConfig !== null) {
     try {

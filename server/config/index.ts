@@ -18,6 +18,11 @@ export default {
     AUDIT_LOG_RETENTION_DAYS: 90,
     OIDC_GROUP_FIELD: 'groups',
     OIDC_GROUP_ROLE_MAP: '{}',
+    OIDC_REQUIRE_EMAIL_VERIFIED: true,
+    OIDC_TRUSTED_IP_HEADER: '',
+    OIDC_JWKS_URI: '',
+    OIDC_ISSUER: '',
+    OIDC_FORCE_SECURE_COOKIES: false,
   },
   validator() {},
 };

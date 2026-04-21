@@ -68,7 +68,8 @@ describe('Whitelist Content-API Routes', () => {
       .send({ email: 'api-register@test.com' });
 
     expect(res.status).toBe(200);
-    expect(res.body.matchedExistingUsersCount).toBeGreaterThanOrEqual(0);
+    expect(res.body.acceptedCount).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(res.body.rejectedEmails)).toBe(true);
 
     // Confirm it appears in the list
     const listRes = await request(strapi.server.httpServer)

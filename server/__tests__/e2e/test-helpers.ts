@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import { expect, beforeAll, beforeEach } from 'vitest';
 import type { Readable } from 'node:stream';
-export { clearRateLimitMap } from '../../routes';
+export { clearRateLimitMap, getRateLimitMapSize } from '../../routes';
 
 export async function streamToString(stream: Readable): Promise<string> {
   const chunks: Buffer[] = [];
@@ -174,6 +174,7 @@ export function mswUserInfoHandler(
   return http.get('https://mock-oidc.com/userinfo', () =>
     HttpResponse.json({
       email,
+      email_verified: true,
       family_name: lastName,
       given_name: firstName,
       groups,
