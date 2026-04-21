@@ -157,7 +157,6 @@ export default {
         form.action = '/strapi-plugin-oidc/logout';
         document.body.appendChild(form);
         form.submit();
-        document.body.removeChild(form);
         return new Promise(() => {});
       }
 
