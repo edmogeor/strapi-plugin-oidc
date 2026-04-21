@@ -95,6 +95,8 @@ Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Lo
 
 When `OIDC_END_SESSION_ENDPOINT` is set, clicking logout in Strapi redirects the browser to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
 
+The logout endpoint is `POST /strapi-plugin-oidc/logout`. Using POST instead of GET prevents CSRF-forced-logout attacks: `SameSite=Lax` cookies block cross-origin form posts, whereas top-level GET navigations from a third-party page would be allowed. The admin UI submits the form automatically via JavaScript.
+
 ## Admin Settings
 
 Manage the plugin under **Settings → OIDC Plugin**.

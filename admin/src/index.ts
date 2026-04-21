@@ -151,7 +151,12 @@ export default {
         window.sessionStorage.removeItem('isLoggedIn');
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
         document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
-        window.location.href = '/strapi-plugin-oidc/logout';
+        // POST to prevent CSRF (SameSite=Lax allows top-level GET navigations).
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/strapi-plugin-oidc/logout';
+        document.body.appendChild(form);
+        form.submit();
         return new Promise(() => {});
       }
 

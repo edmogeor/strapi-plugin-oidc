@@ -495,7 +495,7 @@ describe('OIDC E2E Tests', () => {
 
     const logoutWithOidcSession = () =>
       request(strapi.server.httpServer)
-        .get('/strapi-plugin-oidc/logout')
+        .post('/strapi-plugin-oidc/logout')
         .set('Cookie', 'oidc_authenticated=1')
         .redirects(0);
 
@@ -668,7 +668,7 @@ describe('OIDC E2E Tests', () => {
         strapi.config.set('admin.url', '/admin');
 
         const res = await request(strapi.server.httpServer)
-          .get('/strapi-plugin-oidc/logout')
+          .post('/strapi-plugin-oidc/logout')
           .redirects(0); // no oidc_authenticated cookie
 
         expect(res.status).toBe(302);
@@ -682,7 +682,7 @@ describe('OIDC E2E Tests', () => {
         const startTime = Date.now();
 
         const res = await request(strapi.server.httpServer)
-          .get('/strapi-plugin-oidc/logout')
+          .post('/strapi-plugin-oidc/logout')
           .set(
             'Cookie',
             'oidc_authenticated=1; oidc_access_token=test-token; oidc_user_email=test@test.com',
