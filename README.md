@@ -44,49 +44,38 @@ module.exports = ({ env }) => ({
       OIDC_GRANT_TYPE: 'authorization_code',
       OIDC_FAMILY_NAME_FIELD: 'family_name',
       OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL for RP-initiated logout
+      OIDC_END_SESSION_ENDPOINT: '', // Provider end-session URL (from discovery `end_session_endpoint`)
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
       AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
-      OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when the provider does not report email_verified=true
+      OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
       OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
-      OIDC_JWKS_URI: '', // Recommended: provider's jwks_uri — enables ID token signature verification
-      OIDC_ISSUER: '', // Recommended: provider's issuer claim — verified against the ID token's iss
-      OIDC_FORCE_SECURE_COOKIES: false, // Set true to always mark cookies Secure when proxy-proto detection fails
+      OIDC_JWKS_URI: '', // Provider's JWKS URI (from discovery `jwks_uri`) — enables ID token signature verification
+      OIDC_ISSUER: '', // Provider's issuer (from discovery `issuer`) — verified against ID token's `iss`
+      OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
     },
   },
 });
 ```
 
-All required values come from your provider's OIDC discovery document, typically available at `https://your-provider/.well-known/openid-configuration`.
+All OIDC values come from your provider's discovery document, typically available at `https://your-provider/.well-known/openid-configuration`.
 
-### Verified email requirement
+### Security features
 
-By default the plugin refuses to authenticate users unless the userinfo response includes `email_verified=true` (boolean) or `"true"` (string), per [OIDC Core §5.7](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). A missing claim is treated as unverified. This prevents account takeover when a provider permits unverified addresses — without it, an attacker could register `victim@company.com` at the IdP and gain access if that email is whitelisted.
-
-If your provider does not emit this claim at all, set `OIDC_REQUIRE_EMAIL_VERIFIED: false`. **This disables a security-relevant check** — only opt out when the provider's enrolment flow independently guarantees email ownership.
+- **ID token verification** — `OIDC_JWKS_URI` and `OIDC_ISSUER` enable signature, issuer, audience, and expiry validation via [`jose`](https://github.com/panva/jose)
+- **Email verification** — `OIDC_REQUIRE_EMAIL_VERIFIED: true` (default) rejects unverified emails
+- **CSRF protection** — OIDC state/nonce and POST-only logout endpoint
+- **Rate limiting** — 1 000 req/min per IP+UA (in-process; use a reverse-proxy-level limiter for multi-node)
+- **Secure cookies** — `OIDC_FORCE_SECURE_COOKIES` ensures cookies are marked Secure
 
 ### Client IP attribution and reverse proxies
 
-The plugin attributes rate-limit buckets and audit-log IP fields to the client's IP address. When Strapi runs behind a reverse proxy or load balancer, **you must set `server.proxy: true`** in Strapi's server config so Koa trusts `X-Forwarded-For`; otherwise all logs and rate-limit buckets will show the proxy's address.
+The plugin logs client IPs for rate-limit buckets and audit logs. When Strapi runs behind a reverse proxy, **set `server.proxy: true`** so Koa trusts `X-Forwarded-For`; otherwise all IPs will be the proxy's.
 
-By default the plugin ignores all forwarding headers. Set `OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip'` when running behind Cloudflare to use `CF-Connecting-IP`. The header is only honoured when `server.proxy: true` is set, so arbitrary clients cannot spoof it.
-
-### ID token signature verification
-
-When `OIDC_JWKS_URI` is configured, the plugin verifies the ID token's signature, `iss`, `aud`, `exp`, and `nbf` claims using the provider's JWKS endpoint (via [`jose`](https://github.com/panva/jose)). Both values come from your provider's OIDC discovery document:
-
-- `OIDC_JWKS_URI` — the `jwks_uri` field
-- `OIDC_ISSUER` — the `issuer` field (verified against the token's `iss` claim)
-
-When `OIDC_JWKS_URI` is unset the plugin falls back to a nonce-only check and logs a one-time warning at boot. This keeps existing installs working on upgrade but leaves ID token integrity dependent on TLS to the IdP — set both values to close that gap.
-
-### Rate limiter — single-process note
-
-The built-in rate limiter (`1 000 req/min per IP+UA`) is an **in-process Map** that resets when the Node.js process restarts. In multi-node deployments each instance maintains its own counter, so the effective limit per client is `1 000 × N`. The limiter is intended as a basic safety net only. For stronger per-client limits across multiple instances, place the OIDC endpoints behind a reverse-proxy-level rate limiter (e.g. nginx `limit_req`, Cloudflare rate limiting, or an API gateway).
+Set `OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip'` when behind Cloudflare. The header is only honoured when `server.proxy: true` is set.
 
 ## Login
 
@@ -94,29 +83,27 @@ Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Lo
 
 ## Logout
 
-When `OIDC_END_SESSION_ENDPOINT` is set, clicking logout in Strapi redirects the browser to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
+When `OIDC_END_SESSION_ENDPOINT` is set, clicking logout redirects to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
 
-The logout endpoint is `POST /strapi-plugin-oidc/logout`. Using POST instead of GET prevents CSRF-forced-logout attacks: `SameSite=Lax` cookies block cross-origin form posts, whereas top-level GET navigations from a third-party page would be allowed. The admin UI submits the form automatically via JavaScript.
+The logout endpoint is `POST /strapi-plugin-oidc/logout`. Using POST instead of GET prevents CSRF-forced-logout attacks.
 
 ## Admin Settings
 
 Manage the plugin under **Settings → OIDC Plugin**.
 
-**Default Roles** — Select which Strapi admin role(s) are assigned to new users on first login.
+**Default Roles** — Strapi admin role(s) assigned to new users on first login.
 
-**Whitelist** — Restrict access to specific email addresses. When enabled, only listed emails can log in. When empty, any successfully authenticated OIDC user gets an account. The whitelist supports:
+**Whitelist** — Restrict access to specific email addresses. When empty, any authenticated OIDC user gets an account. Supports:
 
-- Adding individual emails with optional role overrides
-- JSON import / export (see [format](#import-format) below)
+- Individual emails with optional role overrides
+- JSON import / export
 - Bulk delete with confirmation
-- Unsaved changes are held in the UI until **Save Changes** is clicked
 
-**Audit Logs** — Every authentication event is recorded in the plugin's audit log table and visible in the **Audit Logs** section at the bottom of the settings page. Entries can be filtered by action, email, IP address, and date, and a **Download** button exports the current (filtered) view as NDJSON (newline-delimited JSON), compatible with SIEM tools and log processors. Setting `AUDIT_LOG_RETENTION_DAYS` to `0` disables audit logging entirely. Otherwise records older than the configured value (default: 90 days) are automatically purged by a daily cron job. The audit log is also accessible [via API](#audit-log-api).
+**Audit Logs** — Authentication events recorded and visible in the settings page. Filter by action, email, IP, and date. **Download** exports the current view as NDJSON. Set `AUDIT_LOG_RETENTION_DAYS` to `0` to disable. Records older than the configured value (default: 90 days) are purged daily.
 
-**Enforce OIDC Login** — Removes the standard email/password fields from the login page and blocks direct login API calls server-side. Automatically disabled when the whitelist is empty to prevent lockout.
+**Enforce OIDC Login** — Removes email/password fields from the login page and blocks direct login API calls. Automatically disabled when the whitelist is empty to prevent lockout.
 
-- The toggle is grayed out and locked when `OIDC_ENFORCE` is set in config.
-- **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi. This writes through to the database so removing the variable afterwards keeps the setting.
+The toggle is grayed out when `OIDC_ENFORCE` is set in config. **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi.
 
 ## Group-to-Role Mapping
 
@@ -150,14 +137,14 @@ Role names are the **display names** shown in **Settings → Roles** (e.g. `"Edi
 
 ### Role assignment precedence
 
-1. **User's OIDC groups match `OIDC_GROUP_ROLE_MAP`** → use the mapped Strapi roles
-2. **No group match or no mapping configured** → use the default OIDC roles (new users only — see below)
+1. **OIDC groups match `OIDC_GROUP_ROLE_MAP`** → mapped Strapi roles
+2. **No match or no mapping** → default OIDC roles (new users only)
 
 ### Role updates on subsequent logins
 
-- **New users** — Roles are always assigned on first login: group-mapped roles if a match is found, otherwise the configured default OIDC roles.
-- **Existing users with a group mapping match** — Roles are updated to reflect the current mapping. If a user's groups change between logins, their Strapi roles are updated accordingly.
-- **Existing users with no group mapping match** — Roles are left unchanged, regardless of what the default OIDC roles are set to. Manually-assigned roles are never overwritten by a default fallback.
+- **New users** — Roles assigned on first login (group-mapped or default).
+- **Existing users with group match** — Roles updated to reflect current mapping.
+- **Existing users without group match** — Roles left unchanged. Manually-assigned roles are never overwritten.
 
 ## Whitelist API
 
@@ -329,16 +316,16 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 
 ### Changes from the original:
 
-- Removed alternative SSO methods to focus solely on OIDC.
-- Redesigned the Whitelist and Role management UI using native Strapi components.
-- Added OIDC enforcement with an admin toggle and config override (`OIDC_ENFORCE`).
-- Added RP-initiated logout with smart session detection — skips the provider redirect if the session is already expired.
-- Migrated to Vitest with comprehensive e2e test coverage.
-- Config variable names aligned with OIDC discovery document field names (`OIDC_SCOPE`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`).
-- Always injects a **Login via SSO** button on the Strapi login page. Button text is configurable via `OIDC_SSO_BUTTON_TEXT`.
-- Whitelist: programmatic REST API with JSON import/export, bulk delete, delete by email, and unsaved changes guard.
-- Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, and generic error messages on failure.
-- Audit log: records all auth events to a queryable table with Admin UI, JSON export, and REST API. API responses use a single `datetime` field and omit framework metadata (id, documentId, locale, publishedAt, etc.). A separate `user_created` event is emitted when a Strapi admin is provisioned during login.
+- OIDC-only (removed other SSO methods)
+- Redesigned whitelist and role management UI using native Strapi components
+- OIDC enforcement via admin toggle or `OIDC_ENFORCE` config
+- RP-initiated logout with smart session detection
+- Migrated to Vitest with e2e coverage
+- Config variable names aligned with OIDC discovery document field names
+- **Login via SSO** button always injected; text configurable via `OIDC_SSO_BUTTON_TEXT`
+- Whitelist REST API with JSON import/export, bulk delete, delete by email
+- Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, generic error messages on failure
+- Audit log: records all auth events to a queryable table with UI, JSON/NDJSON export, and REST API
 
 ## License
 
