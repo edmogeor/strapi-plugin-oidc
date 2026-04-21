@@ -130,24 +130,25 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.text).toContain('Authentication failed. Please try again.');
   });
 
-  it('should fail if callback is missing code', async () => {
-    const callbackRes = await agent
-      .get('/strapi-plugin-oidc/oidc/callback?state=mock-state')
-      .redirects(0);
+  const assertCallbackError = async (url: string, expectedMsg: string) => {
+    const res = await agent.get(url).redirects(0);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('Authentication Failed');
+    expect(res.text).toContain(expectedMsg);
+  };
 
-    expect(callbackRes.status).toBe(200);
-    expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain(userFacingMessages('en').missing_code);
+  it('should fail if callback is missing code', async () => {
+    await assertCallbackError(
+      '/strapi-plugin-oidc/oidc/callback?state=mock-state',
+      userFacingMessages('en').missing_code,
+    );
   });
 
   it('should fail if callback has invalid state', async () => {
-    const callbackRes = await agent
-      .get('/strapi-plugin-oidc/oidc/callback?code=mock-code&state=invalid-state')
-      .redirects(0);
-
-    expect(callbackRes.status).toBe(200);
-    expect(callbackRes.text).toContain('Authentication Failed');
-    expect(callbackRes.text).toContain(userFacingMessages('en').invalid_state);
+    await assertCallbackError(
+      '/strapi-plugin-oidc/oidc/callback?code=mock-code&state=invalid-state',
+      userFacingMessages('en').invalid_state,
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -251,6 +252,14 @@ describe('OIDC E2E Tests', () => {
   // email_verified enforcement (Task 1)
   // ---------------------------------------------------------------------------
   describe('email_verified enforcement', () => {
+    const assertEmailVerifiedRejected = async (overrides: Record<string, unknown>) => {
+      oidcServer.use(userinfoWith(overrides));
+      const callbackRes = await loginAndExpectSuccess(createAgent());
+      expect(callbackRes.text).toContain('Authentication Failed');
+      const logs = await queryAuditLog(strapi, 'email_not_verified');
+      expect(logs.length).toBeGreaterThan(0);
+    };
+
     const userinfoWith = (overrides: Record<string, unknown>) =>
       http.get('https://mock-oidc.com/userinfo', () =>
         HttpResponse.json({
@@ -283,19 +292,11 @@ describe('OIDC E2E Tests', () => {
     });
 
     it('rejects email_verified: false and emits email_not_verified audit action', async () => {
-      oidcServer.use(userinfoWith({ email_verified: false }));
-      const callbackRes = await loginAndExpectSuccess(createAgent());
-      expect(callbackRes.text).toContain('Authentication Failed');
-      const logs = await queryAuditLog(strapi, 'email_not_verified');
-      expect(logs.length).toBeGreaterThan(0);
+      await assertEmailVerifiedRejected({ email_verified: false });
     });
 
     it('rejects when email_verified claim is missing (default)', async () => {
-      oidcServer.use(userinfoWith({}));
-      const callbackRes = await loginAndExpectSuccess(createAgent());
-      expect(callbackRes.text).toContain('Authentication Failed');
-      const logs = await queryAuditLog(strapi, 'email_not_verified');
-      expect(logs.length).toBeGreaterThan(0);
+      await assertEmailVerifiedRejected({});
     });
 
     it('allows missing email_verified when OIDC_REQUIRE_EMAIL_VERIFIED is disabled', async () => {

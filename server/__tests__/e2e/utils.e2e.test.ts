@@ -371,29 +371,28 @@ describe('cookies utils', () => {
     ).toBe(true);
   });
 
-  it('clearAuthCookies uses secure cookie in production when request is secure', () => {
-    strapi.config.set('environment', 'production');
-    strapi.config.set('admin.auth.cookie.domain', 'example.com');
-    strapi.config.set('admin.auth.cookie.sameSite', 'strict');
-    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
+  describe('in production with domain and strict sameSite', () => {
+    beforeEach(() => {
+      strapi.config.set('environment', 'production');
+      strapi.config.set('admin.auth.cookie.domain', 'example.com');
+      strapi.config.set('admin.auth.cookie.sameSite', 'strict');
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
+    });
 
-    const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
-    cookiesUtils.clearAuthCookies(strapi, ctx);
+    it('clearAuthCookies uses secure cookie when request is secure', () => {
+      const ctx = makeCookieTestCtx(true) as unknown as TestCtx;
+      cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const adminCall = findAdminRefreshCookieCall(ctx);
-    expect(adminCall?.opts?.secure).toBe(true);
-    expect(adminCall?.opts?.domain).toBe('example.com');
-  });
+      const adminCall = findAdminRefreshCookieCall(ctx);
+      expect(adminCall?.opts?.secure).toBe(true);
+      expect(adminCall?.opts?.domain).toBe('example.com');
+    });
 
-  it('clearAuthCookies does not set secure flag when request is not secure even in production', () => {
-    strapi.config.set('environment', 'production');
-    strapi.config.set('admin.auth.cookie.domain', 'example.com');
-    strapi.config.set('admin.auth.cookie.sameSite', 'strict');
-    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
+    it('clearAuthCookies does not set secure flag when request is not secure', () => {
+      const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
+      cookiesUtils.clearAuthCookies(strapi, ctx);
 
-    const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
-    cookiesUtils.clearAuthCookies(strapi, ctx);
-
-    expectAdminCookieSecure(ctx, false);
+      expectAdminCookieSecure(ctx, false);
+    });
   });
 });
