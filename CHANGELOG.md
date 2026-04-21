@@ -5,28 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.8.0] - 2026-04-21
-
-### Added
-
-- **Logout loading overlay** — A full-screen spinner is shown immediately when the user clicks logout, respecting the active light/dark mode theme, so there is no blank-page gap between clicking and the OIDC redirect completing.
-
-### Fixed
-
-- **Double-click logout** — Clicking logout more than once no longer causes a blank page. The first click now intercepts the fetch synchronously, dispatches the overlay event, and navigates away before any second click can fire.
-- **Chrome navigation abort on logout** — Removed a `removeChild` call on the logout form after submission, which caused Chrome to abort the navigation.
-- **Provider session check on logout** — Network timeouts and unreachable userinfo endpoints no longer prevent the OIDC provider logout redirect. The provider redirect is now skipped only when the provider explicitly rejects the token with a 4xx response.
-- **Audit log stale fetch** — Rapidly changing filters could overwrite newer results with a slower earlier response. A generation counter now discards in-flight responses that have been superseded.
-
-### Changed
-
-- **Audit log loading UX** — The table now shows a spinner during loading instead of text, with a minimum display duration to prevent jarring flashes. Existing rows stay visible (dimmed) while new data loads to prevent height jumps. The empty state row uses a consistent minimum height across both the audit log and whitelist tables.
-- **README simplification** — Removed verbose wording throughout, consolidated security features into a dedicated section, and clarified config option descriptions with discovery document field references.
-- Config comments now reference the OIDC discovery document field names for all relevant options.
+## [Unreleased]
 
 ### Security
 
 - **Content-API permission scopes** — All content-API routes now carry explicit permission scopes (`plugin::strapi-plugin-oidc.whitelist.read`, `.whitelist.write`, `.whitelist.delete`, `.audit.read`, `.audit.delete`). Full-access tokens are unaffected. Custom tokens that previously relied on the auto-generated handler-name scopes (e.g. `plugin::strapi-plugin-oidc.whitelist.info`) must be re-issued and granted the new semantic scope(s).
+
+---
+
+## [1.8.1] - 2026-04-21
+
+### Fixed
+
+- **Audit log loading UX** — Table now retains its height while new results load (rows stay in the DOM at reduced opacity). A minimum 400 ms spinner duration prevents jarring flashes on fast connections. The initial render no longer flashes an empty-state message before data arrives.
+- **Audit log stale fetch** — Rapidly changing filters no longer allows a slower in-flight request to overwrite fresher results from a later request.
+- **Logout overlay** — Full-screen loading spinner now appears immediately on logout click, preventing a blank-page flash during the OIDC redirect. Respects the user's light/dark mode preference.
+- **Logout double-patch guard** — The `window.fetch` interceptor is now guarded against being applied more than once during hot-module reload cycles.
+- **MutationObserver cleanup** — The SSO button injection observer is now disconnected once the button is injected (when OIDC enforcement is off), avoiding unnecessary DOM observation for the page lifetime.
+- **Whitelist empty state** — Empty state row now has consistent minimum height and vertical centring, matching the audit log table.
+
+---
+
+## [1.8.0] - 2026-04-21
+
+### Changed
+
+- **README simplification** — Removed verbose wording throughout, consolidated security features into a dedicated section, and clarified config option descriptions with discovery document field references
+- Config comments now reference the OIDC discovery document field names for all relevant options
 
 ## [1.7.6] - 2026-04-20
 
