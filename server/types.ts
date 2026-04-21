@@ -91,6 +91,7 @@ export interface PluginConfig {
   // JSON-encoded GroupRoleMap (e.g. '{"admins":["1"],"editors":["2"]}').
   OIDC_GROUP_ROLE_MAP: string;
   OIDC_REQUIRE_EMAIL_VERIFIED: boolean;
+  OIDC_TRUSTED_IP_HEADER: string;
 }
 
 export interface WhitelistService {

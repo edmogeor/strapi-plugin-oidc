@@ -1,19 +1,29 @@
-import type { StrapiContext } from '../types';
+import type { StrapiContext, PluginConfig } from '../types';
+
+const TRUSTED_HEADER_WHITELIST = new Set(['cf-connecting-ip']);
+
+function getTrustedHeaderName(): string | undefined {
+  const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
+  const raw = config.OIDC_TRUSTED_IP_HEADER;
+  if (typeof raw !== 'string' || !raw) return undefined;
+  const normalized = raw.trim().toLowerCase();
+  return TRUSTED_HEADER_WHITELIST.has(normalized) ? normalized : undefined;
+}
 
 export function getClientIp(ctx: StrapiContext): string {
-  const cfConnectingIp = ctx.get('CF-Connecting-IP');
-  if (cfConnectingIp) {
-    return cfConnectingIp.split(',')[0].trim();
-  }
+  const proxyTrusted = ctx.app?.proxy === true;
 
-  const forwardedFor = ctx.get('X-Forwarded-For');
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0].trim();
-  }
+  if (proxyTrusted) {
+    const trustedHeader = getTrustedHeaderName();
+    if (trustedHeader) {
+      const value = ctx.get(trustedHeader);
+      if (value) return value.split(',')[0].trim();
+    }
 
-  const realIp = ctx.get('X-Real-IP');
-  if (realIp) {
-    return realIp.trim();
+    const forwarded = ctx.request.ips;
+    if (forwarded && forwarded.length > 0) {
+      return forwarded[0];
+    }
   }
 
   return ctx.ip;

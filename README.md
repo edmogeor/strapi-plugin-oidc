@@ -52,6 +52,7 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when the provider does not report email_verified=true
+      OIDC_TRUSTED_IP_HEADER: '', // Optional: 'cf-connecting-ip' for Cloudflare; read only when Strapi trusts the proxy
     },
   },
 });
@@ -64,6 +65,12 @@ All required values come from your provider's OIDC discovery document, typically
 By default the plugin refuses to authenticate users unless the userinfo response includes `email_verified=true` (boolean) or `"true"` (string), per [OIDC Core §5.7](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). A missing claim is treated as unverified. This prevents account takeover when a provider permits unverified addresses — without it, an attacker could register `victim@company.com` at the IdP and gain access if that email is whitelisted.
 
 If your provider does not emit this claim at all, set `OIDC_REQUIRE_EMAIL_VERIFIED: false`. **This disables a security-relevant check** — only opt out when the provider's enrolment flow independently guarantees email ownership.
+
+### Client IP attribution and reverse proxies
+
+The plugin attributes rate-limit buckets and audit-log IP fields to the client's IP address. When Strapi runs behind a reverse proxy or load balancer, **you must set `server.proxy: true`** in Strapi's server config so Koa trusts `X-Forwarded-For`; otherwise all logs and rate-limit buckets will show the proxy's address.
+
+By default the plugin ignores all forwarding headers. Set `OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip'` when running behind Cloudflare to use `CF-Connecting-IP`. The header is only honoured when `server.proxy: true` is set, so arbitrary clients cannot spoof it.
 
 ## Login
 

@@ -114,6 +114,116 @@ describe('enforceOIDC utils', () => {
   });
 });
 
+describe('getClientIp utils', () => {
+  let strapi: Core.Strapi;
+  let ipUtils: typeof import('../../utils/ip');
+
+  beforeAll(async () => {
+    strapi = globalThis.strapiInstance;
+    ipUtils = await import('../../utils/ip');
+  });
+
+  beforeEach(() => {
+    strapi.config.set('plugin::strapi-plugin-oidc', {});
+  });
+
+  interface MockCtx {
+    ip: string;
+    app: { proxy: boolean };
+    request: { ips: string[] };
+    get(name: string): string;
+  }
+
+  const makeCtx = (
+    opts: {
+      ip?: string;
+      proxy?: boolean;
+      ips?: string[];
+      headers?: Record<string, string>;
+    } = {},
+  ): MockCtx => {
+    const headers = Object.fromEntries(
+      Object.entries(opts.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+    );
+    return {
+      ip: opts.ip ?? '10.0.0.1',
+      app: { proxy: opts.proxy ?? false },
+      request: { ips: opts.ips ?? [] },
+      get(name: string) {
+        return headers[name.toLowerCase()] ?? '';
+      },
+    };
+  };
+
+  it('returns ctx.ip when app.proxy is false, ignoring forwarded headers', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: false,
+      ips: ['1.2.3.4'],
+      headers: { 'X-Forwarded-For': '1.2.3.4', 'CF-Connecting-IP': '5.6.7.8' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('returns ctx.request.ips[0] when app.proxy is true and XFF is set', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4', '5.6.7.8'],
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+
+  it('falls back to ctx.ip when app.proxy is true but no forwarded IPs are present', () => {
+    const ctx = makeCtx({ ip: '10.0.0.1', proxy: true, ips: [] });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('ignores CF-Connecting-IP when OIDC_TRUSTED_IP_HEADER is unset', () => {
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+
+  it('reads CF-Connecting-IP when header is allow-listed and app.proxy is true', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('9.9.9.9');
+  });
+
+  it('ignores CF-Connecting-IP allow-list when app.proxy is false', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: false,
+      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+    });
+    expect(ipUtils.getClientIp(ctx as never)).toBe('10.0.0.1');
+  });
+
+  it('rejects unknown header names in OIDC_TRUSTED_IP_HEADER', () => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'x-forwarded-for' });
+    const ctx = makeCtx({
+      ip: '10.0.0.1',
+      proxy: true,
+      ips: ['1.2.3.4'],
+      headers: { 'X-Forwarded-For': '1.2.3.4' },
+    });
+    // app.proxy=true still honors ctx.request.ips from koa — returns 1.2.3.4 from ips[0].
+    // The header name itself is not trusted for raw reads.
+    expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
+  });
+});
+
 describe('cookies utils', () => {
   let strapi: Core.Strapi;
   let cookiesUtils: typeof import('../../utils/cookies');
