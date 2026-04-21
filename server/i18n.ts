@@ -6,16 +6,14 @@ const modules = import.meta.glob('../translations/locales/*.json', { eager: true
   { default: Record<string, string> }
 >;
 
-export const locales: Record<string, Record<string, string>> = Object.fromEntries(
+const locales: Record<string, Record<string, string>> = Object.fromEntries(
   Object.entries(modules).map(([path, mod]) => {
     const code = path.match(/\/([^/]+)\.json$/)?.[1];
     return [code ?? '', mod.default];
   }),
 );
 
-export const AVAILABLE_LOCALES = Object.keys(locales).filter(Boolean);
-
-export const DEFAULT_LOCALE = 'en';
+const DEFAULT_LOCALE = 'en';
 
 interface WeightedTag {
   tag: string;

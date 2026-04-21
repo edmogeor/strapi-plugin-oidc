@@ -132,14 +132,10 @@ async function importUsers(ctx: Context) {
   const existing = await whitelistService.getUsers();
   const existingEmails = new Set(existing.map((u) => u.email));
 
-  let importedCount = 0;
-  for (const email of deduped) {
-    if (existingEmails.has(email)) continue;
-    await whitelistService.registerUser(email);
-    importedCount++;
-  }
+  const toImport = deduped.filter((email) => !existingEmails.has(email));
+  await Promise.all(toImport.map((email) => whitelistService.registerUser(email)));
 
-  ctx.body = { importedCount };
+  ctx.body = { importedCount: toImport.length };
 }
 
 async function syncUsers(ctx: Context) {
@@ -153,17 +149,14 @@ async function syncUsers(ctx: Context) {
   const syncEmailSet = new Set(emails);
   const currentUsersByEmail = new Map(currentUsers.map((u) => [u.email, u]));
 
-  for (const currUser of currentUsers) {
-    if (!syncEmailSet.has(currUser.email)) {
-      await whitelistService.removeUser(currUser.email);
-    }
-  }
-
-  for (const email of emails) {
-    if (!currentUsersByEmail.has(email)) {
-      await whitelistService.registerUser(email);
-    }
-  }
+  await Promise.all([
+    ...currentUsers
+      .filter((u) => !syncEmailSet.has(u.email))
+      .map((u) => whitelistService.removeUser(u.email)),
+    ...emails
+      .filter((email) => !currentUsersByEmail.has(email))
+      .map((email) => whitelistService.registerUser(email)),
+  ]);
 
   ctx.body = {};
 }
