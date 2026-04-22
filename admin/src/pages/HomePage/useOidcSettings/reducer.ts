@@ -41,19 +41,16 @@ type Action =
   | { type: 'flash/error' }
   | { type: 'flash/clear'; kind: 'success' | 'error' };
 
+const defaultSnapshot: SettingsSnapshot = {
+  oidcRoles: [],
+  users: [],
+  useWhitelist: false,
+  enforceOIDC: false,
+};
+
 export const initialState: State = {
-  current: {
-    oidcRoles: [],
-    users: [],
-    useWhitelist: false,
-    enforceOIDC: false,
-  },
-  initial: {
-    oidcRoles: [],
-    users: [],
-    useWhitelist: false,
-    enforceOIDC: false,
-  },
+  current: { ...defaultSnapshot },
+  initial: { ...defaultSnapshot },
   roles: [],
   enforceOIDCConfig: null,
   auditLogEnabled: true,

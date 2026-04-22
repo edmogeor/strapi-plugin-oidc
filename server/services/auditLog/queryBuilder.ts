@@ -17,7 +17,6 @@ const DATE_OP_MAP: Record<string, (v: unknown) => unknown> = {
   $lt: (v) => ({ $lt: v }),
   $lte: (v) => ({ $lte: v }),
   $between: (v) => ({ $between: v }),
-  // $in is handled separately: each ISO day-start is expanded to a [day, day+1) range.
 };
 
 const ACTION_OP_MAP: Record<string, (v: unknown) => unknown> = {
@@ -48,21 +47,31 @@ function mapFieldFilter(
   }
 }
 
+function buildDateConditions(
+  conditions: StrapiWhereClause[],
+  createdAt: AuditLogFilters['createdAt'],
+): void {
+  if (!createdAt) return;
+  const { $in: inDays, ...rest } = createdAt;
+  if (Array.isArray(inDays) && inDays.length > 0) {
+    conditions.push(expandCreatedAtInToDayRanges(inDays));
+  }
+  for (const [op, value] of Object.entries(rest)) {
+    const transform = DATE_OP_MAP[op];
+    if (transform) {
+      const result = transform(value);
+      if (result !== undefined) conditions.push({ createdAt: result });
+    }
+  }
+}
+
 export function buildWhereClause(filters: AuditLogFilters): StrapiWhereClause {
   const conditions: StrapiWhereClause[] = [];
 
   if (filters.action) mapFieldFilter(conditions, 'action', filters.action, ACTION_OP_MAP);
   if (filters.email) mapFieldFilter(conditions, 'email', filters.email, STRING_OP_MAP);
   if (filters.ip) mapFieldFilter(conditions, 'ip', filters.ip, STRING_OP_MAP);
-  if (filters.createdAt) {
-    const { $in: inDays, ...rest } = filters.createdAt;
-    if (Array.isArray(inDays) && inDays.length > 0) {
-      conditions.push(expandCreatedAtInToDayRanges(inDays));
-    }
-    if (Object.keys(rest).length > 0) {
-      mapFieldFilter(conditions, 'createdAt', rest, DATE_OP_MAP);
-    }
-  }
+  if (filters.createdAt) buildDateConditions(conditions, filters.createdAt);
 
   if (conditions.length === 0) return {};
   if (conditions.length === 1) return conditions[0];
