@@ -48,7 +48,7 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
-      OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when server.proxy: true
+      OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when Koa proxy mode is enabled (see below)
       OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
     },
   },
@@ -67,9 +67,17 @@ module.exports = ({ env }) => ({
 
 ### Client IP attribution and reverse proxies
 
-The plugin logs client IPs for rate-limit buckets and audit logs. When Strapi runs behind a reverse proxy, **set `server.proxy: true`** so Koa trusts `X-Forwarded-For`; otherwise all IPs will be the proxy's.
+The plugin logs client IPs for rate-limit buckets and audit logs. When Strapi runs behind a reverse proxy, enable Koa proxy mode so Strapi trusts `X-Forwarded-For`; otherwise all IPs will be the proxy's internal address.
 
-Set `OIDC_TRUSTED_IP_HEADER` to the header your CDN or proxy uses to forward the real client IP. The header is only honoured when `server.proxy: true` is set. Accepted values (all others are silently ignored):
+In `config/server.ts`:
+
+```ts
+proxy: {
+  koa: true,
+},
+```
+
+Set `OIDC_TRUSTED_IP_HEADER` to the header your CDN or proxy uses to forward the real client IP. The header is only honoured when Koa proxy mode is enabled. Accepted values (all others are silently ignored):
 
 | Header                      | Provider                                          |
 | --------------------------- | ------------------------------------------------- |

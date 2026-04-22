@@ -227,18 +227,23 @@ describe('getClientIp utils', () => {
     expect(ipUtils.getClientIp(ctx as never)).toBe('1.2.3.4');
   });
 
-  it('reads CF-Connecting-IP when header is allow-listed and app.proxy is true', () => {
-    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
+  it.each([
+    ['cf-connecting-ip', 'CF-Connecting-IP'],
+    ['true-client-ip', 'True-Client-IP'],
+    ['x-real-ip', 'X-Real-IP'],
+    ['fastly-client-ip', 'Fastly-Client-IP'],
+  ])('reads %s when allow-listed and app.proxy is true', (headerConfig, headerName) => {
+    strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: headerConfig });
     const ctx = makeCtx({
       ip: '10.0.0.1',
       proxy: true,
       ips: ['1.2.3.4'],
-      headers: { 'CF-Connecting-IP': '9.9.9.9' },
+      headers: { [headerName]: '9.9.9.9' },
     });
     expect(ipUtils.getClientIp(ctx as never)).toBe('9.9.9.9');
   });
 
-  it('ignores CF-Connecting-IP allow-list when app.proxy is false', () => {
+  it('ignores trusted header when app.proxy is false', () => {
     strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_TRUSTED_IP_HEADER: 'cf-connecting-ip' });
     const ctx = makeCtx({
       ip: '10.0.0.1',
