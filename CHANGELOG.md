@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.5] - 2026-04-22
+
+### Added
+
+- **`npm run test:unit`** — New unit test script and `vitest.config.unit.ts` covering pure modules: `buildWhereClause`, `classifyOidcError`, `collectGroupMapRoleNames`, `rolesChanged`, `buildQueryString`, and the `useOidcSettings` reducer.
+
+### Changed
+
+- **README proxy documentation corrected** — `server.proxy: true` (Strapi v4) no longer works in v5; the correct key is `server.proxy.koa`. README now shows the v5 structure.
+- **`server/controllers/oidc/` refactored** — Split the 664-line controller into focused modules: `signIn`, `callback`, `logout`, `userAuth`, `errors`, and `shared`. Public surface unchanged.
+- **`server/services/auditLog/` refactored** — Filter-to-where-clause composition moved to `queryBuilder.ts`, JSON-locale interpolation to `translations.ts`. Service is now a thin wrapper.
+- **`admin/src/components/AuditLog/` refactored** — Break the 441-line component into `FilterBar`, `LogTable`, `useAuditLogs`, `queryString`, and types. Index now owns only page actions and orchestration state.
+- **`admin/src/pages/HomePage/useOidcSettings/` refactored** — Reducer extracted to `reducer.ts`. Hook module focuses on effect wiring (hydration, save, handlers).
+
+### Removed
+
+- **Orphaned `audit-log-filters` unit test deleted** — The file was outside `server/__tests__/e2e/` and never matched the vitest include glob, so it never ran. Behavior is exercised by the e2e suite.
+
+---
+
 ## [1.8.4] - 2026-04-21
 
 ### Fixed
