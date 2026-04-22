@@ -22,7 +22,6 @@ import {
   fetchUserWithRoles,
   getFirstAvailableRole,
   loginAndExpectSuccess,
-  expectAuditLogAfterCallback,
   expectUserRoleIdsToContain,
 } from './test-helpers';
 import { userFacingMessages } from '../../audit-error-strings';
@@ -168,30 +167,42 @@ describe('OIDC E2E Tests', () => {
       expect(res.text).toContain('Authentication failed. Please try again.');
     };
 
-    it('shows generic error when token exchange fails', async () => {
+    it('shows generic error and logs token_exchange_failed when token exchange fails', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
       );
       await assertGenericAuthError(agent, await initiateLogin(agent));
+      const rows = await queryAuditLog(strapi, 'token_exchange_failed');
+      expect(rows.length).toBeGreaterThan(0);
     });
 
-    it('shows generic error when userinfo fetch fails', async () => {
+    it('shows generic error and logs login_failure when userinfo fetch fails', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
       );
       await assertGenericAuthError(agent, await initiateLogin(agent));
+      const rows = await queryAuditLog(strapi, 'login_failure');
+      expect(rows.length).toBeGreaterThan(0);
     });
 
-    it('rejects a mismatched nonce in the ID token', async () => {
+    it('rejects a mismatched nonce in the ID token and logs nonce_mismatch', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
       const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
         'base64url',
       );
       await assertInvalidTokenRejected(`${header}.${payload}.fakesig`);
+      const rows = await queryAuditLog(strapi, 'nonce_mismatch');
+      expect(rows.length).toBeGreaterThan(0);
     });
 
-    it('rejects a malformed ID token', async () => {
+    it('rejects a malformed ID token and logs login_failure', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       await assertInvalidTokenRejected('not.a.valid.jwt.at.all');
+      const rows = await queryAuditLog(strapi, 'login_failure');
+      expect(rows.length).toBeGreaterThan(0);
     });
 
     it('does not reflect user-supplied values in error responses', async () => {
@@ -202,49 +213,6 @@ describe('OIDC E2E Tests', () => {
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
       expect(res.text).toContain(userFacingMessages('en').invalid_state);
-    });
-
-    it('token_exchange_failed produces token_exchange_failed audit action', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
-      );
-      await expectAuditLogAfterCallback(agent, strapi, 'token_exchange_failed');
-    });
-
-    it('nonce_mismatch produces nonce_mismatch audit action', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
-        'base64url',
-      );
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({
-            access_token: 'fake-jwt-token',
-            id_token: `${header}.${payload}.fakesig`,
-          }),
-        ),
-      );
-      await expectAuditLogAfterCallback(agent, strapi, 'nonce_mismatch');
-    });
-
-    it('userinfo_fetch_failed produces login_failure audit action', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
-      );
-      await expectAuditLogAfterCallback(agent, strapi, 'login_failure');
-    });
-
-    it('id_token_parse_failed produces login_failure audit action', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: 'not.a.valid.jwt.at.all' }),
-        ),
-      );
-      await expectAuditLogAfterCallback(agent, strapi, 'login_failure');
     });
   });
 
@@ -548,57 +516,32 @@ describe('OIDC E2E Tests', () => {
     });
 
     describe('Direct API auth calls', () => {
-      it('blocks POST /admin/login even when called directly (no browser)', async () => {
-        const res = await request(strapi.server.httpServer)
-          .post('/admin/login')
-          .send({ email: 'admin@strapi.test', password: 'SuperAdmin123!' });
-
-        expect(res.status).toBe(403);
-        expect(res.body.error.message).toContain('Local login is disabled');
-      });
-
-      it('blocks POST /admin/register directly', async () => {
-        const res = await request(strapi.server.httpServer)
-          .post('/admin/register')
-          .send({ registrationToken: 'some-token', userInfo: {} });
-
-        expect(res.status).toBe(403);
-      });
-
-      it('blocks POST /admin/register-admin directly', async () => {
-        const res = await request(strapi.server.httpServer).post('/admin/register-admin').send({
-          firstname: 'Test',
-          lastname: 'User',
-          email: 'test@test.com',
-          password: 'Password1!',
-        });
-
-        expect(res.status).toBe(403);
-      });
-
-      it('blocks POST /admin/forgot-password directly', async () => {
-        const res = await request(strapi.server.httpServer)
-          .post('/admin/forgot-password')
-          .send({ email: 'admin@strapi.test' });
-
+      it.each([
+        ['/admin/login', { email: 'admin@strapi.test', password: 'SuperAdmin123!' }],
+        ['/admin/register', { registrationToken: 'some-token', userInfo: {} }],
+        [
+          '/admin/register-admin',
+          { firstname: 'Test', lastname: 'User', email: 'test@test.com', password: 'Password1!' },
+        ],
+        ['/admin/forgot-password', { email: 'admin@strapi.test' }],
+      ])('blocks POST %s when enforceOIDC is enabled', async (path, body) => {
+        const res = await request(strapi.server.httpServer).post(path).send(body);
         expect(res.status).toBe(403);
       });
     });
 
     // -------------------------------------------------------------------------
     describe('Token refresh bypass prevention', () => {
-      it('returns 401 for token refresh when only strapi_admin_refresh is present (local session)', async () => {
+      it.each([
+        [
+          'only strapi_admin_refresh (local session)',
+          { Cookie: 'strapi_admin_refresh=some-local-token' },
+        ],
+        ['no session cookies at all', {}],
+      ])('returns 401 for token refresh with %s', async (_label, headers) => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/token/refresh')
-          .set('Cookie', 'strapi_admin_refresh=some-local-token');
-
-        expect(res.status).toBe(401);
-        expect(res.body.error.message).toContain('OIDC');
-      });
-
-      it('returns 401 for token refresh with no session cookies at all', async () => {
-        const res = await request(strapi.server.httpServer).post('/admin/token/refresh');
-
+          .set(headers);
         expect(res.status).toBe(401);
         expect(res.body.error.message).toContain('OIDC');
       });
@@ -817,33 +760,30 @@ describe('OIDC E2E Tests', () => {
       expect(logs[0].detailsParams.roles).toContain(targetRole.name);
     });
 
-    it('new user with non-matching group → falls back to default OIDC roles', async () => {
-      const defaultRoleIds = await getDefaultOidcRoleIds(strapi);
-      expect(defaultRoleIds.length).toBeGreaterThan(0);
-
-      const user = await loginAndFetchUser(
-        strapi,
+    it.each([
+      [
+        'non-matching group',
         'no-match@test.com',
-        mswUserInfoHandler('no-match@test.com', 'Test', 'User', ['unknown-group']),
+        ['unknown-group'],
         { 'some-other-group': ['SomeFakeRole'] },
-      );
-      expect(user).not.toBeNull();
-      expectUserRoleIdsToContain(user, defaultRoleIds);
-    });
+      ],
+      ['no groups claim', 'no-groups@test.com', [], { 'any-group': ['SomeFakeRole'] }],
+    ])(
+      'new user with %s → falls back to default OIDC roles',
+      async (_label, email, groups, groupMap) => {
+        const defaultRoleIds = await getDefaultOidcRoleIds(strapi);
+        expect(defaultRoleIds.length).toBeGreaterThan(0);
 
-    it('new user with no groups claim → falls back to default OIDC roles', async () => {
-      const defaultRoleIds = await getDefaultOidcRoleIds(strapi);
-      expect(defaultRoleIds.length).toBeGreaterThan(0);
-
-      const user = await loginAndFetchUser(
-        strapi,
-        'no-groups@test.com',
-        mswUserInfoHandler('no-groups@test.com', 'Test', 'User', []),
-        { 'any-group': ['SomeFakeRole'] },
-      );
-      expect(user).not.toBeNull();
-      expectUserRoleIdsToContain(user, defaultRoleIds);
-    });
+        const user = await loginAndFetchUser(
+          strapi,
+          email,
+          mswUserInfoHandler(email, 'Test', 'User', groups),
+          groupMap,
+        );
+        expect(user).not.toBeNull();
+        expectUserRoleIdsToContain(user, defaultRoleIds);
+      },
+    );
 
     it('group mapping takes priority over default OIDC role', async () => {
       const defaultRoleIds = await getDefaultOidcRoleIds(strapi);

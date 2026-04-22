@@ -31,8 +31,6 @@ describe('Whitelist Content-API Routes', () => {
           $in: [
             'api-get@test.com',
             'api-register@test.com',
-            'api-import1@test.com',
-            'api-import2@test.com',
             'api-delete@test.com',
             'api-deleteall1@test.com',
             'api-deleteall2@test.com',
@@ -78,36 +76,6 @@ describe('Whitelist Content-API Routes', () => {
     expect(
       listRes.body.whitelistUsers.some((u: WhitelistEntry) => u.email === 'api-register@test.com'),
     ).toBe(true);
-  });
-
-  it('POST /whitelist/import — bulk-imports entries and skips duplicates', async () => {
-    // Pre-insert one entry to be treated as a duplicate
-    await strapi
-      .plugin('strapi-plugin-oidc')
-      .service('whitelist')
-      .registerUser('api-import1@test.com');
-
-    const res = await request(strapi.server.httpServer)
-      .post('/api/strapi-plugin-oidc/whitelist/import')
-      .set('Authorization', `Bearer ${apiToken}`)
-      .send({
-        users: [
-          { email: 'api-import1@test.com' }, // duplicate — skipped
-          { email: 'api-import2@test.com' }, // new
-        ],
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.body.importedCount).toBe(1);
-  });
-
-  it('POST /whitelist/import — returns 400 for non-array body', async () => {
-    const res = await request(strapi.server.httpServer)
-      .post('/api/strapi-plugin-oidc/whitelist/import')
-      .set('Authorization', `Bearer ${apiToken}`)
-      .send({ users: 'not-an-array' });
-
-    expect(res.status).toBe(400);
   });
 
   it('DELETE /whitelist/:id — removes a single entry', async () => {

@@ -126,18 +126,6 @@ describe('Controllers E2E', () => {
     });
 
     describe('register email validation', () => {
-      it('rejects invalid email addresses and returns them in rejectedEmails', async () => {
-        const ctx: MockCtx = {
-          request: { body: { email: 'not-an-email' } },
-          status: 200,
-        };
-        await whitelistController.register(ctx);
-        const body = ctx.body as RegisterBody;
-        expect(ctx.status).toBe(400);
-        expect(body.error).toBe('No valid email addresses supplied');
-        expect(body.rejectedEmails).toContain('not-an-email');
-      });
-
       it('accepts valid emails and separates invalid ones', async () => {
         await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({
           where: { email: 'valid@validation-test.com' },

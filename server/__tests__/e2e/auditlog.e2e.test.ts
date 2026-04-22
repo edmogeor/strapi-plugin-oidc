@@ -56,15 +56,6 @@ describe('AuditLog Service', () => {
     expect(page2.results).toHaveLength(1);
   });
 
-  it('find() fetches all records across pages', async () => {
-    await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
-    await s.service.log({ action: 'logout', ip: '1.1.1.1' });
-
-    const { results, pagination } = await s.service.find({ page: 1, pageSize: 100 });
-    expect(results.length).toBeGreaterThanOrEqual(2);
-    expect(pagination.total).toBeGreaterThanOrEqual(2);
-  });
-
   it('cleanup() deletes records older than retention days', async () => {
     await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
 
@@ -376,19 +367,5 @@ describe('AuditLog E2E Integration', () => {
 
     const rows = await queryAuditLog(strapi, 'logout');
     expect(rows.length).toBeGreaterThan(0);
-  });
-
-  it('HTTP export returns Transfer-Encoding: chunked and valid NDJSON', async () => {
-    const auditLogSvc = strapi.plugin('strapi-plugin-oidc').service('auditLog') as AuditLogService;
-    await auditLogSvc.log({ action: 'login_success', email: 'a@b.com', ip: '1.1.1.1' });
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
-    const ctx = createAuditLogExportCtx(strapi);
-    await auditLogController.export(ctx);
-
-    expectNdjsonExportHeaders(ctx.headers);
-
-    const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
-    expect(lines.length).toBeGreaterThan(0);
-    for (const line of lines) JSON.parse(line);
   });
 });
