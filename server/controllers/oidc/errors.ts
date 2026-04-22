@@ -19,7 +19,7 @@ type OidcErrorInfo = {
   params?: Record<string, string | number>;
 };
 
-export function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
+function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
   const kind = e instanceof OidcError ? e.kind : 'unknown';
   const dispatch = OIDC_ERROR_DISPATCH[kind];
   const msg = toMessage(e);

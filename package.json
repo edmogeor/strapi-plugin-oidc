@@ -14,7 +14,6 @@
     "watch:link": "strapi-plugin watch:link",
     "verify": "strapi-plugin verify",
     "test": "vitest run -c vitest.config.e2e.ts",
-    "test:unit": "vitest run -c vitest.config.unit.ts",
     "lint": "eslint",
     "fallow:check": "fallow",
     "fallow:fix": "fallow fix --yes",
