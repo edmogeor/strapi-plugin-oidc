@@ -14,7 +14,7 @@ import type {
   GroupRoleMap,
 } from '../../types';
 
-function collectGroupMapRoleNames(userInfo: OidcUserInfo, config: PluginConfig): string[] {
+export function collectGroupMapRoleNames(userInfo: OidcUserInfo, config: PluginConfig): string[] {
   const rawGroups = userInfo[config.OIDC_GROUP_FIELD];
   if (!Array.isArray(rawGroups) || rawGroups.length === 0) return [];
   const groups = rawGroups.filter((g): g is string => typeof g === 'string');
@@ -63,7 +63,7 @@ async function registerNewUser(
   return activateUser;
 }
 
-function rolesChanged(current: Set<string>, next: Set<string>): boolean {
+export function rolesChanged(current: Set<string>, next: Set<string>): boolean {
   if (current.size !== next.size) return true;
   return [...next].some((id) => !current.has(id));
 }
