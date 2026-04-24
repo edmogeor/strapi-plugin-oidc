@@ -11,7 +11,7 @@ import {
   Tr,
   Typography,
 } from '@strapi/design-system';
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Download, Plus, Trash, Upload } from '@strapi/icons';
 import { useNotification } from '@strapi/strapi/admin';
 import { useIntl } from 'react-intl';

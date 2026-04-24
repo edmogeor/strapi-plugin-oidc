@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useId, FocusEvent, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, useId, FocusEvent, KeyboardEvent } from 'react';
 import { Flex } from '@strapi/design-system';
 import styled from 'styled-components';
 import { useIntl } from 'react-intl';
@@ -73,7 +73,14 @@ const DayButton = styled.button<{
         : $inRange
           ? theme.colors.primary100
           : 'transparent'};
-  color: ${({ $selected, $inRange, $pending, $future, $alreadySelected, theme }) =>
+  color: ${({
+    $selected,
+    $inRange,
+    $pending,
+    $future: _future,
+    $alreadySelected: _alreadySelected,
+    theme,
+  }) =>
     $pending
       ? theme.colors.warning600
       : $selected

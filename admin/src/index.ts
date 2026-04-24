@@ -9,7 +9,18 @@ import { t, en } from './utils/getTrad';
 const name = pluginPkg.strapi.displayName;
 
 export default {
-  register(app: { addSettingsLink: Function; registerPlugin: Function }) {
+  register(app: {
+    addSettingsLink: (
+      id: { id: string; intlLabel: { id: string; defaultMessage: string } },
+      link: {
+        id: string;
+        to: string;
+        intlLabel: { id: string; defaultMessage: string };
+        Component: React.ComponentType;
+      },
+    ) => void;
+    registerPlugin: (plugin: unknown) => void;
+  }) {
     app.addSettingsLink(
       {
         id: 'oidc',

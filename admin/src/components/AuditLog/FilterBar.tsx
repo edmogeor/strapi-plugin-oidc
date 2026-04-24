@@ -54,7 +54,7 @@ export function FilterBar({
           onChange={(selections) => {
             onFiltersChange((prev) => {
               if (selections.length === 0) {
-                const { createdAt, ...rest } = prev;
+                const { createdAt: _createdAt, ...rest } = prev;
                 return rest;
               }
               return { ...prev, createdAt: selections };

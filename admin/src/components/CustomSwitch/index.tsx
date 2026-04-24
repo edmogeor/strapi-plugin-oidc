@@ -1,3 +1,4 @@
+import React from 'react';
 import styled from 'styled-components';
 import { Flex, Typography } from '@strapi/design-system';
 
@@ -26,7 +27,7 @@ const SwitchInput = styled.input`
   &:checked + span:before {
     transform: translateX(16px);
   }
-  
+
   &:disabled + span {
     pointer-events: none;
   }
@@ -45,7 +46,7 @@ const SwitchSlider = styled.span`
 
   &:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 18px;
     width: 18px;
     left: 3px;
@@ -56,20 +57,29 @@ const SwitchSlider = styled.span`
   }
 `;
 
-export default function CustomSwitch({ checked, onChange, label, disabled }: { checked: boolean, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, label?: string, disabled?: boolean }) {
+export default function CustomSwitch({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
   return (
     <Flex gap={3}>
       <SwitchContainer $disabled={disabled}>
-        <SwitchInput 
-          type="checkbox" 
-          checked={checked} 
-          onChange={onChange} 
-          disabled={disabled}
-        />
+        <SwitchInput type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
         <SwitchSlider />
       </SwitchContainer>
       {label && (
-        <Typography variant="pi" fontWeight="bold" textColor={disabled ? "neutral500" : "neutral800"}>
+        <Typography
+          variant="pi"
+          fontWeight="bold"
+          textColor={disabled ? 'neutral500' : 'neutral800'}
+        >
           {label}
         </Typography>
       )}

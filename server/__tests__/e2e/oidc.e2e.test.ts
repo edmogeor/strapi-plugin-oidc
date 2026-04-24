@@ -17,7 +17,6 @@ import {
   initiateLogin,
   assertGenericAuthError,
   queryAuditLog,
-  createOidcAgent,
   setupGroupRoleMapping,
   fetchUserWithRoles,
   getFirstAvailableRole,

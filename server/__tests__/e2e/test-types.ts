@@ -21,7 +21,6 @@ export type {
 
 // Typed global used by setup.ts and all test files.
 declare global {
-  // eslint-disable-next-line no-var
   var strapiInstance: Core.Strapi;
 }
 

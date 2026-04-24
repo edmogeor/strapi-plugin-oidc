@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent, useRef, useEffect, useId, ReactNode } from 'react';
+import React, { useState, KeyboardEvent, useRef, useEffect, useId, ReactNode } from 'react';
 import { Typography } from '@strapi/design-system';
 import styled from 'styled-components';
 import { TagInputShell, useTagState } from './tagPrimitives';

@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useMemo } from 'react';
+import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { downloadJson } from '../../../utils/download';
 import { initialState, reducer } from './reducer';
