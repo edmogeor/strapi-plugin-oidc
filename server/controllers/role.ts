@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
 import { getRoleService } from '../utils/services';
 import { roleUpdateSchema } from '../schemas';
+import { toMessage } from '../../shared/utils';
 
 async function find(ctx: Context) {
   const roleService = getRoleService();
@@ -30,7 +31,7 @@ async function update(ctx: Context) {
     await roleService.update(roles);
     ctx.send({}, 204);
   } catch (e) {
-    strapi.log.error(e);
+    strapi.log.error({ phase: 'role_update', message: toMessage(e) });
     ctx.send({}, 400);
   }
 }

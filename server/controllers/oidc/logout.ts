@@ -50,13 +50,17 @@ export async function logout(ctx: StrapiContext) {
     // On timeout or network error we still redirect to the provider.
     const expired = await isProviderSessionExpired(config.OIDC_USERINFO_ENDPOINT, accessToken);
     if (expired) {
-      await logAudit('session_expired');
+      await logAudit('session_expired').catch((err) => {
+        strapi.log.error('[strapi-plugin-oidc] Audit log failed on session expiry:', err);
+      });
       return ctx.redirect(loginUrl);
     }
     logAudit('logout').catch(() => {});
     return ctx.redirect(logoutUrl);
   }
 
-  await logAudit('logout');
+  await logAudit('logout').catch((err) => {
+    strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
+  });
   ctx.redirect(logoutUrl || loginUrl);
 }

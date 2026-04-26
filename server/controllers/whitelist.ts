@@ -30,7 +30,7 @@ async function updateSettings(ctx: Context) {
   const parsed = updateSettingsSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
-    ctx.body = { error: errorMessages.WHITELIST_INVALID_REQUEST, details: parsed.error.flatten() };
+    ctx.body = { error: errorMessages.WHITELIST_INVALID_REQUEST };
     return;
   }
   const { useWhitelist, enforceOIDC } = parsed.data;
