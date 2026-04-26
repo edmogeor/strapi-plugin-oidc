@@ -176,6 +176,18 @@ describe('OIDC E2E Tests', () => {
       expect(rows.length).toBeGreaterThan(0);
     });
 
+    it('shows generic error and logs login_failure when token response lacks access_token', async () => {
+      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+      oidcServer.use(
+        http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({ error: 'invalid_grant' }, { status: 200 }),
+        ),
+      );
+      await assertGenericAuthError(agent, await initiateLogin(agent));
+      const rows = await queryAuditLog(strapi, 'login_failure');
+      expect(rows.length).toBeGreaterThan(0);
+    });
+
     it('shows generic error and logs login_failure when userinfo fetch fails', async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
       oidcServer.use(
@@ -212,6 +224,27 @@ describe('OIDC E2E Tests', () => {
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
       expect(res.text).toContain(t('en', 'user.invalid_state'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // OIDC sign-in error handling
+  // ---------------------------------------------------------------------------
+  describe('OIDC sign-in error handling', () => {
+    it('renders sign-in error page when required config is missing', async () => {
+      const savedConfig = strapi.config.get('plugin::strapi-plugin-oidc');
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_CLIENT_ID: '',
+      });
+
+      try {
+        const res = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('Authentication Failed');
+      } finally {
+        strapi.config.set('plugin::strapi-plugin-oidc', savedConfig);
+      }
     });
   });
 
