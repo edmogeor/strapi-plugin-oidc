@@ -124,14 +124,14 @@ describe('OIDC E2E Tests', () => {
     await setSettings(strapi, true, false);
 
     const callbackRes = await loginAndExpectSuccess(agent);
-    expect(callbackRes.text).toContain('Authentication Failed');
+    expect(callbackRes.text).toContain('Authentication failed');
     expect(callbackRes.text).toContain('Authentication failed. Please try again.');
   });
 
   const assertCallbackError = async (url: string, expectedMsg: string) => {
     const res = await agent.get(url).redirects(0);
     expect(res.status).toBe(200);
-    expect(res.text).toContain('Authentication Failed');
+    expect(res.text).toContain('Authentication failed');
     expect(res.text).toContain(expectedMsg);
   };
 
@@ -162,7 +162,7 @@ describe('OIDC E2E Tests', () => {
       const callbackUrl = await initiateLogin(agent);
       const res = await agent.get(callbackUrl).redirects(0);
       expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed');
       expect(res.text).toContain('Authentication failed. Please try again.');
     };
 
@@ -242,7 +242,7 @@ describe('OIDC E2E Tests', () => {
       try {
         const res = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
         expect(res.status).toBe(200);
-        expect(res.text).toContain('Authentication Failed');
+        expect(res.text).toContain('Authentication failed');
       } finally {
         strapi.config.set('plugin::strapi-plugin-oidc', savedConfig);
       }
@@ -256,7 +256,7 @@ describe('OIDC E2E Tests', () => {
     const assertEmailVerifiedRejected = async (overrides: Record<string, unknown>) => {
       oidcServer.use(userinfoWith(overrides));
       const callbackRes = await loginAndExpectSuccess(createAgent());
-      expect(callbackRes.text).toContain('Authentication Failed');
+      expect(callbackRes.text).toContain('Authentication failed');
       const logs = await queryAuditLog(strapi, 'email_not_verified');
       expect(logs.length).toBeGreaterThan(0);
     };
@@ -428,7 +428,7 @@ describe('OIDC E2E Tests', () => {
       const res = await runCallback({
         build: (nonce) => signIdToken({ nonce, exp: past }),
       });
-      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed');
       const logs = await queryAuditLog(strapi, 'id_token_invalid');
       expect(logs.length).toBeGreaterThan(0);
     });
@@ -442,7 +442,7 @@ describe('OIDC E2E Tests', () => {
       const res = await runCallback({
         build: (nonce) => signIdToken({ nonce, aud: 'different-client' }),
       });
-      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed');
     });
 
     it('rejects an ID token with the wrong issuer', async () => {
@@ -454,7 +454,7 @@ describe('OIDC E2E Tests', () => {
       const res = await runCallback({
         build: (nonce) => signIdToken({ nonce, iss: 'https://evil.example.com/' }),
       });
-      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed');
     });
 
     it('rejects an ID token with a tampered signature', async () => {
@@ -471,7 +471,7 @@ describe('OIDC E2E Tests', () => {
           return parts.join('.');
         },
       });
-      expect(res.text).toContain('Authentication Failed');
+      expect(res.text).toContain('Authentication failed');
     });
 
     it('falls back to nonce-only check when OIDC_JWKS_URI is unset', async () => {

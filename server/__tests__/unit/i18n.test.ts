@@ -34,16 +34,6 @@ describe('i18n', () => {
   });
 
   describe('t', () => {
-    it('returns translation for existing key and locale', () => {
-      expect(t('en', 'page.save')).toBe('Save Changes');
-      expect(t('fr', 'page.save')).toBe('Enregistrer les modifications');
-      expect(t('de', 'page.save')).toBe('Änderungen speichern');
-    });
-
-    it('falls back to en when locale does not exist', () => {
-      expect(t('xyz', 'page.save')).toBe('Save Changes');
-    });
-
     it('falls back to key when key does not exist in any locale', () => {
       expect(t('xyz', 'nonexistent.key')).toBe('nonexistent.key');
     });

@@ -114,7 +114,7 @@ export async function assertGenericAuthError(
 ) {
   const res = await agent.get(callbackUrl).redirects(0);
   expect(res.status).toBe(200);
-  expect(res.text).toContain('Authentication Failed');
+  expect(res.text).toContain('Authentication failed');
   expect(res.text).toContain('Authentication failed. Please try again.');
   expect(res.text).not.toContain('mock-oidc.com');
   return res;
