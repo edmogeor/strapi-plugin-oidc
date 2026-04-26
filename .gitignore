@@ -3,6 +3,5 @@ node_modules
 .idea
 dist
 coverage
-html
 *.db
 .fallow/
