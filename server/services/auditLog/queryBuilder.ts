@@ -1,8 +1,7 @@
 import type { AuditLogFilters } from '../../audit-log-filters';
+import { DAY_MS } from '../../../shared/constants';
 
 type StrapiWhereClause = Record<string, unknown>;
-
-export const DAY_MS = 86_400_000;
 
 const STRING_OP_MAP: Record<string, (v: unknown) => unknown> = {
   $eq: (v) => v,

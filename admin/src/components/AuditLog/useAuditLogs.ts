@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { buildQueryString } from './queryString';
 import { PAGE_SIZE, type AuditLogRecord, type FilterState, type PaginationInfo } from './types';
-
-const MIN_SPINNER_MS = 400;
+import { UI_DEFAULTS } from '../../../../shared/constants';
 
 function useDebounced<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -47,7 +46,7 @@ export function useAuditLogs(page: number, filters: FilterState) {
       } catch {
         // ignored — newRecords stays []
       }
-      const remaining = MIN_SPINNER_MS - (Date.now() - startTime);
+      const remaining = UI_DEFAULTS.MIN_SPINNER_MS - (Date.now() - startTime);
       if (remaining > 0) await new Promise<void>((r) => setTimeout(r, remaining));
       if (gen !== fetchGenRef.current) return;
       // Update records and clear loading in one render so old rows never flash between states.

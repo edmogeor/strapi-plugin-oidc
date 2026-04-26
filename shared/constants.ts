@@ -27,6 +27,27 @@ export const AUDIT_LOG_DEFAULTS = {
   BATCH_DELETE_SIZE: 1000,
 } as const;
 
+export const RATE_LIMIT = {
+  WINDOW_MS: 60_000,
+  MAX_REQUESTS: 1_000,
+  MAX_MAP_SIZE: 10_000,
+  PRUNE_THRESHOLD: 1_000,
+} as const;
+
+export const CACHE_TTL = {
+  SETTINGS_MS: 5 * 60 * 1000, // 5 minutes
+} as const;
+
+export const DEFAULT_RETENTION_DAYS = 90;
+
+export const DAY_MS = 86_400_000;
+
+export const DISCOVERY_TIMEOUT_MS = 5000;
+
+export const UI_DEFAULTS = {
+  MIN_SPINNER_MS: 400,
+} as const;
+
 export type ContentTypeUid = (typeof CONTENT_TYPES)[keyof typeof CONTENT_TYPES];
 // fallow-ignore-next-line unused-types
 export type PermissionAction = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

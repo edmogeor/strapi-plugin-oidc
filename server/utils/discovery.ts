@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/types';
 import { errorMessages } from '../error-strings';
 import type { PluginConfig } from '../types';
+import { DISCOVERY_TIMEOUT_MS } from '../../shared/constants';
 
 interface DiscoveryDocument {
   issuer?: string;
@@ -10,8 +11,6 @@ interface DiscoveryDocument {
   end_session_endpoint?: string;
   jwks_uri?: string;
 }
-
-const DISCOVERY_TIMEOUT_MS = 5000;
 
 // Maps OIDC discovery document fields to plugin config keys.
 // Individual config vars take precedence; discovery only fills in empty values.
