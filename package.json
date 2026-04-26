@@ -13,7 +13,7 @@
     "watch": "strapi-plugin watch",
     "watch:link": "strapi-plugin watch:link",
     "verify": "strapi-plugin verify",
-    "test": "vitest run --reporter=verbose --reporter=html",
+    "test": "vitest run -c vitest.config.e2e.ts",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run -c vitest.config.unit.ts",
     "lint": "eslint",
