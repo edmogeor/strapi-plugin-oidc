@@ -1,5 +1,6 @@
 import { Readable } from 'node:stream';
 import { errorMessages } from '../error-strings';
+import { translateDetails } from '../services/auditLog/translations';
 import type { StrapiContext, AuditLogService } from '../types';
 import { getAuditLogService } from '../utils/services';
 import { setNdjsonAttachmentHeaders } from '../utils/http';
@@ -27,7 +28,7 @@ async function* ndjsonRowStream(
           action: row.action,
           email: row.email ?? null,
           ip: row.ip ?? null,
-          details: row.details,
+          details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
         }) + '\n';
     }
     yield Buffer.from(chunk, 'utf8');

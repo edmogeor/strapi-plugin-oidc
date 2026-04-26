@@ -19,6 +19,7 @@ import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, SizedButton, TablePagination } from '../shared';
 
 import type { WhitelistUser } from '../../types';
+import { EMAIL_REGEX } from '../../../../shared/constants';
 
 interface WhitelistProps {
   users: WhitelistUser[];
@@ -32,7 +33,6 @@ interface WhitelistProps {
 }
 
 const PAGE_SIZE = 10;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Whitelist({
   users,

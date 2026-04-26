@@ -1,4 +1,5 @@
-import type { StrapiContext, PluginConfig } from '../types';
+import type { StrapiContext } from '../types';
+import type { PluginConfig } from '../../shared/config';
 
 // Headers that CDN/proxy vendors guarantee to strip from client requests,
 // so only the infrastructure itself can set them.

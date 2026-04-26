@@ -1,7 +1,7 @@
 import { Flex, Loader, Tbody, Td, Th, Thead, Tooltip, Tr, Typography } from '@strapi/design-system';
 import { Information } from '@strapi/icons';
 import { useIntl } from 'react-intl';
-import getTrad from '../../utils/getTrad';
+import getTrad, { en } from '../../utils/getTrad';
 import { CustomTable, LocalizedDate } from '../shared';
 import type { AuditLogEntry } from './types';
 
@@ -81,17 +81,26 @@ export function LogTable({ records, loading, hasActiveFilters }: LogTableProps) 
                 <Typography variant="omega">{record.ip ?? '—'}</Typography>
               </Td>
               <Td style={{ maxWidth: '200px' }}>
-                {record.details ? (
-                  <Tooltip label={record.details} side="top">
-                    <Typography variant="omega" textColor="neutral600" style={DETAILS_TEXT_STYLE}>
-                      {record.details}
+                {(() => {
+                  const translationKey = record.detailsKey
+                    ? (`audit.${record.detailsKey}` as keyof typeof en)
+                    : null;
+                  const detail =
+                    translationKey && en[translationKey]
+                      ? formatMessage(getTrad(translationKey), record.detailsParams ?? {})
+                      : null;
+                  return detail ? (
+                    <Tooltip label={detail} side="top">
+                      <Typography variant="omega" textColor="neutral600" style={DETAILS_TEXT_STYLE}>
+                        {detail}
+                      </Typography>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="omega" textColor="neutral600">
+                      —
                     </Typography>
-                  </Tooltip>
-                ) : (
-                  <Typography variant="omega" textColor="neutral600">
-                    —
-                  </Typography>
-                )}
+                  );
+                })()}
               </Td>
             </Tr>
           ))}

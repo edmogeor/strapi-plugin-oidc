@@ -6,7 +6,8 @@ export interface AuditLogEntry {
   action: string;
   email?: string;
   ip?: string;
-  details?: string;
+  detailsKey?: string;
+  detailsParams?: Record<string, string>;
   createdAt: string;
 }
 

@@ -2,11 +2,8 @@ import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from 'jose';
 import type { JWTPayload } from 'jose';
 import { errorMessages } from '../../error-strings';
 import { OidcError } from '../../oidc-errors';
-import type { PluginConfig } from '../../types';
-
-export function toMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
+import { toMessage } from '../../../shared/utils';
+import type { PluginConfig } from '../../../shared/config';
 
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_DISCOVERY_URL',

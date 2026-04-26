@@ -23,7 +23,7 @@ import {
   loginAndExpectSuccess,
   expectUserRoleIdsToContain,
 } from './test-helpers';
-import { userFacingMessages } from '../../audit-error-strings';
+import { t } from '../../i18n';
 import type { WhitelistService } from '../../types';
 
 const createAgent = () => request.agent(strapi.server.httpServer);
@@ -138,14 +138,14 @@ describe('OIDC E2E Tests', () => {
   it('should fail if callback is missing code', async () => {
     await assertCallbackError(
       '/strapi-plugin-oidc/oidc/callback?state=mock-state',
-      userFacingMessages('en').missing_code,
+      t('en', 'user.missing_code'),
     );
   });
 
   it('should fail if callback has invalid state', async () => {
     await assertCallbackError(
       '/strapi-plugin-oidc/oidc/callback?code=mock-code&state=invalid-state',
-      userFacingMessages('en').invalid_state,
+      t('en', 'user.invalid_state'),
     );
   });
 
@@ -211,7 +211,7 @@ describe('OIDC E2E Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.text).not.toContain('<script>');
-      expect(res.text).toContain(userFacingMessages('en').invalid_state);
+      expect(res.text).toContain(t('en', 'user.invalid_state'));
     });
   });
 

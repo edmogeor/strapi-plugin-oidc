@@ -1,4 +1,4 @@
-import type { PluginConfig } from '../types';
+import type { PluginConfig } from '../../shared/config';
 import { DEFAULT_RETENTION_DAYS } from '../../shared/constants';
 
 export function getPluginConfig(): PluginConfig {

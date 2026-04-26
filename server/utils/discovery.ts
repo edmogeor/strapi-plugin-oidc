@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/types';
 import { errorMessages } from '../error-strings';
-import type { PluginConfig } from '../types';
+import type { PluginConfig } from '../../shared/config';
 import { DISCOVERY_TIMEOUT_MS } from '../../shared/constants';
 
 interface DiscoveryDocument {

@@ -102,5 +102,9 @@
   "user.invalid_state": "State parameter mismatch. Please restart the login flow.",
   "user.signInError": "Authentication failed. Please try again.",
   "settings.section": "OIDC",
-  "settings.configuration": "Configuration"
+  "settings.configuration": "Configuration",
+
+  "audit.login_failure": "Error: {message}",
+  "audit.roles_updated": "Roles updated to: {roles}",
+  "audit.user_created": "Roles assigned: {roles}"
 }

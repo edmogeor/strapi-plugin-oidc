@@ -4,6 +4,7 @@ import { isAuditLogEnabled, getPluginConfig } from '../utils/pluginConfig';
 import { isValidEmail } from '../utils/email';
 import { getWhitelistService } from '../utils/services';
 import { setJsonAttachmentHeaders } from '../utils/http';
+import { errorMessages } from '../error-strings';
 import {
   updateSettingsSchema,
   registerSchema,
@@ -29,7 +30,7 @@ async function updateSettings(ctx: Context) {
   const parsed = updateSettingsSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
-    ctx.body = { error: 'Invalid request body', details: parsed.error.flatten() };
+    ctx.body = { error: errorMessages.WHITELIST_INVALID_REQUEST, details: parsed.error.flatten() };
     return;
   }
   const { useWhitelist, enforceOIDC } = parsed.data;
@@ -61,7 +62,7 @@ async function register(ctx: Context) {
   const parsed = registerSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
-    ctx.body = { message: 'Please enter a valid email address' };
+    ctx.body = { message: errorMessages.WHITELIST_INVALID_EMAIL };
     return;
   }
   const { email } = parsed.data;
@@ -81,7 +82,7 @@ async function register(ctx: Context) {
 
   if (validEmails.length === 0) {
     ctx.status = 400;
-    ctx.body = { error: 'No valid email addresses supplied', rejectedEmails };
+    ctx.body = { message: errorMessages.WHITELIST_INVALID_EMAIL };
     return;
   }
 
@@ -126,7 +127,7 @@ async function importUsers(ctx: Context) {
   const parsed = importUsersSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
-    ctx.body = { error: 'Expected { users: [{email}] }' };
+    ctx.body = { error: errorMessages.WHITELIST_IMPORT_INVALID };
     return;
   }
   const { users } = parsed.data;
@@ -149,7 +150,7 @@ async function syncUsers(ctx: Context) {
   const parsed = syncUsersSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
-    ctx.body = { error: 'Invalid request body' };
+    ctx.body = { error: errorMessages.WHITELIST_INVALID_REQUEST };
     return;
   }
   const { users } = parsed.data;

@@ -2,8 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
 import { COOKIE_MAX_AGE_MS } from '../../../shared/constants';
 import { errorMessages } from '../../error-strings';
-import { userFacingMessages } from '../../audit-error-strings';
-import { negotiateLocale } from '../../i18n';
+import { negotiateLocale, t } from '../../i18n';
 import { OidcError } from '../../oidc-errors';
 import {
   getOauthService,
@@ -16,13 +15,8 @@ import { getClientIp } from '../../utils/ip';
 import { configValidation, verifyIdToken } from './shared';
 import { handleUserAuthentication } from './userAuth';
 import { handleCallbackError } from './errors';
-import type {
-  StrapiContext,
-  OidcUserInfo,
-  AuditLogService,
-  PluginConfig,
-  StrapiAdminUser,
-} from '../../types';
+import type { StrapiContext, OidcUserInfo, AuditLogService, StrapiAdminUser } from '../../types';
+import type { PluginConfig } from '../../../shared/config';
 
 async function exchangeTokenAndFetchUserInfo(
   config: PluginConfig,
@@ -131,18 +125,14 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
   if (!ctx.query.code) {
     await auditLog.log({ action: 'missing_code', ip: getClientIp(ctx) });
-    return ctx.send(
-      oauthService.renderSignUpError(userFacingMessages(locale).missing_code, locale),
-    );
+    return ctx.send(oauthService.renderSignUpError(t(locale, 'user.missing_code'), locale));
   }
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: getClientIp(ctx) });
-    return ctx.send(
-      oauthService.renderSignUpError(userFacingMessages(locale).invalid_state, locale),
-    );
+    return ctx.send(oauthService.renderSignUpError(t(locale, 'user.invalid_state'), locale));
   }
 
   const params = new URLSearchParams({

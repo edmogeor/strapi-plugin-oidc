@@ -1,6 +1,6 @@
 import type { Context } from 'koa';
 import type { AuditEntry, AuditLogRecord } from '../shared/audit-actions';
-
+import type { GroupRoleMap } from '../shared/constants';
 export { AuditAction, AuditEntry, AuditLogRecord } from '../shared/audit-actions';
 
 export interface StrapiContext extends Context {
@@ -10,10 +10,6 @@ export interface StrapiContext extends Context {
 export interface WhitelistSettings {
   useWhitelist: boolean;
   enforceOIDC: boolean;
-}
-
-export interface GroupRoleMap {
-  [groupName: string]: string[];
 }
 
 export interface WhitelistEntry {
@@ -71,31 +67,6 @@ export interface RoleService {
   update(roles: unknown): Promise<void>;
 }
 
-export interface PluginConfig {
-  REMEMBER_ME: boolean;
-  OIDC_DISCOVERY_URL: string;
-  OIDC_REDIRECT_URI: string;
-  OIDC_CLIENT_ID: string;
-  OIDC_CLIENT_SECRET: string;
-  OIDC_SCOPE: string;
-  OIDC_AUTHORIZATION_ENDPOINT: string;
-  OIDC_TOKEN_ENDPOINT: string;
-  OIDC_USERINFO_ENDPOINT: string;
-  OIDC_FAMILY_NAME_FIELD: string;
-  OIDC_GIVEN_NAME_FIELD: string;
-  OIDC_END_SESSION_ENDPOINT: string;
-  OIDC_SSO_BUTTON_TEXT: string;
-  OIDC_ENFORCE: boolean | null;
-  AUDIT_LOG_RETENTION_DAYS: number;
-  OIDC_GROUP_FIELD: string;
-  OIDC_GROUP_ROLE_MAP: string;
-  OIDC_REQUIRE_EMAIL_VERIFIED: boolean;
-  OIDC_TRUSTED_IP_HEADER: string;
-  OIDC_JWKS_URI: string;
-  OIDC_ISSUER: string;
-  OIDC_FORCE_SECURE_COOKIES?: boolean;
-}
-
 export interface WhitelistService {
   getSettings(): Promise<WhitelistSettings>;
   setSettings(settings: WhitelistSettings): Promise<void>;
@@ -118,7 +89,7 @@ export interface AuditLogService {
     pageSize?: number;
     filters?: import('./audit-log-filters').AuditLogFilters;
   }): Promise<{
-    results: (AuditLogRecord & { details: string | null })[];
+    results: AuditLogRecord[];
     pagination: { page: number; pageSize: number; total: number; pageCount: number };
   }>;
   clearAll(): Promise<void>;

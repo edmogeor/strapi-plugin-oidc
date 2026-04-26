@@ -4,126 +4,9 @@ import { randomUUID } from 'node:crypto';
 import type { Core, UID } from '@strapi/types';
 import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
-import { authPageMessages } from '../audit-error-strings';
+import { t } from '../i18n';
 import { shouldMarkSecure, COOKIE_NAMES } from '../utils/cookies';
-
-function renderHtmlTemplate(title: string, content: string, locale: string = 'en'): string {
-  return `
-<!doctype html>
-<html lang="${locale}">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title}</title>
-  <style>
-    :root {
-      --bg-color: #f6f6f9;
-      --card-bg: #ffffff;
-      --text-color: #32324d;
-      --text-muted: #666687;
-      --btn-bg: #4945ff;
-      --btn-hover: #271fe0;
-      --btn-text: #ffffff;
-      --icon-bg: #fcecea;
-      --icon-color: #d02b20;
-      --success-bg: #eafbe7;
-      --success-color: #328048;
-      --shadow: 0 1px 4 rgba(33, 33, 52, 0.1);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #181826;
-        --card-bg: #212134;
-        --text-color: #ffffff;
-        --text-muted: #a5a5ba;
-        --btn-bg: #4945ff;
-        --btn-hover: #7b79ff;
-        --btn-text: #ffffff;
-        --icon-bg: #4a2123;
-        --icon-color: #f23628;
-        --success-bg: #1c3523;
-        --success-color: #55ca76;
-        --shadow: 0 1px 4 rgba(0, 0, 0, 0.5);
-      }
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: var(--bg-color);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: var(--text-color);
-    }
-    .card {
-      background: var(--card-bg);
-      padding: 32px 40px;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      max-width: 400px;
-      width: 100%;
-      text-align: center;
-      box-sizing: border-box;
-    }
-    .icon {
-      width: 48px;
-      height: 48px;
-      background-color: var(--icon-bg);
-      color: var(--icon-color);
-      border-radius: 50%;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    .icon.success {
-      background-color: var(--success-bg);
-      color: var(--success-color);
-    }
-    .icon svg {
-      width: 24px;
-      height: 24px;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-    }
-    h1 {
-      margin: 0 0 12px 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--text-color);
-    }
-    p {
-      margin: 0 0 32px 0;
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--text-muted);
-    }
-    .btn {
-      display: inline-block;
-      background-color: var(--btn-bg);
-      color: var(--btn-text);
-      padding: 10px 16px;
-      border-radius: 4px;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: background-color 0.2s;
-    }
-    .btn:hover {
-      background-color: var(--btn-hover);
-    }
-  </style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
-}
+import { renderHtmlTemplate } from '../../shared/auth-template';
 
 export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
   return {
@@ -230,8 +113,6 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         | { REMEMBER_ME?: boolean }
         | undefined;
       const isRememberMe = !!config?.REMEMBER_ME;
-      const messages = authPageMessages(locale);
-
       const content = `
     <noscript>
       <div class="card">
@@ -240,8 +121,8 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
             <path d="M20 6 9 17l-5-5"/>
           </svg>
         </div>
-        <h1>${messages.noscriptHeading}</h1>
-        <p>${messages.noscriptBody}</p>
+        <h1>${t(locale, 'auth.page.authenticating.noscript.heading')}</h1>
+        <p>${t(locale, 'auth.page.authenticating.noscript.body')}</p>
       </div>
     </noscript>
     <script nonce="${nonce}">
@@ -256,10 +137,10 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
      })
     </script>`;
 
-      return renderHtmlTemplate(messages.authenticatingTitle, content, locale);
+      return renderHtmlTemplate(t(locale, 'auth.page.authenticating.title'), content, locale);
     },
     renderSignUpError(message: string, locale: string = 'en') {
-      const messages = authPageMessages(locale);
+      const errorTitle = t(locale, 'auth.page.error.title');
       const safeMessage = String(message)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -275,11 +156,11 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         <path d="M12 17h.01"/>
       </svg>
     </div>
-    <h1>${messages.errorTitle}</h1>
+    <h1>${errorTitle}</h1>
     <p>${safeMessage}</p>
-    <a href="${strapi.config.admin.url}" class="btn">${messages.returnToLogin}</a>
+    <a href="${strapi.config.admin.url}" class="btn">${t(locale, 'auth.page.error.returnToLogin')}</a>
   </div>`;
-      return renderHtmlTemplate(messages.errorTitle, content, locale);
+      return renderHtmlTemplate(errorTitle, content, locale);
     },
     async generateToken(user: StrapiAdminUser, ctx: StrapiContext) {
       const sessionManager = (

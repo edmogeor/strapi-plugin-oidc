@@ -2,14 +2,13 @@ import type { Core } from '@strapi/types';
 import type { AuditEntry, AuditLogRecord } from '../../types';
 import type { AuditLogFilters } from '../../audit-log-filters';
 import { isAuditLogEnabled } from '../../utils/pluginConfig';
-import { translateDetails } from './translations';
 import { buildWhereClause } from './queryBuilder';
 import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS, DAY_MS } from '../../../shared/constants';
 
 const BATCH_SIZE = AUDIT_LOG_DEFAULTS.BATCH_DELETE_SIZE;
 
 interface AuditLogResult {
-  results: Array<AuditLogRecord & { details: string | null }>;
+  results: AuditLogRecord[];
   pagination: { page: number; pageSize: number; total: number; pageCount: number };
 }
 
@@ -68,10 +67,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
       ])) as [AuditLogRecord[], number];
 
       return {
-        results: rows.map((row) => ({
-          ...row,
-          details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
-        })),
+        results: rows,
         pagination: {
           page,
           pageSize,
