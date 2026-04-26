@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-04-26
+
+### Changed
+
+- **Shared locale keys for Clear and Export buttons** — Whitelist and audit log clear button labels now share `button.clear`; export button labels share `button.export`. Removed redundant `whitelist.delete.all.label`, `whitelist.export`, `auditlog.clear`, and `auditlog.export` locale keys across all 25 supported locales.
+
+---
+
 ## [1.9.1] - 2026-04-26
 
 ### Fixed

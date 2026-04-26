@@ -91,7 +91,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
             onClick={handleExport}
             disabled={pagination.total === 0}
           >
-            {formatMessage(getTrad('auditlog.export'))}
+            {formatMessage(getTrad('button.export'))}
           </SizedButton>
           <ConfirmDialog
             trigger={
@@ -101,7 +101,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
                 startIcon={<Trash />}
                 disabled={pagination.total === 0}
               >
-                {formatMessage(getTrad('auditlog.clear'))}
+                {formatMessage(getTrad('button.clear'))}
               </SizedButton>
             }
             title={formatMessage(getTrad('auditlog.clear.title'))}
@@ -114,7 +114,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
                 </Typography>
               </Flex>
             }
-            confirmLabel={formatMessage(getTrad('auditlog.clear'))}
+            confirmLabel={formatMessage(getTrad('button.clear'))}
             onConfirm={handleClearAll}
           />
         </Flex>

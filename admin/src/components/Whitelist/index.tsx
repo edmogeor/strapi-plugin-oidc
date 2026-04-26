@@ -153,7 +153,7 @@ export default function Whitelist({
                 onClick={onExport}
                 disabled={users.length === 0}
               >
-                {formatMessage(getTrad('whitelist.export'))}
+                {formatMessage(getTrad('button.export'))}
               </SizedButton>
               <SizedButton
                 size="S"
@@ -178,7 +178,7 @@ export default function Whitelist({
                     startIcon={<Trash />}
                     disabled={users.length === 0}
                   >
-                    {formatMessage(getTrad('whitelist.delete.all.label'))}
+                    {formatMessage(getTrad('button.clear'))}
                   </SizedButton>
                 }
                 title={formatMessage(getTrad('whitelist.delete.all.title'))}
@@ -191,7 +191,7 @@ export default function Whitelist({
                     </Typography>
                   </Flex>
                 }
-                confirmLabel={formatMessage(getTrad('whitelist.delete.all.label'))}
+                confirmLabel={formatMessage(getTrad('button.clear'))}
                 onConfirm={onDeleteAll}
               />
             </Flex>
