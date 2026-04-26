@@ -1,20 +1,35 @@
+import { z } from 'zod';
 import type { Core } from '@strapi/types';
 import { errorMessages } from '../error-strings';
 import type { PluginConfig } from '../../shared/config';
 import { DISCOVERY_TIMEOUT_MS } from '../../shared/constants';
 
-interface DiscoveryDocument {
-  issuer?: string;
-  authorization_endpoint?: string;
-  token_endpoint?: string;
-  userinfo_endpoint?: string;
-  end_session_endpoint?: string;
-  jwks_uri?: string;
-}
+const discoveryDocumentSchema = z
+  .object({
+    issuer: z.string().optional(),
+    authorization_endpoint: z.string().optional(),
+    token_endpoint: z.string().optional(),
+    userinfo_endpoint: z.string().optional(),
+    end_session_endpoint: z.string().optional(),
+    jwks_uri: z.string().optional(),
+  })
+  .passthrough();
+
+type DiscoveryDocument = z.infer<typeof discoveryDocumentSchema>;
 
 // Maps OIDC discovery document fields to plugin config keys.
 // Individual config vars take precedence; discovery only fills in empty values.
-const FIELD_MAP: [keyof DiscoveryDocument, keyof PluginConfig][] = [
+const FIELD_MAP: [
+  (
+    | 'issuer'
+    | 'authorization_endpoint'
+    | 'token_endpoint'
+    | 'userinfo_endpoint'
+    | 'end_session_endpoint'
+    | 'jwks_uri'
+  ),
+  keyof PluginConfig,
+][] = [
   ['issuer', 'OIDC_ISSUER'],
   ['authorization_endpoint', 'OIDC_AUTHORIZATION_ENDPOINT'],
   ['token_endpoint', 'OIDC_TOKEN_ENDPOINT'],
@@ -32,7 +47,9 @@ export async function applyDiscovery(strapi: Core.Strapi): Promise<void> {
   try {
     const res = await fetch(discoveryUrl, { signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    doc = (await res.json()) as DiscoveryDocument;
+    const parseResult = discoveryDocumentSchema.safeParse(await res.json());
+    if (!parseResult.success) throw new Error('malformed discovery document');
+    doc = parseResult.data;
   } catch (e) {
     strapi.log.error(
       errorMessages.DISCOVERY_FETCH_ERROR(discoveryUrl, e instanceof Error ? e.message : String(e)),

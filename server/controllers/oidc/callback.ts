@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
 import { COOKIE_MAX_AGE_MS } from '../../../shared/constants';
 import { errorMessages } from '../../error-strings';
@@ -18,6 +19,12 @@ import { handleCallbackError } from './errors';
 import type { StrapiContext, OidcUserInfo, AuditLogService, StrapiAdminUser } from '../../types';
 import type { PluginConfig } from '../../../shared/config';
 
+const tokenResponseSchema = z
+  .object({ access_token: z.string(), id_token: z.string().optional() })
+  .passthrough();
+
+const oidcUserInfoSchema = z.object({ email: z.string().optional() }).passthrough();
+
 async function exchangeTokenAndFetchUserInfo(
   config: PluginConfig,
   params: URLSearchParams,
@@ -35,10 +42,15 @@ async function exchangeTokenAndFetchUserInfo(
     throw new OidcError('token_exchange_failed', errorMessages.TOKEN_EXCHANGE_FAILED);
   }
 
-  const tokenData = (await response.json()) as {
-    access_token: string;
-    id_token?: string;
-  };
+  const tokenParseResult = tokenResponseSchema.safeParse(await response.json());
+  if (!tokenParseResult.success) {
+    throw new OidcError(
+      'provider_response_invalid',
+      errorMessages.PROVIDER_RESPONSE_INVALID,
+      tokenParseResult.error,
+    );
+  }
+  const tokenData = tokenParseResult.data;
 
   if (tokenData.id_token) {
     // null when OIDC_JWKS_URI is unset; nonce check still validates replay either way.
@@ -67,7 +79,15 @@ async function exchangeTokenAndFetchUserInfo(
     throw new OidcError('userinfo_fetch_failed', errorMessages.USERINFO_FETCH_FAILED);
   }
 
-  const userInfo = (await userResponse.json()) as OidcUserInfo;
+  const userInfoParseResult = oidcUserInfoSchema.safeParse(await userResponse.json());
+  if (!userInfoParseResult.success) {
+    throw new OidcError(
+      'provider_response_invalid',
+      errorMessages.PROVIDER_RESPONSE_INVALID,
+      userInfoParseResult.error,
+    );
+  }
+  const userInfo = userInfoParseResult.data as OidcUserInfo;
   return { userInfo, accessToken: tokenData.access_token };
 }
 

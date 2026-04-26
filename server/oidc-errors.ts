@@ -11,6 +11,7 @@ type OidcErrorKind =
   | 'invalid_email'
   | 'email_not_verified'
   | 'id_token_invalid'
+  | 'provider_response_invalid'
   | 'unknown';
 
 export class OidcError extends Error {
@@ -67,6 +68,11 @@ export const OIDC_ERROR_DISPATCH: Record<
     action: 'id_token_invalid',
     code: errorCodes.ID_TOKEN_INVALID,
     key: 'id_token_invalid',
+  },
+  provider_response_invalid: {
+    action: 'login_failure',
+    code: errorCodes.PROVIDER_RESPONSE_INVALID,
+    key: 'provider_response_invalid',
   },
   unknown: {
     action: 'login_failure',

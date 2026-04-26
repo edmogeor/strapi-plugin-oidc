@@ -1,6 +1,5 @@
 import type { Context } from 'koa';
 import type { AuditEntry, AuditLogRecord } from '../shared/audit-actions';
-import type { GroupRoleMap } from '../shared/constants';
 export { AuditAction, AuditEntry, AuditLogRecord } from '../shared/audit-actions';
 
 export interface StrapiContext extends Context {
@@ -27,7 +26,7 @@ export interface StrapiAdminUser {
 }
 
 export interface OidcUserInfo {
-  email: string;
+  email?: string;
   [key: string]: unknown;
 }
 

@@ -15,6 +15,7 @@ export const errorCodes = {
   ID_TOKEN_INVALID: 'ID_TOKEN_INVALID',
   WHITELIST_NOT_PRESENT: 'WHITELIST_NOT_PRESENT',
   SESSION_MANAGER_UNSUPPORTED: 'SESSION_MANAGER_UNSUPPORTED',
+  PROVIDER_RESPONSE_INVALID: 'PROVIDER_RESPONSE_INVALID',
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
@@ -30,6 +31,7 @@ const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   email_not_verified: 'Email address has not been verified by the OIDC provider',
   id_token_invalid: 'ID token verification failed: {error}',
   whitelist_not_present: 'Email not present in whitelist',
+  provider_response_invalid: 'Provider returned an unexpected response: {error}',
   session_manager_unsupported:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
 };
@@ -57,6 +59,7 @@ export const errorMessages = {
   EMAIL_NOT_VERIFIED: 'Email address has not been verified by the OIDC provider',
   ID_TOKEN_INVALID: 'ID token verification failed',
   WHITELIST_NOT_PRESENT: 'Not present in whitelist',
+  PROVIDER_RESPONSE_INVALID: 'Unexpected response from OIDC provider',
   SESSION_MANAGER_UNSUPPORTED:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
   JWKS_URI_NOT_CONFIGURED:

@@ -37,7 +37,9 @@ export const pluginConfigSchema = z.object({
   OIDC_ENFORCE: coerceBoolNullable,
   AUDIT_LOG_RETENTION_DAYS: z.number().default(90),
   OIDC_GROUP_FIELD: z.string().default('groups'),
-  OIDC_GROUP_ROLE_MAP: z.union([z.string(), z.record(z.array(z.string()))]).default('{}'),
+  OIDC_GROUP_ROLE_MAP: z
+    .union([z.string(), z.record(z.string(), z.array(z.string()))])
+    .default('{}'),
   OIDC_REQUIRE_EMAIL_VERIFIED: coerceBool(true),
   OIDC_TRUSTED_IP_HEADER: z.string().default(''),
   OIDC_JWKS_URI: z.string().default(''),

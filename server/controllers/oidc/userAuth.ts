@@ -3,7 +3,6 @@ import { errorCodes, getErrorDetail, errorMessages } from '../../error-strings';
 import { OidcError } from '../../oidc-errors';
 import { toMessage } from '../../../shared/utils';
 import { parseGroupRoleMap } from '../../../shared/config';
-import type { GroupRoleMap } from '../../../shared/constants';
 import type { PluginConfig } from '../../../shared/config';
 import type {
   StrapiContext,
