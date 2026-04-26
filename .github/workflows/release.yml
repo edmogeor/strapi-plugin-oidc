@@ -29,6 +29,9 @@ jobs:
       - name: Build plugin
         run: npm run build
 
+      - name: Run ESLint
+        run: npm run lint
+
       - name: Install dependencies in test-app
         run: |
           cd test-app
