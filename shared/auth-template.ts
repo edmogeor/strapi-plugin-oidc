@@ -1,4 +1,4 @@
-export const AUTH_PAGE_CSS = `
+const AUTH_PAGE_CSS = `
   :root {
     --bg-color: #f6f6f9;
     --card-bg: #ffffff;

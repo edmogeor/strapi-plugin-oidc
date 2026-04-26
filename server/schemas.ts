@@ -9,7 +9,7 @@ export const registerSchema = z.object({
   email: z.union([z.string(), z.array(z.string())]),
 });
 
-export const EmailUserSchema = z.object({
+const EmailUserSchema = z.object({
   email: z.string().email(),
 });
 
@@ -29,9 +29,3 @@ export const roleUpdateSchema = z.object({
     }),
   ),
 });
-
-export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type ImportUsersInput = z.infer<typeof importUsersSchema>;
-export type SyncUsersInput = z.infer<typeof syncUsersSchema>;
-export type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;

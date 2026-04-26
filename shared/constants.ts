@@ -48,10 +48,6 @@ export const UI_DEFAULTS = {
   MIN_SPINNER_MS: 400,
 } as const;
 
-export type ContentTypeUid = (typeof CONTENT_TYPES)[keyof typeof CONTENT_TYPES];
-// fallow-ignore-next-line unused-types
-export type PermissionAction = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
-
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface GroupRoleMap {
