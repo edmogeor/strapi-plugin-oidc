@@ -97,7 +97,7 @@ export async function getDefaultOidcRoleIds(strapi: Core.Strapi): Promise<string
   const record = await strapi
     .query('plugin::strapi-plugin-oidc.roles')
     .findOne({ where: { oauth_type: '4' } });
-  return record?.roles ?? [];
+  return (record?.roles ?? []).map(String);
 }
 
 export async function queryAuditLog(

@@ -2,19 +2,16 @@ import { createHash } from 'node:crypto';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 import { getClientIp } from '../utils/ip';
+import { PERMISSIONS, RATE_LIMIT } from '../../shared/constants';
 
 const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60_000;
-const MAX_REQUESTS = 1_000;
-const MAX_MAP_SIZE = 10_000;
-const PRUNE_THRESHOLD = 1_000;
 
 export const clearRateLimitMap = (): void => rateLimitMap.clear();
 
 export const getRateLimitMapSize = (): number => rateLimitMap.size;
 
 function pruneExpiredEntries(now: number): void {
-  const windowStart = now - RATE_LIMIT_WINDOW;
+  const windowStart = now - RATE_LIMIT.WINDOW_MS;
   for (const [key, stamps] of rateLimitMap) {
     if (stamps.length === 0 || stamps[stamps.length - 1] <= windowStart) {
       rateLimitMap.delete(key);
@@ -39,15 +36,15 @@ function getRateLimitKey(ctx: StrapiContext): string {
 function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
   const key = getRateLimitKey(ctx);
   const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW;
+  const windowStart = now - RATE_LIMIT.WINDOW_MS;
 
-  if (rateLimitMap.size > PRUNE_THRESHOLD) {
+  if (rateLimitMap.size > RATE_LIMIT.PRUNE_THRESHOLD) {
     pruneExpiredEntries(now);
   }
 
   const requestStamps = (rateLimitMap.get(key) ?? []).filter((ts) => ts > windowStart);
 
-  if (requestStamps.length >= MAX_REQUESTS) {
+  if (requestStamps.length >= RATE_LIMIT.MAX_REQUESTS) {
     ctx.status = 429;
     ctx.body = 'Too Many Requests';
     return;
@@ -55,7 +52,7 @@ function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
 
   requestStamps.push(now);
 
-  if (!rateLimitMap.has(key) && rateLimitMap.size >= MAX_MAP_SIZE) {
+  if (!rateLimitMap.has(key) && rateLimitMap.size >= RATE_LIMIT.MAX_MAP_SIZE) {
     evictOldestEntry();
   }
   rateLimitMap.set(key, requestStamps);
@@ -201,55 +198,55 @@ export default {
         method: 'GET',
         path: '/whitelist',
         handler: 'whitelist.info',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_READ] } },
       },
       {
         method: 'POST',
         path: '/whitelist',
         handler: 'whitelist.register',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_WRITE] } },
       },
       {
         method: 'POST',
         path: '/whitelist/import',
         handler: 'whitelist.importUsers',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_WRITE] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist/:email',
         handler: 'whitelist.removeEmail',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_DELETE] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_DELETE] } },
       },
       {
         method: 'GET',
         path: '/whitelist/export',
         handler: 'whitelist.exportWhitelist',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_READ] } },
       },
       {
         method: 'GET',
         path: '/audit-logs',
         handler: 'auditLog.find',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_READ] } },
       },
       {
         method: 'GET',
         path: '/audit-logs/export',
         handler: 'auditLog.export',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_READ] } },
       },
       {
         method: 'DELETE',
         path: '/audit-logs',
         handler: 'auditLog.clearAll',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_DELETE] } },
       },
     ],
   },

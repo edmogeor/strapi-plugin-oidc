@@ -1,11 +1,11 @@
 import { Readable } from 'node:stream';
 import { errorMessages } from '../error-strings';
+import { translateDetails } from '../services/auditLog/translations';
 import type { StrapiContext, AuditLogService } from '../types';
 import { getAuditLogService } from '../utils/services';
 import { setNdjsonAttachmentHeaders } from '../utils/http';
 import { parseAuditLogFilters, ValidationError, type AuditLogFilters } from '../audit-log-filters';
-
-const EXPORT_PAGE_SIZE = 500;
+import { AUDIT_LOG_DEFAULTS } from '../../shared/constants';
 
 async function* ndjsonRowStream(
   service: AuditLogService,
@@ -13,7 +13,11 @@ async function* ndjsonRowStream(
 ): AsyncGenerator<Buffer> {
   let page = 1;
   while (true) {
-    const { results } = await service.find({ page, pageSize: EXPORT_PAGE_SIZE, filters });
+    const { results } = await service.find({
+      page,
+      pageSize: AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE,
+      filters,
+    });
     if (results.length === 0) return;
 
     let chunk = '';
@@ -24,12 +28,12 @@ async function* ndjsonRowStream(
           action: row.action,
           email: row.email ?? null,
           ip: row.ip ?? null,
-          details: row.details,
+          details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
         }) + '\n';
     }
     yield Buffer.from(chunk, 'utf8');
 
-    if (results.length < EXPORT_PAGE_SIZE) return;
+    if (results.length < AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE) return;
     page++;
   }
 }
@@ -62,7 +66,10 @@ async function find(ctx: StrapiContext): Promise<void> {
   if (!filters) return;
 
   const page = Math.max(1, Number(ctx.query.page) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(ctx.query.pageSize) || 25));
+  const pageSize = Math.min(
+    AUDIT_LOG_DEFAULTS.MAX_PAGE_SIZE,
+    Math.max(1, Number(ctx.query.pageSize) || AUDIT_LOG_DEFAULTS.PAGE_SIZE),
+  );
   ctx.body = await getAuditLogService().find({ page, pageSize, filters });
 }
 

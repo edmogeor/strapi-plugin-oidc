@@ -2,15 +2,7 @@ import { Flex, MultiSelect, MultiSelectOption, Box, Typography } from '@strapi/d
 import getTrad from '../../utils/getTrad';
 import { useIntl } from 'react-intl';
 
-export interface OIDCRole {
-  oauth_type: string;
-  role?: string[];
-}
-
-export interface RoleDef {
-  id: string | number;
-  name: string;
-}
+import type { OIDCRole, RoleDef } from '../../types';
 
 interface RoleProps {
   oidcRoles: OIDCRole[];

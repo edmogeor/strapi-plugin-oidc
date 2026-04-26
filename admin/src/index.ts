@@ -5,22 +5,24 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
+import { PERMISSIONS } from '../../shared/constants';
+import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
 const name = pluginPkg.strapi.displayName;
 
 export default {
-  register(app: {
-    addSettingsLink: (
-      id: { id: string; intlLabel: { id: string; defaultMessage: string } },
-      link: {
-        id: string;
-        to: string;
-        intlLabel: { id: string; defaultMessage: string };
-        Component: React.ComponentType;
+  register(app: StrapiAdminApp) {
+    const AppPage = React.lazy(() => import('./pages/App'));
+    const link: SettingsLink = {
+      id: 'configuration',
+      to: `/settings/${pluginId}`,
+      intlLabel: {
+        id: 'settings.configuration',
+        defaultMessage: 'Configuration',
       },
-    ) => void;
-    registerPlugin: (plugin: unknown) => void;
-  }) {
+      Component: AppPage,
+      permissions: [{ action: PERMISSIONS.READ, subject: null }],
+    };
     app.addSettingsLink(
       {
         id: 'oidc',
@@ -29,18 +31,7 @@ export default {
           defaultMessage: 'OIDC',
         },
       },
-      {
-        id: 'configuration',
-        to: `/settings/${pluginId}`,
-        intlLabel: {
-          id: 'settings.configuration',
-          defaultMessage: 'Configuration',
-        },
-        Component: async () => {
-          return await import('./pages/App');
-        },
-        permissions: [{ action: 'plugin::strapi-plugin-oidc.read', subject: null }],
-      },
+      link,
     );
     app.registerPlugin({
       id: pluginId,
@@ -183,7 +174,7 @@ export default {
     };
   },
 
-  async registerTrads({ locales }: { locales: string[] }) {
+  async registerTrads({ locales }: RegisterTradsParams) {
     const transformKeys = (data: Record<string, string>) =>
       Object.fromEntries(
         Object.entries(data).map(([key, value]) => [

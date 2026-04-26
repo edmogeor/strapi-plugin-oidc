@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
-import { shouldMarkSecure } from '../../utils/cookies';
+import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
 import { configValidation } from './shared';
 import type { StrapiContext } from '../../types';
 
@@ -22,9 +22,9 @@ export async function oidcSignIn(ctx: StrapiContext) {
     sameSite: 'lax' as const,
   };
 
-  ctx.cookies.set('oidc_code_verifier', codeVerifier, cookieOptions);
-  ctx.cookies.set('oidc_state', state, cookieOptions);
-  ctx.cookies.set('oidc_nonce', nonce, cookieOptions);
+  ctx.cookies.set(COOKIE_NAMES.codeVerifier, codeVerifier, cookieOptions);
+  ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
+  ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
 
   const params = new URLSearchParams({
     response_type: 'code',

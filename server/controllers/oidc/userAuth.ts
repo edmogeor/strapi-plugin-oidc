@@ -1,7 +1,10 @@
 import { isValidEmail } from '../../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../../error-strings';
 import { OidcError } from '../../oidc-errors';
-import { toMessage } from './shared';
+import { toMessage } from '../../../shared/utils';
+import { parseGroupRoleMap } from '../../../shared/config';
+import type { GroupRoleMap } from '../../../shared/constants';
+import type { PluginConfig } from '../../../shared/config';
 import type {
   StrapiContext,
   OidcUserInfo,
@@ -10,8 +13,6 @@ import type {
   WhitelistService,
   AdminUserService,
   StrapiAdminUser,
-  PluginConfig,
-  GroupRoleMap,
 } from '../../types';
 
 function collectGroupMapRoleNames(userInfo: OidcUserInfo, config: PluginConfig): string[] {
@@ -19,16 +20,7 @@ function collectGroupMapRoleNames(userInfo: OidcUserInfo, config: PluginConfig):
   if (!Array.isArray(rawGroups) || rawGroups.length === 0) return [];
   const groups = rawGroups.filter((g): g is string => typeof g === 'string');
 
-  const raw = config.OIDC_GROUP_ROLE_MAP;
-  let groupRoleMap: GroupRoleMap;
-  try {
-    groupRoleMap =
-      typeof raw === 'string'
-        ? (JSON.parse(raw) as GroupRoleMap)
-        : (raw as unknown as GroupRoleMap);
-  } catch {
-    return [];
-  }
+  const groupRoleMap = parseGroupRoleMap(config.OIDC_GROUP_ROLE_MAP);
 
   const roleNameSet = new Set<string>();
   for (const group of groups) {
@@ -87,7 +79,7 @@ async function updateUserRoles(
       userId: user.id,
       detail: getErrorDetail('role_update_failed', {
         userId: user.id,
-        error: (updateErr as Error).message,
+        error: toMessage(updateErr),
       }),
     });
     throw updateErr;

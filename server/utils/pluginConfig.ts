@@ -1,8 +1,8 @@
-const PLUGIN_UID = 'plugin::strapi-plugin-oidc';
-const DEFAULT_RETENTION_DAYS = 90;
+import { pluginConfigSchema, type PluginConfig } from '../../shared/config';
+import { DEFAULT_RETENTION_DAYS } from '../../shared/constants';
 
-function getPluginConfig(): Record<string, unknown> {
-  return strapi.config.get(PLUGIN_UID) as Record<string, unknown>;
+export function getPluginConfig(): PluginConfig {
+  return pluginConfigSchema.parse(strapi.config.get('plugin::strapi-plugin-oidc') ?? {});
 }
 
 export function getRetentionDays(): number {

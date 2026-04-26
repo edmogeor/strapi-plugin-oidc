@@ -2,8 +2,7 @@ import type { Core } from '@strapi/types';
 import type { WhitelistSettings, WhitelistEntry } from '../types';
 import { errorMessages } from '../error-strings';
 import { OidcError } from '../oidc-errors';
-
-const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
+import { CONTENT_TYPES, CACHE_TTL } from '../../shared/constants';
 
 export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
   let settingsCache: { value: WhitelistSettings; ts: number } | null = null;
@@ -11,12 +10,12 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
   const getPluginStore = () =>
     strapi.store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc' });
 
-  const getWhitelistQuery = () => strapi.query('plugin::strapi-plugin-oidc.whitelists');
+  const getWhitelistQuery = () => strapi.query(CONTENT_TYPES.WHITELIST);
 
   return {
     async getSettings(): Promise<WhitelistSettings> {
       const now = Date.now();
-      if (settingsCache && now - settingsCache.ts < SETTINGS_CACHE_TTL_MS) {
+      if (settingsCache && now - settingsCache.ts < CACHE_TTL.SETTINGS_MS) {
         return settingsCache.value;
       }
       let settings = (await getPluginStore().get({ key: 'settings' })) as WhitelistSettings | null;

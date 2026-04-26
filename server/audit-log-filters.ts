@@ -15,7 +15,6 @@ function isIsoUtcDatetime(value: unknown): value is string {
 
 type EnumOperator = '$eq' | '$in';
 
-// fallow-ignore-next-line unused-type
 export interface AuditLogFilters {
   action?: Partial<Record<EnumOperator, AuditAction | AuditAction[]>>;
   email?: Partial<Record<StringOperator, string | boolean>>;

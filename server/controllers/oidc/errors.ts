@@ -1,9 +1,8 @@
 import { errorCodes, getErrorDetail } from '../../error-strings';
-import { userFacingMessages } from '../../audit-error-strings';
-import { negotiateLocale } from '../../i18n';
+import { negotiateLocale, t } from '../../i18n';
 import { OidcError, OIDC_ERROR_DISPATCH } from '../../oidc-errors';
 import { getClientIp } from '../../utils/ip';
-import { toMessage } from './shared';
+import { toMessage } from '../../../shared/utils';
 import type {
   StrapiContext,
   OidcUserInfo,
@@ -64,5 +63,5 @@ export async function handleCallbackError(
     email: userInfo?.email,
   });
   const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
-  ctx.send(oauthService.renderSignUpError(userFacingMessages(locale).signInError, locale));
+  ctx.send(oauthService.renderSignUpError(t(locale, 'user.signInError'), locale));
 }

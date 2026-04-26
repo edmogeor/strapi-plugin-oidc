@@ -69,4 +69,7 @@ export const errorMessages = {
   DISCOVERY_FETCH_ERROR: (url: string, reason: string) =>
     `[strapi-plugin-oidc] Failed to fetch OIDC discovery document from ${url}: ${reason}`,
   MISSING_CONFIG: (keys: string) => `Missing required config keys: ${keys}`,
+  WHITELIST_INVALID_EMAIL: 'Please enter a valid email address',
+  WHITELIST_INVALID_REQUEST: 'Invalid request body',
+  WHITELIST_IMPORT_INVALID: 'Expected { users: [{email}] }',
 } as const;

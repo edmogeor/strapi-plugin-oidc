@@ -1,4 +1,4 @@
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_REGEX } from '../../shared/constants';
 
 export function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email);

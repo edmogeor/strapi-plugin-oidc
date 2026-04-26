@@ -5,6 +5,8 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
+import { CONTENT_TYPES as CT, PERMISSIONS } from '../shared/constants';
+import { COOKIE_NAMES } from './utils/cookies';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
@@ -39,7 +41,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           return;
         }
 
-        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get('oidc_authenticated')) {
+        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get(COOKIE_NAMES.authenticated)) {
           ctx.status = 401;
           ctx.body = {
             data: null,
@@ -74,11 +76,11 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
 
   const contentApiScopeUids = [
-    'plugin::strapi-plugin-oidc.whitelist.read',
-    'plugin::strapi-plugin-oidc.whitelist.write',
-    'plugin::strapi-plugin-oidc.whitelist.delete',
-    'plugin::strapi-plugin-oidc.audit.read',
-    'plugin::strapi-plugin-oidc.audit.delete',
+    PERMISSIONS.WHITELIST_READ,
+    PERMISSIONS.WHITELIST_WRITE,
+    PERMISSIONS.WHITELIST_DELETE,
+    PERMISSIONS.AUDIT_READ,
+    PERMISSIONS.AUDIT_DELETE,
   ];
   for (const uid of contentApiScopeUids) {
     strapi.contentAPI.permissions.providers.action.register(uid, { uid });
@@ -101,9 +103,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   }
 
   try {
-    const oidcRoleCount = await strapi
-      .query('plugin::strapi-plugin-oidc.roles')
-      .count({ where: { oauth_type: '4' } });
+    const oidcRoleCount = await strapi.query(CT.ROLES).count({ where: { oauth_type: '4' } });
 
     if (oidcRoleCount === 0) {
       const defaultRole =
@@ -111,7 +111,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
         (await strapi.query('admin::role').findOne({}));
 
       if (defaultRole) {
-        await strapi.query('plugin::strapi-plugin-oidc.roles').create({
+        await strapi.query(CT.ROLES).create({
           data: { oauth_type: '4', roles: [String(defaultRole.id)] },
         });
       }
