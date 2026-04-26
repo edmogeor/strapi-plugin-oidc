@@ -5,7 +5,8 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
-import { CONTENT_TYPES as CT, COOKIE_NAMES } from '../shared/constants';
+import { CONTENT_TYPES as CT, PERMISSIONS } from '../shared/constants';
+import { COOKIE_NAMES } from './utils/cookies';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
@@ -75,11 +76,11 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   await strapi.admin.services.permission.actionProvider.registerMany(actions);
 
   const contentApiScopeUids = [
-    CT.WHITELIST_READ,
-    CT.WHITELIST_WRITE,
-    CT.WHITELIST_DELETE,
-    CT.AUDIT_READ,
-    CT.AUDIT_DELETE,
+    PERMISSIONS.WHITELIST_READ,
+    PERMISSIONS.WHITELIST_WRITE,
+    PERMISSIONS.WHITELIST_DELETE,
+    PERMISSIONS.AUDIT_READ,
+    PERMISSIONS.AUDIT_DELETE,
   ];
   for (const uid of contentApiScopeUids) {
     strapi.contentAPI.permissions.providers.action.register(uid, { uid });

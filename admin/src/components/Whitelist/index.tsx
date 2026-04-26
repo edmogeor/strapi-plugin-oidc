@@ -18,10 +18,7 @@ import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 import { ConfirmDialog, CustomTable, LocalizedDate, SizedButton, TablePagination } from '../shared';
 
-export interface WhitelistUser {
-  email: string;
-  createdAt: string;
-}
+import type { WhitelistUser } from '../../types';
 
 interface WhitelistProps {
   users: WhitelistUser[];

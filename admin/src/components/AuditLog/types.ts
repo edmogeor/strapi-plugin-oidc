@@ -1,8 +1,7 @@
 import type { DateSelection } from '../shared';
-import { AUDIT_LOG_DEFAULTS } from '../../../shared/constants';
+import { AUDIT_LOG_DEFAULTS } from '../../../../shared/constants';
 
-// fallow-ignore-next-line duplicate-exports
-export interface AuditLogRecord {
+export interface AuditLogEntry {
   id: number;
   action: string;
   email?: string;

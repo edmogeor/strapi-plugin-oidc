@@ -3,7 +3,7 @@ import { Information } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 import { CustomTable, LocalizedDate } from '../shared';
-import type { AuditLogRecord } from './types';
+import type { AuditLogEntry } from './types';
 
 const DETAILS_TEXT_STYLE = {
   display: 'block',
@@ -15,7 +15,7 @@ const DETAILS_TEXT_STYLE = {
 } as const;
 
 interface LogTableProps {
-  records: AuditLogRecord[];
+  records: AuditLogEntry[];
   loading: boolean;
   hasActiveFilters: boolean;
 }

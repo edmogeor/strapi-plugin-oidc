@@ -1,5 +1,4 @@
-import { OIDCRole, RoleDef } from '../../../components/Role';
-import { WhitelistUser } from '../../../components/Whitelist';
+import type { OIDCRole, RoleDef, WhitelistUser } from '../../../types';
 
 type SettingsSnapshot = {
   oidcRoles: OIDCRole[];

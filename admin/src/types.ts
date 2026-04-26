@@ -18,7 +18,21 @@ export interface StrapiAdminApp {
   registerPlugin: (plugin: unknown) => void;
 }
 
-// fallow-ignore-next-line unused-types
 export interface RegisterTradsParams {
   locales: string[];
+}
+
+export interface OIDCRole {
+  oauth_type: string;
+  role?: string[];
+}
+
+export interface RoleDef {
+  id: string | number;
+  name: string;
+}
+
+export interface WhitelistUser {
+  email: string;
+  createdAt: string;
 }

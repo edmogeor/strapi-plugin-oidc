@@ -3,8 +3,8 @@ import type { AuditEntry, AuditLogRecord } from '../../types';
 import type { AuditLogFilters } from '../../audit-log-filters';
 import { isAuditLogEnabled } from '../../utils/pluginConfig';
 import { translateDetails } from './translations';
-import { buildWhereClause, DAY_MS } from './queryBuilder';
-import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS } from '../../../shared/constants';
+import { buildWhereClause } from './queryBuilder';
+import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS, DAY_MS } from '../../../shared/constants';
 
 const BATCH_SIZE = AUDIT_LOG_DEFAULTS.BATCH_DELETE_SIZE;
 

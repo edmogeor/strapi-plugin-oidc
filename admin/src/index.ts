@@ -6,7 +6,7 @@ import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
 import { PERMISSIONS } from '../../shared/constants';
-import type { StrapiAdminApp, SettingsLink } from './types';
+import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
 const name = pluginPkg.strapi.displayName;
 
@@ -174,7 +174,7 @@ export default {
     };
   },
 
-  async registerTrads({ locales }: { locales: string[] }) {
+  async registerTrads({ locales }: RegisterTradsParams) {
     const transformKeys = (data: Record<string, string>) =>
       Object.fromEntries(
         Object.entries(data).map(([key, value]) => [
