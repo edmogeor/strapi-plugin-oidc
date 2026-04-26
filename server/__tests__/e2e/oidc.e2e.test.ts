@@ -166,37 +166,38 @@ describe('OIDC E2E Tests', () => {
       expect(res.text).toContain('Authentication failed. Please try again.');
     };
 
-    it('shows generic error and logs token_exchange_failed when token exchange fails', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
-      );
-      await assertGenericAuthError(agent, await initiateLogin(agent));
-      const rows = await queryAuditLog(strapi, 'token_exchange_failed');
-      expect(rows.length).toBeGreaterThan(0);
-    });
-
-    it('shows generic error and logs login_failure when token response lacks access_token', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
+    it.each([
+      {
+        scenario: 'token exchange fails',
+        handler: http.post('https://mock-oidc.com/token', () =>
+          HttpResponse.json({}, { status: 401 }),
+        ),
+        auditAction: 'token_exchange_failed',
+      },
+      {
+        scenario: 'token response lacks access_token',
+        handler: http.post('https://mock-oidc.com/token', () =>
           HttpResponse.json({ error: 'invalid_grant' }, { status: 200 }),
         ),
-      );
-      await assertGenericAuthError(agent, await initiateLogin(agent));
-      const rows = await queryAuditLog(strapi, 'login_failure');
-      expect(rows.length).toBeGreaterThan(0);
-    });
-
-    it('shows generic error and logs login_failure when userinfo fetch fails', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(
-        http.get('https://mock-oidc.com/userinfo', () => HttpResponse.json({}, { status: 503 })),
-      );
-      await assertGenericAuthError(agent, await initiateLogin(agent));
-      const rows = await queryAuditLog(strapi, 'login_failure');
-      expect(rows.length).toBeGreaterThan(0);
-    });
+        auditAction: 'login_failure',
+      },
+      {
+        scenario: 'userinfo fetch fails',
+        handler: http.get('https://mock-oidc.com/userinfo', () =>
+          HttpResponse.json({}, { status: 503 }),
+        ),
+        auditAction: 'login_failure',
+      },
+    ])(
+      'shows generic error and logs $auditAction when $scenario',
+      async ({ handler, auditAction }) => {
+        await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+        oidcServer.use(handler);
+        await assertGenericAuthError(agent, await initiateLogin(agent));
+        const rows = await queryAuditLog(strapi, auditAction);
+        expect(rows.length).toBeGreaterThan(0);
+      },
+    );
 
     it('rejects a mismatched nonce in the ID token and logs nonce_mismatch', async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
