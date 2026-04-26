@@ -5,7 +5,7 @@ import type { Core, UID } from '@strapi/types';
 import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
 import { authPageMessages } from '../audit-error-strings';
-import { shouldMarkSecure } from '../utils/cookies';
+import { shouldMarkSecure, COOKIE_NAMES } from '../utils/cookies';
 
 function renderHtmlTemplate(title: string, content: string, locale: string = 'en'): string {
   return `
@@ -347,8 +347,8 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         cookieOptions.expires = new Date(Date.now() + ms);
       }
 
-      ctx.cookies.set('strapi_admin_refresh', refreshToken, cookieOptions);
-      ctx.cookies.set('oidc_authenticated', '1', { ...cookieOptions, path: '/' });
+      ctx.cookies.set(COOKIE_NAMES.adminRefresh, refreshToken, cookieOptions);
+      ctx.cookies.set(COOKIE_NAMES.authenticated, '1', { ...cookieOptions, path: '/' });
 
       const accessResult = await smAdmin.generateAccessToken(refreshToken);
       if ('error' in accessResult) {

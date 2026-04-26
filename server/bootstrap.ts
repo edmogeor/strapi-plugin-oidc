@@ -5,6 +5,7 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
+import { COOKIE_NAMES } from './utils/cookies';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
@@ -39,7 +40,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           return;
         }
 
-        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get('oidc_authenticated')) {
+        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get(COOKIE_NAMES.authenticated)) {
           ctx.status = 401;
           ctx.body = {
             data: null,

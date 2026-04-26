@@ -1,5 +1,6 @@
 import type { DateSelection } from '../shared';
 
+// fallow-ignore-next-line duplicate-exports
 export interface AuditLogRecord {
   id: number;
   action: string;

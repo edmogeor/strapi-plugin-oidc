@@ -1,11 +1,22 @@
 import type { Core } from '@strapi/types';
-import type { StrapiContext, PluginConfig } from '../types';
+import { getPluginConfig } from './pluginConfig';
+import type { StrapiContext } from '../types';
+
+export const COOKIE_NAMES = {
+  state: 'oidc_state',
+  codeVerifier: 'oidc_code_verifier',
+  nonce: 'oidc_nonce',
+  accessToken: 'oidc_access_token',
+  userEmail: 'oidc_user_email',
+  adminRefresh: 'strapi_admin_refresh',
+  authenticated: 'oidc_authenticated',
+} as const;
 
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
   const isProduction = strapi.config.get('environment') === 'production';
   if (!isProduction) return false;
 
-  const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
+  const config = getPluginConfig();
   if (config.OIDC_FORCE_SECURE_COOKIES === true) return true;
 
   if (ctx.request.secure) return true;
@@ -31,9 +42,9 @@ function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
 
 export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
-  ctx.cookies.set('strapi_admin_refresh', '', options);
+  ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
   const rootPathOptions = { ...options, path: '/' };
-  for (const name of ['oidc_authenticated', 'oidc_access_token', 'oidc_user_email']) {
-    ctx.cookies.set(name, '', rootPathOptions);
-  }
+  ctx.cookies.set(COOKIE_NAMES.authenticated, '', rootPathOptions);
+  ctx.cookies.set(COOKIE_NAMES.accessToken, '', rootPathOptions);
+  ctx.cookies.set(COOKIE_NAMES.userEmail, '', rootPathOptions);
 }

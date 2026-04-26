@@ -1,7 +1,8 @@
-import { clearAuthCookies } from '../../utils/cookies';
+import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
 import { getAuditLogService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
-import type { StrapiContext, AuditAction, PluginConfig } from '../../types';
+import { getPluginConfig } from '../../utils/pluginConfig';
+import type { StrapiContext, AuditAction } from '../../types';
 
 const LOGOUT_USERINFO_TIMEOUT_MS = 1500;
 
@@ -23,16 +24,16 @@ async function isProviderSessionExpired(
 }
 
 export async function logout(ctx: StrapiContext) {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
+  const config = getPluginConfig();
   const auditLog = getAuditLogService();
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;
 
   // Read before clearing (cookies are gone after clearAuthCookies).
-  const isOidcSession = !!ctx.cookies.get('oidc_authenticated');
-  const accessToken = ctx.cookies.get('oidc_access_token');
-  const userEmail = ctx.cookies.get('oidc_user_email') ?? undefined;
+  const isOidcSession = !!ctx.cookies.get(COOKIE_NAMES.authenticated);
+  const accessToken = ctx.cookies.get(COOKIE_NAMES.accessToken);
+  const userEmail = ctx.cookies.get(COOKIE_NAMES.userEmail) ?? undefined;
 
   clearAuthCookies(strapi, ctx);
 

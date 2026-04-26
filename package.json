@@ -53,7 +53,8 @@
     "jose": "^6.2.2",
     "lucide-react": "^1.8.0",
     "pkce-challenge": "^6.0.0",
-    "react-intl": "^6.8.9"
+    "react-intl": "^6.8.9",
+    "zod": "^3.25.76"
   },
   "author": {
     "name": "edmogeor",

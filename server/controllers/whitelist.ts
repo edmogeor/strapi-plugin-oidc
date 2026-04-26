@@ -1,14 +1,16 @@
 import type { Context } from 'koa';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
-import { isAuditLogEnabled } from '../utils/pluginConfig';
+import { isAuditLogEnabled, getPluginConfig } from '../utils/pluginConfig';
 import { isValidEmail } from '../utils/email';
 import { getWhitelistService } from '../utils/services';
 import { setJsonAttachmentHeaders } from '../utils/http';
+import {
+  updateSettingsSchema,
+  registerSchema,
+  importUsersSchema,
+  syncUsersSchema,
+} from '../schemas';
 import type { StrapiContext } from '../types';
-
-interface EmailUser {
-  email: string;
-}
 
 async function info(ctx: Context) {
   const whitelistService = getWhitelistService();
@@ -24,26 +26,31 @@ async function info(ctx: Context) {
 }
 
 async function updateSettings(ctx: Context) {
-  const body = ctx.request.body as { useWhitelist: boolean; enforceOIDC: boolean };
-  const { useWhitelist } = body;
-  let { enforceOIDC } = body;
+  const parsed = updateSettingsSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    ctx.status = 400;
+    ctx.body = { error: 'Invalid request body', details: parsed.error.flatten() };
+    return;
+  }
+  const { useWhitelist, enforceOIDC } = parsed.data;
+  let enforceODICParsed = enforceOIDC;
   const whitelistService = getWhitelistService();
 
-  if (useWhitelist && enforceOIDC) {
+  if (useWhitelist && enforceODICParsed) {
     const users = await whitelistService.getUsers();
     if (users.length === 0) {
-      enforceOIDC = false;
+      enforceODICParsed = false;
     }
   }
 
-  await whitelistService.setSettings({ useWhitelist, enforceOIDC });
-  ctx.body = { useWhitelist, enforceOIDC };
+  await whitelistService.setSettings({ useWhitelist, enforceOIDC: enforceODICParsed });
+  ctx.body = { useWhitelist, enforceOIDC: enforceODICParsed };
 }
 
 async function publicSettings(ctx: Context) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
+  const config = getPluginConfig();
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
@@ -51,11 +58,13 @@ async function publicSettings(ctx: Context) {
 }
 
 async function register(ctx: Context) {
-  const { email } = ctx.request.body as { email: string | string[] };
-  if (!email) {
+  const parsed = registerSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    ctx.status = 400;
     ctx.body = { message: 'Please enter a valid email address' };
     return;
   }
+  const { email } = parsed.data;
 
   const rawEmails = Array.isArray(email) ? email : email.split(',');
   const normalized = rawEmails.map((e: string) => String(e).trim().toLowerCase()).filter(Boolean);
@@ -93,7 +102,7 @@ async function register(ctx: Context) {
 }
 
 async function removeEmail(ctx: Context) {
-  const { email } = ctx.params as { email: string };
+  const { email } = ctx.params;
   const whitelistService = getWhitelistService();
   await whitelistService.removeUser(email);
   ctx.body = {};
@@ -114,17 +123,15 @@ async function exportWhitelist(ctx: StrapiContext): Promise<void> {
 }
 
 async function importUsers(ctx: Context) {
-  const { users } = ctx.request.body as { users: EmailUser[] };
-  if (!Array.isArray(users)) {
+  const parsed = importUsersSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
     ctx.status = 400;
     ctx.body = { error: 'Expected { users: [{email}] }' };
     return;
   }
+  const { users } = parsed.data;
 
-  const normalized = users
-    .filter((u) => u?.email)
-    .map((u) => String(u.email).trim().toLowerCase())
-    .filter(isValidEmail);
+  const normalized = users.map((u) => String(u.email).trim().toLowerCase()).filter(isValidEmail);
 
   const deduped = [...new Set(normalized)];
 
@@ -139,9 +146,15 @@ async function importUsers(ctx: Context) {
 }
 
 async function syncUsers(ctx: Context) {
-  const { users: rawUsers } = ctx.request.body as { users: EmailUser[] };
+  const parsed = syncUsersSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    ctx.status = 400;
+    ctx.body = { error: 'Invalid request body' };
+    return;
+  }
+  const { users } = parsed.data;
 
-  const emails = rawUsers.map((u) => String(u.email).toLowerCase()).filter(isValidEmail);
+  const emails = users.map((u) => String(u.email).toLowerCase()).filter(isValidEmail);
 
   const whitelistService = getWhitelistService();
   const currentUsers = await whitelistService.getUsers();

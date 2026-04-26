@@ -87,7 +87,7 @@ async function updateUserRoles(
       userId: user.id,
       detail: getErrorDetail('role_update_failed', {
         userId: user.id,
-        error: (updateErr as Error).message,
+        error: toMessage(updateErr),
       }),
     });
     throw updateErr;

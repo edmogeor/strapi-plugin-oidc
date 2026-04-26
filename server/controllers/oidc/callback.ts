@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { shouldMarkSecure } from '../../utils/cookies';
+import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
 import { errorMessages } from '../../error-strings';
 import { userFacingMessages } from '../../audit-error-strings';
 import { negotiateLocale } from '../../i18n';
@@ -18,7 +18,6 @@ import { handleCallbackError } from './errors';
 import type {
   StrapiContext,
   OidcUserInfo,
-  AuditAction,
   AuditLogService,
   PluginConfig,
   StrapiAdminUser,
@@ -82,12 +81,12 @@ function readAndClearPkceCookies(ctx: StrapiContext): {
   codeVerifier: string | undefined;
   oidcNonce: string | undefined;
 } {
-  const oidcState = ctx.cookies.get('oidc_state');
-  const codeVerifier = ctx.cookies.get('oidc_code_verifier');
-  const oidcNonce = ctx.cookies.get('oidc_nonce');
-  ctx.cookies.set('oidc_state', null);
-  ctx.cookies.set('oidc_code_verifier', null);
-  ctx.cookies.set('oidc_nonce', null);
+  const oidcState = ctx.cookies.get(COOKIE_NAMES.state);
+  const codeVerifier = ctx.cookies.get(COOKIE_NAMES.codeVerifier);
+  const oidcNonce = ctx.cookies.get(COOKIE_NAMES.nonce);
+  ctx.cookies.set(COOKIE_NAMES.state, null);
+  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null);
+  ctx.cookies.set(COOKIE_NAMES.nonce, null);
   return { oidcState, codeVerifier, oidcNonce };
 }
 
@@ -112,7 +111,7 @@ async function logSuccessfulAuth(
   if (userCreated) {
     entries.push(
       auditLog.log({
-        action: 'user_created' as AuditAction,
+        action: 'user_created',
         email: user.email,
         ip: getClientIp(ctx),
         detailsKey: 'user_created',
@@ -146,7 +145,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
   }
 
   const params = new URLSearchParams({
-    code: ctx.query.code as string,
+    code: String(ctx.query.code),
     client_id: config.OIDC_CLIENT_ID,
     client_secret: config.OIDC_CLIENT_SECRET,
     redirect_uri: config.OIDC_REDIRECT_URI,
@@ -160,7 +159,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     userInfo = exchangeResult.userInfo;
 
     const secureFlag = shouldMarkSecure(strapi, ctx);
-    ctx.cookies.set('oidc_access_token', exchangeResult.accessToken, {
+    ctx.cookies.set(COOKIE_NAMES.accessToken, exchangeResult.accessToken, {
       httpOnly: true,
       maxAge: 300000,
       secure: secureFlag,
@@ -178,7 +177,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
         ctx,
       );
 
-    ctx.cookies.set('oidc_user_email', activateUser.email, {
+    ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {
       httpOnly: true,
       path: '/',
       secure: secureFlag,
