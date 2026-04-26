@@ -178,7 +178,7 @@ export default function Whitelist({
                     startIcon={<Trash />}
                     disabled={users.length === 0}
                   >
-                    {formatMessage(getTrad('button.clear'))}
+                    {formatMessage(getTrad('button.deleteAll'))}
                   </SizedButton>
                 }
                 title={formatMessage(getTrad('whitelist.delete.all.title'))}
@@ -191,7 +191,7 @@ export default function Whitelist({
                     </Typography>
                   </Flex>
                 }
-                confirmLabel={formatMessage(getTrad('button.clear'))}
+                confirmLabel={formatMessage(getTrad('button.deleteAll'))}
                 onConfirm={onDeleteAll}
               />
             </Flex>

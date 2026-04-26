@@ -101,7 +101,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
                 startIcon={<Trash />}
                 disabled={pagination.total === 0}
               >
-                {formatMessage(getTrad('button.clear'))}
+                {formatMessage(getTrad('button.deleteAll'))}
               </SizedButton>
             }
             title={formatMessage(getTrad('auditlog.clear.title'))}
@@ -114,7 +114,7 @@ export default function AuditLog({ title }: { title?: ReactNode } = {}) {
                 </Typography>
               </Flex>
             }
-            confirmLabel={formatMessage(getTrad('button.clear'))}
+            confirmLabel={formatMessage(getTrad('button.deleteAll'))}
             onConfirm={handleClearAll}
           />
         </Flex>
