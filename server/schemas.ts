@@ -14,7 +14,7 @@ const EmailUserSchema = z.object({
 });
 
 export const importUsersSchema = z.object({
-  users: z.array(z.object({ email: z.string() })),
+  users: z.array(z.object({ email: z.string().nullable().optional() })),
 });
 
 export const syncUsersSchema = z.object({

@@ -1,8 +1,27 @@
 import { z } from 'zod';
 import type { GroupRoleMap } from './constants';
 
+const coerceBool = (defaultVal: boolean) =>
+  z.preprocess((v) => {
+    if (typeof v === 'boolean') return v;
+    if (v === 'true' || v === '1') return true;
+    if (v === 'false' || v === '0') return false;
+    return v;
+  }, z.boolean().default(defaultVal));
+
+const coerceBoolNullable = z.preprocess(
+  (v) => {
+    if (v === null || v === undefined || v === 'null') return null;
+    if (typeof v === 'boolean') return v;
+    if (v === 'true' || v === '1') return true;
+    if (v === 'false' || v === '0') return false;
+    return null;
+  },
+  z.union([z.boolean(), z.null()]).default(null),
+);
+
 export const pluginConfigSchema = z.object({
-  REMEMBER_ME: z.boolean().default(false),
+  REMEMBER_ME: coerceBool(false),
   OIDC_DISCOVERY_URL: z.string().default(''),
   OIDC_REDIRECT_URI: z.string().default(''),
   OIDC_CLIENT_ID: z.string().default(''),
@@ -15,15 +34,15 @@ export const pluginConfigSchema = z.object({
   OIDC_GIVEN_NAME_FIELD: z.string().default('given_name'),
   OIDC_END_SESSION_ENDPOINT: z.string().default(''),
   OIDC_SSO_BUTTON_TEXT: z.string().default('Sign in with OIDC'),
-  OIDC_ENFORCE: z.union([z.boolean(), z.null()]).default(null),
+  OIDC_ENFORCE: coerceBoolNullable,
   AUDIT_LOG_RETENTION_DAYS: z.number().default(90),
   OIDC_GROUP_FIELD: z.string().default('groups'),
   OIDC_GROUP_ROLE_MAP: z.union([z.string(), z.record(z.array(z.string()))]).default('{}'),
-  OIDC_REQUIRE_EMAIL_VERIFIED: z.boolean().default(true),
+  OIDC_REQUIRE_EMAIL_VERIFIED: coerceBool(true),
   OIDC_TRUSTED_IP_HEADER: z.string().default(''),
   OIDC_JWKS_URI: z.string().default(''),
   OIDC_ISSUER: z.string().default(''),
-  OIDC_FORCE_SECURE_COOKIES: z.boolean().default(false),
+  OIDC_FORCE_SECURE_COOKIES: coerceBool(false),
 });
 
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;

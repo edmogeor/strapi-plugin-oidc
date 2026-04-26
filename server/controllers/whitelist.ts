@@ -132,7 +132,7 @@ async function importUsers(ctx: Context) {
   }
   const { users } = parsed.data;
 
-  const normalized = users.map((u) => u.email.trim().toLowerCase()).filter(isValidEmail);
+  const normalized = users.map((u) => (u.email ?? '').trim().toLowerCase()).filter(isValidEmail);
 
   const deduped = [...new Set(normalized)];
 
