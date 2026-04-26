@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.6] - 2026-04-26
+
+### Fixed
+
+- **Audit log errors no longer silently swallowed on logout** — The fire-and-forget `logAudit('logout')` call inside the provider redirect path now logs failures via `strapi.log.error`, consistent with the other audit log catch handlers in the same function.
+
+### Changed
+
+- **`npm test` now runs unit and e2e suites** — Unit tests run first so failures are caught before the heavier e2e suite. `npm run test:unit` remains available to run units alone.
+
+---
+
 ## [1.8.5] - 2026-04-22
 
 ### Added
