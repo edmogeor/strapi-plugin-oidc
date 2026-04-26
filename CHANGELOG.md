@@ -11,13 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **White screen on admin login** — The plugin settings link was registered with a `React.lazy` component instead of a raw `() => import(path)` function. Strapi's runtime invariant check threw an uncaught error during app startup, crashing the admin panel before the login page could render.
 
-### Changed
-
-- **Test suite: silent skips replaced with hard failures** — Four group-to-role mapping tests used early `return` when DB preconditions weren't met, causing them to pass vacuously. They now use `expect(...).toBeDefined()` / `expect(...).toBeGreaterThanOrEqual(2)` so a missing precondition fails loudly.
-- **Test suite: conditional assertions made unconditional** — Two token-refresh bypass tests wrapped their assertions in `if (res.status === 401)`, meaning the assertion could silently not run. Both now always assert `expect(res.body?.error?.message ?? '').not.toContain('OIDC')`.
-- **Test suite: `getRetentionDays` invalid-input test fixed** — The test was asserting `Number('not-a-number')` (a JS built-in) rather than calling the function under test. It now calls `pluginConfig.getRetentionDays()` and correctly documents that Zod throws on non-numeric string input.
-- **E2E `hookTimeout` raised to 120 s** — Strapi's startup can exceed the default 10 s vitest hook timeout when a test file happens to run first, causing the entire suite to be skipped. `hookTimeout: 120000` prevents this race.
-
 ---
 
 ## [1.9.0] - 2026-04-26
