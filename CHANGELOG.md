@@ -5,15 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.8.6] - 2026-04-26
+## [1.9.0] - 2026-04-26
+
+### Added
+
+- **Translations for 26 locales** — Server-rendered authentication pages (sign-in error, missing code, invalid state) now display in the user's browser language. Supported locales: ar, cs, de, el, es, fi, fr, he, hr, hu, id, it, ja, ko, ms, nl, pl, pt-BR, pt, ro, ru, sk, sv, th, tr, uk, vi, zh-Hans, zh-Hant.
+- **Unit test suite** — `npm run test:unit` runs 65 fast unit tests (~700ms, no Strapi bootstrap) covering `buildWhereClause`, `parseAuditLogFilters`, `buildQueryString`, and i18n locale loading. `npm test` now runs unit tests before e2e so failures are caught early.
+- **`npm run typecheck`** — Runs `tsc --noEmit` for a standalone type check without building.
 
 ### Fixed
 
-- **Audit log errors no longer silently swallowed on logout** — The fire-and-forget `logAudit('logout')` call inside the provider redirect path now logs failures via `strapi.log.error`, consistent with the other audit log catch handlers in the same function.
+- **Boolean env vars now accepted by config schema** — `REMEMBER_ME`, `OIDC_ENFORCE`, `OIDC_REQUIRE_EMAIL_VERIFIED`, and `OIDC_FORCE_SECURE_COOKIES` were rejected when set via `.env` files because environment variables arrive as strings. The schema now coerces `"true"`/`"1"` → `true` and `"false"`/`"0"` → `false` itself.
+- **Sign-in config errors return a proper error page** — If required config (e.g. `OIDC_CLIENT_ID`) is missing at sign-in time, the user now sees a localised error page instead of an unhandled exception leaking config key names.
+- **Audit log errors no longer block logout** — Both `logAudit` calls in the logout handler are now guarded with `.catch` so a database failure never prevents the redirect. Errors are logged via `strapi.log.error` rather than swallowed silently.
+- **`importUsers` no longer rejects null/missing email fields** — The import schema now accepts `null` or absent email values and skips them rather than returning a 400.
+- **Audit log details now translate in the user's locale** — Detail strings (e.g. "Roles updated: Editor") are translated client-side using the browser locale instead of being fixed to English server-side. The NDJSON export continues to use English.
+- **ESLint errors resolved** — Unused variables, missing React imports, and unsafe `Function` types corrected across the codebase.
 
 ### Changed
 
-- **`npm test` now runs unit and e2e suites** — Unit tests run first so failures are caught before the heavier e2e suite. `npm run test:unit` remains available to run units alone.
+- **Zod validation at all external boundaries** — OIDC token responses, userinfo responses, and the discovery document are now validated with Zod schemas. A malformed provider response throws `OidcError('provider_response_invalid')` with a distinct audit log entry (`login_failure`) instead of a silent type cast.
+- **`audit-log-filters.ts` rewritten with Zod** — Hand-rolled validation (165 lines) replaced with Zod schemas (73 lines); `AuditLogFilters` type is now derived from the schema.
+- **Constants centralised** — Magic values extracted to `shared/constants.ts`: `COOKIE_NAMES`, `CONTENT_TYPES`, `PERMISSIONS`, `RATE_LIMIT`, `PKCE_COOKIE_MAX_AGE_MS`, `DISCOVERY_TIMEOUT_MS`, `DAY_MS`, and others. All callsites updated to import from the single source.
+- **Error strings consolidated** — `audit-error-strings.ts` deleted; all server error and log messages now live in `error-strings.ts`. Audit detail keys resolved from `en.json` via `i18n.ts`.
+- **ESLint added to CI** — The CI workflow now runs `npm run lint` on every push and pull request to `main`.
 
 ---
 
