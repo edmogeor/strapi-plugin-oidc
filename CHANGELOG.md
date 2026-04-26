@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **UI labels standardized to sentence case** — All headings, button labels, dialog titles, and page text now follow sentence case throughout the plugin UI (e.g. "Save Changes" → "Save changes", "Authentication Failed" → "Authentication failed", "Unsaved Changes" → "Unsaved changes"). All 25 non-English locale files updated to match.
+- **UI labels aligned to Strapi's casing conventions** — Button labels, descriptions, and error messages updated to sentence case; page titles, section headings, and modal titles use Title Case, matching Strapi's own UI style. All 25 non-English locale files updated to match.
 - **"Clear" button renamed to "Delete all"** — The clear/delete-all button on the whitelist and audit log now reads "Delete all". The shared locale key is `button.deleteAll` (was `button.clear`).
-- **Settings page title updated** — Now reads "Configure admin OIDC login settings and view logs".
+- **Settings page title updated** — Now reads "Configure Admin OIDC Login Settings and View Logs".
+
+### Fixed
+
+- **Title and heading casing corrected** — Page titles, section headings, and modal titles restored to Title Case per Strapi's conventions (e.g. "Authentication Failed", "Unsaved Changes", "Delete All Entries").
 
 ---
 
