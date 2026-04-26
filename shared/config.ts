@@ -1,21 +1,21 @@
 import { z } from 'zod';
 import type { GroupRoleMap } from './constants';
 
+function toBoolCoerced(v: unknown): boolean | unknown {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === '1') return true;
+  if (v === 'false' || v === '0') return false;
+  return v;
+}
+
 const coerceBool = (defaultVal: boolean) =>
-  z.preprocess((v) => {
-    if (typeof v === 'boolean') return v;
-    if (v === 'true' || v === '1') return true;
-    if (v === 'false' || v === '0') return false;
-    return v;
-  }, z.boolean().default(defaultVal));
+  z.preprocess(toBoolCoerced, z.boolean().default(defaultVal));
 
 const coerceBoolNullable = z.preprocess(
   (v) => {
     if (v === null || v === undefined || v === 'null') return null;
-    if (typeof v === 'boolean') return v;
-    if (v === 'true' || v === '1') return true;
-    if (v === 'false' || v === '0') return false;
-    return null;
+    const coerced = toBoolCoerced(v);
+    return typeof coerced === 'boolean' ? coerced : null;
   },
   z.union([z.boolean(), z.null()]).default(null),
 );

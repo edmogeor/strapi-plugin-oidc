@@ -53,7 +53,9 @@ export async function logout(ctx: StrapiContext) {
       });
       return ctx.redirect(loginUrl);
     }
-    logAudit('logout').catch(() => {});
+    logAudit('logout').catch((err) => {
+      strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
+    });
     return ctx.redirect(logoutUrl);
   }
 

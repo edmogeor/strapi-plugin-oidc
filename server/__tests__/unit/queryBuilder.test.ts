@@ -92,7 +92,6 @@ describe('buildWhereClause', () => {
   describe('createdAt filter', () => {
     const DAY = '2024-01-15T00:00:00.000Z';
     const NEXT_DAY = '2024-01-16T00:00:00.000Z';
-    const DAY2 = '2024-01-16T00:00:00.000Z';
     const NEXT_DAY2 = '2024-01-17T00:00:00.000Z';
 
     it('maps $gte', () => {
@@ -126,10 +125,10 @@ describe('buildWhereClause', () => {
     });
 
     it('expands multiple $in days into an $or of ranges', () => {
-      expect(buildWhereClause({ createdAt: { $in: [DAY, DAY2] } })).toEqual({
+      expect(buildWhereClause({ createdAt: { $in: [DAY, NEXT_DAY] } })).toEqual({
         $or: [
           { createdAt: { $gte: DAY, $lt: NEXT_DAY } },
-          { createdAt: { $gte: DAY2, $lt: NEXT_DAY2 } },
+          { createdAt: { $gte: NEXT_DAY, $lt: NEXT_DAY2 } },
         ],
       });
     });
