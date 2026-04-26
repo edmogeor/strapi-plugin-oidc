@@ -20,7 +20,8 @@ async function find(ctx: Context) {
 async function update(ctx: Context) {
   const parsed = roleUpdateSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
-    ctx.send({}, 400);
+    ctx.status = 400;
+    ctx.body = {};
     return;
   }
   try {

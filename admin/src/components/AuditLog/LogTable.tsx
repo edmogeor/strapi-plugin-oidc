@@ -53,43 +53,46 @@ export function LogTable({ records, loading, hasActiveFilters }: LogTableProps) 
               </Td>
             </Tr>
           )}
-          {records.map((record) => (
-            <Tr key={record.id} style={{ opacity: loading ? 0.4 : 1, transition: 'opacity 0.15s' }}>
-              <Td>
-                <Typography variant="omega">
-                  <LocalizedDate date={record.createdAt} options={{ second: '2-digit' }} />
-                </Typography>
-              </Td>
-              <Td>
-                <Flex gap={2} alignItems="center">
-                  <Typography variant="omega">{record.action}</Typography>
-                  <Tooltip label={formatMessage(getTrad(`auditlog.action.${record.action}`))}>
-                    <Information
-                      aria-hidden
-                      style={{ cursor: 'help' }}
-                      width="1.4rem"
-                      height="1.4rem"
-                      fill="primary600"
-                    />
-                  </Tooltip>
-                </Flex>
-              </Td>
-              <Td>
-                <Typography variant="omega">{record.email ?? '—'}</Typography>
-              </Td>
-              <Td>
-                <Typography variant="omega">{record.ip ?? '—'}</Typography>
-              </Td>
-              <Td style={{ maxWidth: '200px' }}>
-                {(() => {
-                  const translationKey = record.detailsKey
-                    ? (`audit.${record.detailsKey}` as keyof typeof en)
-                    : null;
-                  const detail =
-                    translationKey && en[translationKey]
-                      ? formatMessage(getTrad(translationKey), record.detailsParams ?? {})
-                      : null;
-                  return detail ? (
+          {records.map((record) => {
+            const detailKey = record.detailsKey
+              ? (`audit.${record.detailsKey}` as keyof typeof en)
+              : null;
+            const detail =
+              detailKey && en[detailKey]
+                ? formatMessage(getTrad(detailKey), record.detailsParams ?? {})
+                : null;
+            return (
+              <Tr
+                key={record.id}
+                style={{ opacity: loading ? 0.4 : 1, transition: 'opacity 0.15s' }}
+              >
+                <Td>
+                  <Typography variant="omega">
+                    <LocalizedDate date={record.createdAt} options={{ second: '2-digit' }} />
+                  </Typography>
+                </Td>
+                <Td>
+                  <Flex gap={2} alignItems="center">
+                    <Typography variant="omega">{record.action}</Typography>
+                    <Tooltip label={formatMessage(getTrad(`auditlog.action.${record.action}`))}>
+                      <Information
+                        aria-hidden
+                        style={{ cursor: 'help' }}
+                        width="1.4rem"
+                        height="1.4rem"
+                        fill="primary600"
+                      />
+                    </Tooltip>
+                  </Flex>
+                </Td>
+                <Td>
+                  <Typography variant="omega">{record.email ?? '—'}</Typography>
+                </Td>
+                <Td>
+                  <Typography variant="omega">{record.ip ?? '—'}</Typography>
+                </Td>
+                <Td style={{ maxWidth: '200px' }}>
+                  {detail ? (
                     <Tooltip label={detail} side="top">
                       <Typography variant="omega" textColor="neutral600" style={DETAILS_TEXT_STYLE}>
                         {detail}
@@ -99,11 +102,11 @@ export function LogTable({ records, loading, hasActiveFilters }: LogTableProps) 
                     <Typography variant="omega" textColor="neutral600">
                       —
                     </Typography>
-                  );
-                })()}
-              </Td>
-            </Tr>
-          ))}
+                  )}
+                </Td>
+              </Tr>
+            );
+          })}
         </Tbody>
       </CustomTable>
 

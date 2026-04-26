@@ -1,8 +1,8 @@
-import type { PluginConfig } from '../../shared/config';
+import { pluginConfigSchema, type PluginConfig } from '../../shared/config';
 import { DEFAULT_RETENTION_DAYS } from '../../shared/constants';
 
 export function getPluginConfig(): PluginConfig {
-  return strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
+  return pluginConfigSchema.parse(strapi.config.get('plugin::strapi-plugin-oidc') ?? {});
 }
 
 export function getRetentionDays(): number {

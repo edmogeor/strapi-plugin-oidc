@@ -34,18 +34,18 @@ async function updateSettings(ctx: Context) {
     return;
   }
   const { useWhitelist, enforceOIDC } = parsed.data;
-  let enforceODICParsed = enforceOIDC;
+  let enforceOIDCParsed = enforceOIDC;
   const whitelistService = getWhitelistService();
 
-  if (useWhitelist && enforceODICParsed) {
+  if (useWhitelist && enforceOIDCParsed) {
     const users = await whitelistService.getUsers();
     if (users.length === 0) {
-      enforceODICParsed = false;
+      enforceOIDCParsed = false;
     }
   }
 
-  await whitelistService.setSettings({ useWhitelist, enforceOIDC: enforceODICParsed });
-  ctx.body = { useWhitelist, enforceOIDC: enforceODICParsed };
+  await whitelistService.setSettings({ useWhitelist, enforceOIDC: enforceOIDCParsed });
+  ctx.body = { useWhitelist, enforceOIDC: enforceOIDCParsed };
 }
 
 async function publicSettings(ctx: Context) {
@@ -132,7 +132,7 @@ async function importUsers(ctx: Context) {
   }
   const { users } = parsed.data;
 
-  const normalized = users.map((u) => String(u.email).trim().toLowerCase()).filter(isValidEmail);
+  const normalized = users.map((u) => u.email.trim().toLowerCase()).filter(isValidEmail);
 
   const deduped = [...new Set(normalized)];
 
@@ -155,7 +155,7 @@ async function syncUsers(ctx: Context) {
   }
   const { users } = parsed.data;
 
-  const emails = users.map((u) => String(u.email).toLowerCase()).filter(isValidEmail);
+  const emails = users.map((u) => u.email.toLowerCase()).filter(isValidEmail);
 
   const whitelistService = getWhitelistService();
   const currentUsers = await whitelistService.getUsers();

@@ -30,7 +30,10 @@ export type PluginConfig = z.infer<typeof pluginConfigSchema>;
 
 export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
   if (typeof raw !== 'string') {
-    return (raw as GroupRoleMap) ?? {};
+    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+      return raw as GroupRoleMap;
+    }
+    return {};
   }
   try {
     return JSON.parse(raw) as GroupRoleMap;
