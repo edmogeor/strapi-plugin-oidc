@@ -31,10 +31,9 @@ describe('pluginConfig utils', () => {
       expect(pluginConfig.getRetentionDays()).toBe(90);
     });
 
-    it('returns NaN for invalid string values (Number() coercion)', () => {
+    it('throws for non-numeric string values (Zod rejects before Number() coercion)', () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { AUDIT_LOG_RETENTION_DAYS: 'not-a-number' });
-      // Number('not-a-number') === NaN, which is not nullish — no fallback
-      expect(Number('not-a-number')).toBeNaN();
+      expect(() => pluginConfig.getRetentionDays()).toThrow();
     });
   });
 

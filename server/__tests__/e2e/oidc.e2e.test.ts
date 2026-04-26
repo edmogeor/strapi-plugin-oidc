@@ -586,9 +586,7 @@ describe('OIDC E2E Tests', () => {
 
         // Our middleware passes it through — Strapi may return 401 for the invalid
         // token itself, but the error must NOT be our OIDC enforcement message
-        if (res.status === 401) {
-          expect(res.body?.error?.message).not.toContain('OIDC');
-        }
+        expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
 
       it('does not block token refresh when enforceOIDC is disabled', async () => {
@@ -599,9 +597,7 @@ describe('OIDC E2E Tests', () => {
           .set('Cookie', 'strapi_admin_refresh=some-local-token');
 
         // Our middleware must not return our specific 401 message
-        if (res.status === 401) {
-          expect(res.body?.error?.message).not.toContain('OIDC');
-        }
+        expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
     });
 
@@ -824,7 +820,7 @@ describe('OIDC E2E Tests', () => {
 
       const allRoles = await strapi.db.query('admin::role').findMany();
       const mappedRole = allRoles.find((r) => !defaultRoleIds.includes(String(r.id)));
-      if (!mappedRole) return;
+      expect(mappedRole, 'Expected at least one role outside the default OIDC roles').toBeDefined();
 
       const user = await loginAndFetchUser(
         strapi,
@@ -839,7 +835,10 @@ describe('OIDC E2E Tests', () => {
 
     it('existing user → group mapping removed → user keeps last known roles', async () => {
       const availableRoles = await strapi.db.query('admin::role').findMany();
-      if (availableRoles.length < 2) return;
+      expect(
+        availableRoles.length,
+        'Expected at least 2 admin roles to exist',
+      ).toBeGreaterThanOrEqual(2);
 
       const roleB = availableRoles[1];
 
@@ -876,7 +875,7 @@ describe('OIDC E2E Tests', () => {
 
     it('existing user → groups change between logins → role updates to new mapping', async () => {
       const allRoles = await strapi.db.query('admin::role').findMany();
-      if (allRoles.length < 2) return;
+      expect(allRoles.length, 'Expected at least 2 admin roles to exist').toBeGreaterThanOrEqual(2);
 
       const roleA = allRoles[0];
       const roleB = allRoles[1];
@@ -987,7 +986,10 @@ describe('OIDC E2E Tests', () => {
 
     it('existing user with no roles → login assigns OIDC roles', async () => {
       const availableRoles = await strapi.db.query('admin::role').findMany();
-      if (availableRoles.length < 2) return;
+      expect(
+        availableRoles.length,
+        'Expected at least 2 admin roles to exist',
+      ).toBeGreaterThanOrEqual(2);
 
       const roleA = availableRoles[0];
 

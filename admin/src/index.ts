@@ -12,7 +12,6 @@ const name = pluginPkg.strapi.displayName;
 
 export default {
   register(app: StrapiAdminApp) {
-    const AppPage = React.lazy(() => import('./pages/App'));
     const link: SettingsLink = {
       id: 'configuration',
       to: `/settings/${pluginId}`,
@@ -20,7 +19,7 @@ export default {
         id: 'settings.configuration',
         defaultMessage: 'Configuration',
       },
-      Component: AppPage,
+      Component: () => import('./pages/App'),
       permissions: [{ action: PERMISSIONS.READ, subject: null }],
     };
     app.addSettingsLink(
