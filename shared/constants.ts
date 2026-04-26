@@ -16,6 +16,7 @@ export const PERMISSIONS = {
 } as const;
 
 export const COOKIE_MAX_AGE_MS = 300000; // 5 minutes
+export const PKCE_COOKIE_MAX_AGE_MS = 600_000; // 10 minutes
 
 export const LOGOUT_USERINFO_TIMEOUT_MS = 1500;
 

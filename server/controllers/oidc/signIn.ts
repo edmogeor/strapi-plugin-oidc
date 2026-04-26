@@ -5,6 +5,7 @@ import { configValidation } from './shared';
 import { getOauthService } from '../../utils/services';
 import { negotiateLocale, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
+import { PKCE_COOKIE_MAX_AGE_MS } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
 
 export async function oidcSignIn(ctx: StrapiContext) {
@@ -21,7 +22,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
 
     const cookieOptions = {
       httpOnly: true,
-      maxAge: 600000,
+      maxAge: PKCE_COOKIE_MAX_AGE_MS,
       secure: shouldMarkSecure(strapi, ctx),
       sameSite: 'lax' as const,
     };

@@ -46,8 +46,6 @@ export async function logout(ctx: StrapiContext) {
       : Promise.resolve();
 
   if (logoutUrl && accessToken) {
-    // Skip provider logout only when the provider confirms the token is expired (4xx).
-    // On timeout or network error we still redirect to the provider.
     const expired = await isProviderSessionExpired(config.OIDC_USERINFO_ENDPOINT, accessToken);
     if (expired) {
       await logAudit('session_expired').catch((err) => {

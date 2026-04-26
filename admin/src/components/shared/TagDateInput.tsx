@@ -235,10 +235,12 @@ function toUtcMidnightIso(date: Date): string {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())).toISOString();
 }
 
-// Jan 2, 2000 was a Sunday — iterate 7 days to get locale-aware weekday labels (Sun-first).
-const DAY_NAMES = Array.from({ length: 7 }, (_, i) =>
-  WEEKDAY_FORMATTER.format(new Date(2000, 0, 2 + i)),
-);
+const SUNDAY_ANCHOR = new Date(2000, 0, 2); // Jan 2, 2000 — a Sunday
+const DAY_NAMES = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(SUNDAY_ANCHOR);
+  d.setDate(d.getDate() + i);
+  return WEEKDAY_FORMATTER.format(d);
+});
 
 export function TagDateInput({ value = [], onChange, placeholder, startIcon }: TagDateInputProps) {
   const { formatMessage } = useIntl();

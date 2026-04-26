@@ -69,7 +69,6 @@ export default {
         window.location.href = '/strapi-plugin-oidc/oidc';
       };
 
-      // Match the inner span structure of the submit button.
       const innerSpan = submitButton.querySelector('span');
       const span = document.createElement('span');
       if (innerSpan) span.className = innerSpan.className;
@@ -188,7 +187,6 @@ export default {
         if (locale === 'en') {
           return Promise.resolve({ data: transformKeys(en), locale });
         }
-        // Additional locale files live in translations/locales/.
         return import(`../translations/locales/${locale}.json`)
           .then(({ default: data }) => ({ data: transformKeys(data), locale }))
           .catch(() => ({ data: {}, locale }));
