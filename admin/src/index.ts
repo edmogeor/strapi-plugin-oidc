@@ -5,6 +5,7 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
+import { PERMISSIONS } from '../../shared/constants';
 import type { StrapiAdminApp, SettingsLink } from './types';
 
 const name = pluginPkg.strapi.displayName;
@@ -20,7 +21,7 @@ export default {
         defaultMessage: 'Configuration',
       },
       Component: AppPage,
-      permissions: [{ action: 'plugin::strapi-plugin-oidc.read', subject: null }],
+      permissions: [{ action: PERMISSIONS.READ, subject: null }],
     };
     app.addSettingsLink(
       {

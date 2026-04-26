@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 import { getClientIp } from '../utils/ip';
+import { PERMISSIONS } from '../../shared/constants';
 
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60_000;
@@ -201,55 +202,55 @@ export default {
         method: 'GET',
         path: '/whitelist',
         handler: 'whitelist.info',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_READ] } },
       },
       {
         method: 'POST',
         path: '/whitelist',
         handler: 'whitelist.register',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_WRITE] } },
       },
       {
         method: 'POST',
         path: '/whitelist/import',
         handler: 'whitelist.importUsers',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.write'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_WRITE] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist/:email',
         handler: 'whitelist.removeEmail',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_DELETE] } },
       },
       {
         method: 'DELETE',
         path: '/whitelist',
         handler: 'whitelist.deleteAll',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_DELETE] } },
       },
       {
         method: 'GET',
         path: '/whitelist/export',
         handler: 'whitelist.exportWhitelist',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.whitelist.read'] } },
+        config: { auth: { scope: [PERMISSIONS.WHITELIST_READ] } },
       },
       {
         method: 'GET',
         path: '/audit-logs',
         handler: 'auditLog.find',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_READ] } },
       },
       {
         method: 'GET',
         path: '/audit-logs/export',
         handler: 'auditLog.export',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.read'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_READ] } },
       },
       {
         method: 'DELETE',
         path: '/audit-logs',
         handler: 'auditLog.clearAll',
-        config: { auth: { scope: ['plugin::strapi-plugin-oidc.audit.delete'] } },
+        config: { auth: { scope: [PERMISSIONS.AUDIT_DELETE] } },
       },
     ],
   },

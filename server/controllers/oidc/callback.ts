@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
+import { COOKIE_MAX_AGE_MS } from '../../../shared/constants';
 import { errorMessages } from '../../error-strings';
 import { userFacingMessages } from '../../audit-error-strings';
 import { negotiateLocale } from '../../i18n';
@@ -161,7 +162,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     const secureFlag = shouldMarkSecure(strapi, ctx);
     ctx.cookies.set(COOKIE_NAMES.accessToken, exchangeResult.accessToken, {
       httpOnly: true,
-      maxAge: 300000,
+      maxAge: COOKIE_MAX_AGE_MS,
       secure: secureFlag,
       sameSite: 'lax' as const,
     });

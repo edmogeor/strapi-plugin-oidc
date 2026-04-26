@@ -2,6 +2,7 @@ import type { Core } from '@strapi/types';
 import type { WhitelistSettings, WhitelistEntry } from '../types';
 import { errorMessages } from '../error-strings';
 import { OidcError } from '../oidc-errors';
+import { CONTENT_TYPES } from '../../shared/constants';
 
 const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -11,7 +12,7 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
   const getPluginStore = () =>
     strapi.store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc' });
 
-  const getWhitelistQuery = () => strapi.query('plugin::strapi-plugin-oidc.whitelists');
+  const getWhitelistQuery = () => strapi.query(CONTENT_TYPES.WHITELIST);
 
   return {
     async getSettings(): Promise<WhitelistSettings> {

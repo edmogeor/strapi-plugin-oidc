@@ -1,4 +1,5 @@
 import type { DateSelection } from '../shared';
+import { AUDIT_LOG_DEFAULTS } from '../../../shared/constants';
 
 // fallow-ignore-next-line duplicate-exports
 export interface AuditLogRecord {
@@ -24,4 +25,4 @@ export interface FilterState {
   createdAt?: DateSelection[];
 }
 
-export const PAGE_SIZE = 10;
+export const PAGE_SIZE = AUDIT_LOG_DEFAULTS.ADMIN_PAGE_SIZE;

@@ -4,6 +4,9 @@ import type { AuditLogFilters } from '../../audit-log-filters';
 import { isAuditLogEnabled } from '../../utils/pluginConfig';
 import { translateDetails } from './translations';
 import { buildWhereClause, DAY_MS } from './queryBuilder';
+import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS } from '../../../shared/constants';
+
+const BATCH_SIZE = AUDIT_LOG_DEFAULTS.BATCH_DELETE_SIZE;
 
 interface AuditLogResult {
   results: Array<AuditLogRecord & { details: string | null }>;
@@ -15,7 +18,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
     async log({ action, email, ip, detailsKey, detailsParams }: AuditEntry): Promise<void> {
       if (!isAuditLogEnabled()) return;
 
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').create({
+      await strapi.db.query(CONTENT_TYPES.AUDIT_LOG).create({
         data: {
           action,
           email: email ?? null,
@@ -44,7 +47,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
 
     async find({
       page = 1,
-      pageSize = 25,
+      pageSize = AUDIT_LOG_DEFAULTS.PAGE_SIZE,
       filters,
     }: {
       page?: number;
@@ -52,7 +55,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
       filters?: AuditLogFilters;
     } = {}): Promise<AuditLogResult> {
       const where = filters ? buildWhereClause(filters) : {};
-      const dbQuery = strapi.db.query('plugin::strapi-plugin-oidc.audit-log');
+      const dbQuery = strapi.db.query(CONTENT_TYPES.AUDIT_LOG);
 
       const [rows, total] = (await Promise.all([
         dbQuery.findMany({
@@ -79,11 +82,10 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
     },
 
     async clearAll(): Promise<void> {
-      const BATCH_SIZE = 1000;
       let deletedCount: number;
       do {
         const result = await strapi.db
-          .query('plugin::strapi-plugin-oidc.audit-log')
+          .query(CONTENT_TYPES.AUDIT_LOG)
           .deleteMany({ limit: BATCH_SIZE });
         deletedCount = result.count;
       } while (deletedCount === BATCH_SIZE);
@@ -92,7 +94,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
     async cleanup(retentionDays: number): Promise<void> {
       const cutoff = new Date(Date.now() - retentionDays * DAY_MS);
       await strapi.db
-        .query('plugin::strapi-plugin-oidc.audit-log')
+        .query(CONTENT_TYPES.AUDIT_LOG)
         .deleteMany({ where: { createdAt: { $lt: cutoff } } });
     },
   };

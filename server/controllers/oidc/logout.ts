@@ -2,9 +2,8 @@ import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
 import { getAuditLogService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
 import { getPluginConfig } from '../../utils/pluginConfig';
+import { LOGOUT_USERINFO_TIMEOUT_MS } from '../../../shared/constants';
 import type { StrapiContext, AuditAction } from '../../types';
-
-const LOGOUT_USERINFO_TIMEOUT_MS = 1500;
 
 // Returns true only when the provider explicitly rejects the token (4xx).
 // Timeouts and network errors return false so we still redirect to the provider.
