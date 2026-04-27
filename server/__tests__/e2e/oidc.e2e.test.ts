@@ -467,7 +467,9 @@ describe('OIDC E2E Tests', () => {
         build: async (nonce) => {
           const tok = await signIdToken({ nonce });
           const parts = tok.split('.');
-          parts[2] = 'A' + parts[2].slice(1);
+          // Replace the entire signature with a fixed bogus value so the tamper
+          // is always effective regardless of what the original signature starts with.
+          parts[2] = 'dGhpcyBpcyBub3QgYSB2YWxpZCBzaWduYXR1cmU';
           return parts.join('.');
         },
       });
