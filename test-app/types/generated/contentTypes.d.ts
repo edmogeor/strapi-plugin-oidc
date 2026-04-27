@@ -620,6 +620,46 @@ export interface PluginStrapiPluginOidcAuditLog extends Struct.CollectionTypeSch
   };
 }
 
+export interface PluginStrapiPluginOidcOidcSessionMeta extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi-plugin-oidc_oidc-session-meta';
+  info: {
+    collectionName: 'oidc_session_metas';
+    displayName: 'OIDC Session Meta';
+    pluralName: 'oidc-session-metas';
+    singularName: 'oidc-session-meta';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    admin_user_id: Schema.Attribute.Integer;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+    id_token: Schema.Attribute.Text;
+    iss: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::strapi-plugin-oidc.oidc-session-meta'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    refresh_token: Schema.Attribute.Text;
+    sid: Schema.Attribute.String;
+    sub: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+  };
+}
+
 export interface PluginStrapiPluginOidcRoles extends Struct.CollectionTypeSchema {
   collectionName: 'strapi-plugin-oidc_roles';
   info: {
@@ -925,6 +965,7 @@ declare module '@strapi/strapi' {
       'plugin::review-workflows.workflow': PluginReviewWorkflowsWorkflow;
       'plugin::review-workflows.workflow-stage': PluginReviewWorkflowsWorkflowStage;
       'plugin::strapi-plugin-oidc.audit-log': PluginStrapiPluginOidcAuditLog;
+      'plugin::strapi-plugin-oidc.oidc-session-meta': PluginStrapiPluginOidcOidcSessionMeta;
       'plugin::strapi-plugin-oidc.roles': PluginStrapiPluginOidcRoles;
       'plugin::strapi-plugin-oidc.whitelists': PluginStrapiPluginOidcWhitelists;
       'plugin::upload.file': PluginUploadFile;

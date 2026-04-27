@@ -44,6 +44,7 @@ export const DEFAULT_RETENTION_DAYS = 90;
 export const DAY_MS = 86_400_000;
 
 export const DISCOVERY_TIMEOUT_MS = 5000;
+export const OIDC_DISCOVERY_PATH = '/.well-known/openid-configuration';
 
 export const UI_DEFAULTS = {
   MIN_SPINNER_MS: 400,

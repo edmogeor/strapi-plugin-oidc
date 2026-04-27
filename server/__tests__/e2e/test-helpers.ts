@@ -14,7 +14,7 @@ export async function streamToString(stream: Readable): Promise<string> {
 
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
-  OIDC_DISCOVERY_URL: 'https://mock-oidc.com/.well-known/openid-configuration',
+  OIDC_ISSUER: 'https://mock-oidc.com',
   OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
   OIDC_CLIENT_ID: 'mock-client-id',
   OIDC_CLIENT_SECRET: 'mock-client-secret',

@@ -22,7 +22,6 @@ const coerceBoolNullable = z.preprocess(
 
 export const pluginConfigSchema = z.object({
   REMEMBER_ME: coerceBool(false),
-  OIDC_DISCOVERY_URL: z.string().default(''),
   OIDC_REDIRECT_URI: z.string().default(''),
   OIDC_CLIENT_ID: z.string().default(''),
   OIDC_CLIENT_SECRET: z.string().default(''),

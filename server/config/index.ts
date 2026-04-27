@@ -2,7 +2,6 @@ export default {
   default: {
     REMEMBER_ME: false,
 
-    OIDC_DISCOVERY_URL: '',
     OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
     OIDC_CLIENT_ID: '',
     OIDC_CLIENT_SECRET: '',
@@ -17,7 +16,7 @@ export default {
     OIDC_REQUIRE_EMAIL_VERIFIED: true,
     OIDC_TRUSTED_IP_HEADER: '',
     OIDC_FORCE_SECURE_COOKIES: false,
-    // Populated at bootstrap from OIDC_DISCOVERY_URL — not user-configurable directly
+    // Populated at bootstrap from OIDC_ISSUER — not user-configurable directly
     OIDC_AUTHORIZATION_ENDPOINT: '',
     OIDC_TOKEN_ENDPOINT: '',
     OIDC_USERINFO_ENDPOINT: '',

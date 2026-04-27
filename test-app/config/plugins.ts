@@ -5,7 +5,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
     enabled: true,
     resolve: './node_modules/strapi-plugin-oidc',
     config: {
-      OIDC_DISCOVERY_URL: env('OIDC_DISCOVERY_URL', ''),
+      OIDC_ISSUER: env('OIDC_ISSUER', ''),
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID', 'test-client-id'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET', 'test-client-secret'),
       OIDC_REDIRECT_URI: env(

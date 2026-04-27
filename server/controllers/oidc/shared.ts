@@ -6,14 +6,14 @@ import { toMessage } from '../../../shared/utils';
 import type { PluginConfig } from '../../../shared/config';
 
 const REQUIRED_CONFIG_KEYS = [
-  'OIDC_DISCOVERY_URL',
+  'OIDC_ISSUER',
   'OIDC_CLIENT_ID',
   'OIDC_CLIENT_SECRET',
   'OIDC_REDIRECT_URI',
   'OIDC_SCOPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
-  // Populated at bootstrap from OIDC_DISCOVERY_URL — checked here as a runtime safety net
+  // Populated at bootstrap from OIDC_ISSUER — checked here as a runtime safety net
   'OIDC_TOKEN_ENDPOINT',
   'OIDC_USERINFO_ENDPOINT',
   'OIDC_AUTHORIZATION_ENDPOINT',
