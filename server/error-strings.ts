@@ -62,8 +62,10 @@ export const errorMessages = {
   PROVIDER_RESPONSE_INVALID: 'Unexpected response from OIDC provider',
   SESSION_MANAGER_UNSUPPORTED:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
+  OIDC_ISSUER_NOT_CONFIGURED:
+    '[strapi-plugin-oidc] OIDC_ISSUER is not configured — discovery skipped. OIDC sign-in will fail until OIDC_ISSUER is set in your plugin config.',
   JWKS_URI_NOT_CONFIGURED:
-    "[OIDC] OIDC_JWKS_URI is not configured — ID token signature verification is disabled. Set OIDC_JWKS_URI and OIDC_ISSUER from your provider's discovery document.",
+    "[strapi-plugin-oidc] OIDC_JWKS_URI is not configured — ID token signature verification is disabled. Set OIDC_JWKS_URI and OIDC_ISSUER from your provider's discovery document.",
   ENFORCE_MIDDLEWARE_ERROR: 'Error checking OIDC enforcement in middleware:',
   ENFORCE_SYNC_ERROR: '[strapi-plugin-oidc] Failed to sync OIDC_ENFORCE to database:',
   DEFAULT_ROLE_INIT_ERROR: 'Could not initialize default OIDC role:',
