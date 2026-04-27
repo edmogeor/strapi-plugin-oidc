@@ -69,7 +69,9 @@ export async function applyDiscovery(strapi: Core.Strapi): Promise<void> {
     return;
   }
 
-  const updates: Partial<PluginConfig> = { OIDC_ISSUER: canonicalIssuer };
+  // Prefer the issuer from the discovery document — it's the exact value placed in JWT iss claims.
+  // Fall back to the canonical form derived from user input if the document omits it.
+  const updates: Partial<PluginConfig> = { OIDC_ISSUER: doc.issuer ?? canonicalIssuer };
   for (const [docField, configKey] of FIELD_MAP) {
     if (doc[docField]) {
       (updates as Record<string, string>)[configKey] = doc[docField] as string;

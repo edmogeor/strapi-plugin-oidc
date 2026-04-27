@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.6] - 2026-04-27
+
+### Fixed
+
+- **ID token `iss` claim mismatch** — `OIDC_ISSUER` is now set from the `issuer` field in the discovery document rather than the canonical form of the user-provided URL. This ensures JWT verification uses the exact issuer value the provider embeds in tokens, preventing `unexpected "iss" claim value` errors (e.g. with Authentik).
+
+---
+
 ## [1.9.5] - 2026-04-27
 
 ### Fixed
