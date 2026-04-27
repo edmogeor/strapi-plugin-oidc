@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-04-27
+
+### Changed
+
+- **OIDC_ISSUER replaces OIDC_DISCOVERY_URL** — User now sets only `OIDC_ISSUER` (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin auto-appends `/.well-known/openid-configuration` if not present, and strips it if already included. Canonical issuer is stored in config after discovery.
+
+---
+
 ## [1.9.3] - 2026-04-26
 
 ### Changed
