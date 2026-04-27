@@ -39,7 +39,10 @@ const FIELD_MAP: [
 export async function applyDiscovery(strapi: Core.Strapi): Promise<void> {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
   const issuer = config.OIDC_ISSUER;
-  if (!issuer) return;
+  if (!issuer) {
+    strapi.log.warn(errorMessages.OIDC_ISSUER_NOT_CONFIGURED);
+    return;
+  }
 
   let discoveryUrl: string;
   let canonicalIssuer: string;
