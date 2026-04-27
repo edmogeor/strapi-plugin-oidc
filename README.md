@@ -32,7 +32,7 @@ module.exports = ({ env }) => ({
     enabled: true,
     config: {
       // Required
-      OIDC_DISCOVERY_URL: env('OIDC_DISCOVERY_URL'), // https://your-provider/.well-known/openid-configuration
+      OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
       OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com/strapi-plugin-oidc/oidc/callback
@@ -55,7 +55,7 @@ module.exports = ({ env }) => ({
 });
 ```
 
-`OIDC_DISCOVERY_URL` is the URL of your provider's OpenID Connect discovery document (`/.well-known/openid-configuration`). The plugin fetches it at startup and automatically configures all endpoints, JWKS URI, and issuer.
+`OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
 
 ### Security features
 
