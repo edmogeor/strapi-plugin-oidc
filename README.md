@@ -11,6 +11,9 @@
     <a href="./LICENSE">
       <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"/>
     </a>
+    <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml">
+      <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/badges/badge.svg" alt="fallow health"/>
+    </a>
   </p>
 </div>
 

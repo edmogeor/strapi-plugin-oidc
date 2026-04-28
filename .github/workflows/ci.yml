@@ -43,3 +43,28 @@ jobs:
 
       - name: Run E2E Tests
         run: npm run test
+
+  health-badge:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install fallow
+        run: npm install -g fallow
+
+      - name: Generate health badge
+        run: fallow health --format badge > badge.svg
+
+      - name: Publish badge
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: badges
+          keep_files: true
+          include_files: badge.svg
