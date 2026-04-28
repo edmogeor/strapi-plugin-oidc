@@ -1,0 +1,17 @@
+[
+  { "email": "alice@example.com" },
+  { "email": "bob@example.com" },
+  { "email": "carol@example.com" },
+  { "email": "dave@example.com" },
+  { "email": "eve@example.com" },
+  { "email": "frank@example.com" },
+  { "email": "grace@example.com" },
+  { "email": "henry@example.com" },
+  { "email": "iris@example.com" },
+  { "email": "jack@example.com" },
+  { "email": "karen@example.com" },
+  { "email": "liam@example.com" },
+  { "email": "mia@example.com" },
+  { "email": "noah@example.com" },
+  { "email": "olivia@example.com" }
+]

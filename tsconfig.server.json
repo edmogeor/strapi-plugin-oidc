@@ -1,0 +1,14 @@
+{
+  "extends": "@strapi/typescript-utils/tsconfigs/server",
+  "compilerOptions": {
+    "outDir": "dist/server",
+    "rootDir": ".",
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "types": ["vite/client"],
+    "sourceMap": false,
+    "inlineSourceMap": false
+  },
+  "include": ["server", "shared"],
+  "exclude": ["node_modules/", "build/", "dist/", ".yalc", "**/*.test.ts"]
+}

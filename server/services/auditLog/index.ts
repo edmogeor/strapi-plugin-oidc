@@ -1,0 +1,97 @@
+import type { Core } from '@strapi/types';
+import type { AuditEntry, AuditLogRecord } from '../../types';
+import type { AuditLogFilters } from '../../audit-log-filters';
+import { isAuditLogEnabled } from '../../utils/pluginConfig';
+import { buildWhereClause } from './queryBuilder';
+import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS, DAY_MS } from '../../../shared/constants';
+
+const BATCH_SIZE = AUDIT_LOG_DEFAULTS.BATCH_DELETE_SIZE;
+
+interface AuditLogResult {
+  results: AuditLogRecord[];
+  pagination: { page: number; pageSize: number; total: number; pageCount: number };
+}
+
+export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
+  return {
+    async log({ action, email, ip, detailsKey, detailsParams }: AuditEntry): Promise<void> {
+      if (!isAuditLogEnabled()) return;
+
+      await strapi.db.query(CONTENT_TYPES.AUDIT_LOG).create({
+        data: {
+          action,
+          email: email ?? null,
+          ip: ip ?? null,
+          detailsKey: detailsKey ?? null,
+          detailsParams: detailsParams ?? null,
+        },
+      });
+
+      const eventHub =
+        (
+          strapi as Core.Strapi & {
+            serviceMap?: {
+              get: (name: string) => { emit: (event: string, data: unknown) => void };
+            };
+          }
+        ).serviceMap?.get?.('eventHub') ?? strapi.eventHub;
+      if (eventHub) {
+        eventHub.emit(`strapi-plugin-oidc::auth.${action}`, {
+          email,
+          ip,
+          provider: 'strapi-plugin-oidc',
+        });
+      }
+    },
+
+    async find({
+      page = 1,
+      pageSize = AUDIT_LOG_DEFAULTS.PAGE_SIZE,
+      filters,
+    }: {
+      page?: number;
+      pageSize?: number;
+      filters?: AuditLogFilters;
+    } = {}): Promise<AuditLogResult> {
+      const where = filters ? buildWhereClause(filters) : {};
+      const dbQuery = strapi.db.query(CONTENT_TYPES.AUDIT_LOG);
+
+      const [rows, total] = (await Promise.all([
+        dbQuery.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }],
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        }),
+        dbQuery.count({ where }),
+      ])) as [AuditLogRecord[], number];
+
+      return {
+        results: rows,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          pageCount: Math.ceil(total / pageSize),
+        },
+      };
+    },
+
+    async clearAll(): Promise<void> {
+      let deletedCount: number;
+      do {
+        const result = await strapi.db
+          .query(CONTENT_TYPES.AUDIT_LOG)
+          .deleteMany({ limit: BATCH_SIZE });
+        deletedCount = result.count;
+      } while (deletedCount === BATCH_SIZE);
+    },
+
+    async cleanup(retentionDays: number): Promise<void> {
+      const cutoff = new Date(Date.now() - retentionDays * DAY_MS);
+      await strapi.db
+        .query(CONTENT_TYPES.AUDIT_LOG)
+        .deleteMany({ where: { createdAt: { $lt: cutoff } } });
+    },
+  };
+}

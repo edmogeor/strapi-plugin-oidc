@@ -1,0 +1,123 @@
+{
+  "name": "strapi-plugin-oidc",
+  "version": "1.9.7",
+  "description": "A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.",
+  "strapi": {
+    "displayName": "OIDC Plugin",
+    "name": "strapi-plugin-oidc",
+    "description": "A Strapi plugin that provides OpenID Connect (OIDC) authentication functionality for the Strapi Admin Panel.",
+    "kind": "plugin"
+  },
+  "scripts": {
+    "build": "strapi-plugin build",
+    "watch": "strapi-plugin watch",
+    "watch:link": "strapi-plugin watch:link",
+    "verify": "strapi-plugin verify",
+    "test": "vitest run -c vitest.config.e2e.ts",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run -c vitest.config.unit.ts",
+    "lint": "eslint",
+    "fallow:check": "fallow",
+    "fallow:fix": "fallow fix --yes",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,jsx,json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "strapi",
+    "strapi-plugin",
+    "oidc",
+    "oauth",
+    "sso",
+    "authentication",
+    "keycloak",
+    "auth0",
+    "okta",
+    "azure-ad",
+    "authentik",
+    "authelia"
+  ],
+  "peerDependencies": {
+    "@strapi/strapi": "^5.42.1",
+    "react": "^17.0.0 || ^18.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.0.0"
+  },
+  "dependencies": {
+    "@strapi/design-system": "^2.2.0",
+    "@strapi/icons": "^2.2.0",
+    "@strapi/utils": "^5.41.1",
+    "generate-password": "^1.7.1",
+    "jose": "^6.2.2",
+    "lucide-react": "^1.8.0",
+    "pkce-challenge": "^6.0.0",
+    "react-intl": "^6.8.9",
+    "zod": "^3.25.76"
+  },
+  "author": {
+    "name": "edmogeor",
+    "url": "https://github.com/edmogeor/strapi-plugin-oidc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edmogeor/strapi-plugin-oidc"
+  },
+  "bugs": {
+    "url": "https://github.com/edmogeor/strapi-plugin-oidc/issues"
+  },
+  "maintainers": [
+    {
+      "name": "edmogeor"
+    }
+  ],
+  "engines": {
+    "node": ">=20.0.0 <=24.x.x",
+    "npm": ">=6.0.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "vitest": "^4.1.2",
+    "@eslint/js": "^10.0.1",
+    "@strapi/sdk-plugin": "^6.0.1",
+    "@types/node": "^25.5.2",
+    "@types/supertest": "^7.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.4.1",
+    "eslint": "^10.2.0",
+    "globals": "^17.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "msw": "^2.13.0",
+    "prettier": "^3.8.1",
+    "react": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.3.12",
+    "supertest": "^7.2.2",
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./strapi-admin": {
+      "source": "./admin/src/index.js",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    },
+    "./strapi-server": {
+      "source": "./server/index.js",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    }
+  }
+}
