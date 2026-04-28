@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 2026-04-28
+
+### Fixed
+
+- **Audit-log admin routes now enforce plugin permissions** — The find, export, and clear-all audit-log endpoints were gated only by `admin::isAuthenticatedAdmin`, allowing any authenticated admin user to access or delete the OIDC audit trail regardless of their assigned role permissions. The routes now apply `adminPolicies('read')` for find/export and `adminPolicies('update')` for clear-all, consistent with all other admin routes in the plugin.
+
+---
+
 ## [1.9.6] - 2026-04-27
 
 ### Fixed
