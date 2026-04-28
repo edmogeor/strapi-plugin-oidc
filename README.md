@@ -6,13 +6,13 @@
       <img src="https://img.shields.io/npm/v/strapi-plugin-oidc.svg" alt="npm version">
     </a>
     <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml">
-      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml/badge.svg" alt="CI"/>
+      <img src="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"/>
+    </a>
+    <a href="https://github.com/fallow-rs/fallow">
+      <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/badges/badge.svg" alt="fallow health"/>
     </a>
     <a href="./LICENSE">
       <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"/>
-    </a>
-    <a href="https://github.com/edmogeor/strapi-plugin-oidc/actions/workflows/ci.yml">
-      <img src="https://raw.githubusercontent.com/edmogeor/strapi-plugin-oidc/badges/badge.svg" alt="fallow health"/>
     </a>
   </p>
 </div>
