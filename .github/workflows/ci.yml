@@ -61,13 +61,15 @@ jobs:
         run: npm install -g fallow
 
       - name: Generate health badge
-        run: fallow health --format badge > badge.svg
+        run: |
+          mkdir -p badge-output
+          fallow health --format badge > badge-output/badge.svg
 
       - name: Publish badge
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: badge-output
           publish_branch: badges
-          keep_files: true
-          include_files: badge.svg
+          force_orphan: true
+          enable_jekyll: false
