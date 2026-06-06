@@ -10,6 +10,7 @@ export const COOKIE_NAMES = {
   userEmail: 'oidc_user_email',
   adminRefresh: 'strapi_admin_refresh',
   authenticated: 'oidc_authenticated',
+  skipLoginPage: 'oidc_skip_login_page',
 } as const;
 
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {

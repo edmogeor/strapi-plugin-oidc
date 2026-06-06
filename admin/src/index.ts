@@ -40,14 +40,23 @@ export default {
   },
 
   bootstrap() {
+    const isAuthRoute = (path: string) =>
+      /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
+
+    const hasSkipCookie = document.cookie
+      .split(';')
+      .some((c) => c.trim() === 'oidc_skip_login_page=1');
+
+    if (hasSkipCookie && isAuthRoute(window.location.pathname)) {
+      window.location.replace(OIDC_SIGN_IN_PATH);
+      return;
+    }
+
     const overlayContainer = document.createElement('div');
     document.body.appendChild(overlayContainer);
     createRoot(overlayContainer).render(React.createElement(LogoutOverlay));
 
     const defaultButtonText = t('login.sso');
-
-    const isAuthRoute = (path: string) =>
-      /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
     let ssoButtonInjected = false;
     let domObserver: MutationObserver | null = null;
