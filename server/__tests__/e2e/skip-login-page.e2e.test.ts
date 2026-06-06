@@ -7,6 +7,7 @@ import {
   makeLogoutCtx,
   expectCookieCleared,
 } from './test-helpers';
+import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 
 describe('Skip Login Page E2E', () => {
   let strapi: Core.Strapi;
@@ -42,13 +43,13 @@ describe('Skip Login Page E2E', () => {
     it('redirects GET /admin to /strapi-plugin-oidc/oidc when unauthenticated', async () => {
       const res = await request(strapi.server.httpServer).get('/admin').redirects(0);
       expect(res.status).toBe(302);
-      expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
+      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
     });
 
     it('redirects GET /admin/auth/login to /strapi-plugin-oidc/oidc', async () => {
       const res = await request(strapi.server.httpServer).get('/admin/auth/login').redirects(0);
       expect(res.status).toBe(302);
-      expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
+      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
     });
 
     it('does NOT redirect excluded API path GET /admin/init', async () => {
@@ -105,14 +106,14 @@ describe('Skip Login Page E2E', () => {
         .redirects(0);
       // Should not redirect to OIDC (the fake cookie won't authenticate, but the check
       // for admin_refresh presence must skip the redirect)
-      expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
+      expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
     });
 
     it('does NOT redirect when skip is disabled', async () => {
       disableSkipLoginPage();
       const res = await request(strapi.server.httpServer).get('/admin').redirects(0);
       // Should serve the admin SPA (200) or redirect to login (302 to /admin/auth/login)
-      expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
+      expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
     });
   });
 
@@ -122,13 +123,21 @@ describe('Skip Login Page E2E', () => {
       strapi.config.set('admin.url', '/admin');
     });
 
-    it('redirects non-OIDC sessions to OIDC sign-in instead of admin login', async () => {
-      const ctxLogout = makeLogoutCtx(); // no oidc_authenticated cookie
-      const oidcController = strapi.plugin('strapi-plugin-oidc').controller('oidc');
-      await oidcController.logout(ctxLogout);
+    const getOidcController = () => strapi.plugin('strapi-plugin-oidc').controller('oidc');
 
-      expect(ctxLogout.redirectedTo).toBe('/strapi-plugin-oidc/oidc');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
+    const logoutAndExpectRedirect = async (
+      ctxLogout: ReturnType<typeof makeLogoutCtx>,
+      ...clearedCookies: string[]
+    ) => {
+      await getOidcController().logout(ctxLogout);
+      expect(ctxLogout.redirectedTo).toBe(OIDC_SIGN_IN_PATH);
+      for (const cookie of clearedCookies) {
+        expectCookieCleared(ctxLogout, cookie);
+      }
+    };
+
+    it('redirects non-OIDC sessions to OIDC sign-in instead of admin login', async () => {
+      await logoutAndExpectRedirect(makeLogoutCtx(), 'strapi_admin_refresh');
     });
 
     it('falls back to OIDC sign-in when OIDC logout not configured', async () => {
@@ -137,13 +146,11 @@ describe('Skip Login Page E2E', () => {
         OIDC_END_SESSION_ENDPOINT: undefined,
       });
 
-      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
-      const oidcController = strapi.plugin('strapi-plugin-oidc').controller('oidc');
-      await oidcController.logout(ctxLogout);
-
-      expect(ctxLogout.redirectedTo).toBe('/strapi-plugin-oidc/oidc');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, 'oidc_authenticated');
+      await logoutAndExpectRedirect(
+        makeLogoutCtx({ oidc_authenticated: '1' }),
+        'strapi_admin_refresh',
+        'oidc_authenticated',
+      );
     });
 
     it('falls back to OIDC sign-in when provider rejects expired token', async () => {
@@ -153,14 +160,10 @@ describe('Skip Login Page E2E', () => {
         OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
       });
 
-      const ctxLogout = makeLogoutCtx({
-        oidc_authenticated: '1',
-        oidc_access_token: 'expired-token',
-      });
-      const oidcController = strapi.plugin('strapi-plugin-oidc').controller('oidc');
-      await oidcController.logout(ctxLogout);
-
-      expect(ctxLogout.redirectedTo).toBe('/strapi-plugin-oidc/oidc');
+      await logoutAndExpectRedirect(
+        makeLogoutCtx({ oidc_authenticated: '1', oidc_access_token: 'expired-token' }),
+        'strapi_admin_refresh',
+      );
     });
   });
 });
