@@ -55,6 +55,7 @@ async function publicSettings(ctx: Context) {
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
+    skipLoginPage: config.OIDC_SKIP_LOGIN_PAGE,
   };
 }
 

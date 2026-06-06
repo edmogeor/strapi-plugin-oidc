@@ -129,11 +129,29 @@ export default {
       loginObserver.observe(document.body, { childList: true, subtree: true });
     };
 
+    const startSkipLoginRedirect = () => {
+      if (loginObserver) return;
+
+      const tick = () => {
+        if (isAuthRoute(window.location.pathname)) {
+          window.location.href = '/strapi-plugin-oidc/oidc';
+        }
+      };
+
+      tick();
+      loginObserver = new MutationObserver(tick);
+      loginObserver.observe(document.body, { childList: true, subtree: true });
+    };
+
     const applySettings = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
         if (response.ok) {
           const data = await response.json();
+          if (data.skipLoginPage) {
+            startSkipLoginRedirect();
+            return;
+          }
           startLoginObserver(data.ssoButtonText || defaultButtonText, !!data.enforceOIDC);
         } else {
           startLoginObserver(defaultButtonText, false);

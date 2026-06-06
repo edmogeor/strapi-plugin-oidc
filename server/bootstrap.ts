@@ -2,7 +2,7 @@ import type { Core } from '@strapi/types';
 import type { Context, Next } from 'koa';
 import { errorMessages } from './error-strings';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
-import { getRetentionDays } from './utils/pluginConfig';
+import { getRetentionDays, getPluginConfig } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
 import { CONTENT_TYPES as CT, PERMISSIONS } from '../shared/constants';
@@ -15,11 +15,37 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   const adminUrl = strapi.config.get('admin.url', '/admin') as string;
   const tokenRefreshPath = `${adminUrl}/token/refresh`;
 
+  const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
+
+  const EXCLUDED_ADMIN_PATHS = [
+    `${adminUrl}/login`,
+    `${adminUrl}/access-token`,
+    `${adminUrl}/logout`,
+    `${adminUrl}/init`,
+    `${adminUrl}/register`,
+    `${adminUrl}/register-admin`,
+    `${adminUrl}/forgot-password`,
+    `${adminUrl}/reset-password`,
+  ];
+
   const enforceOidcMiddleware = async (ctx: Context, next: Next) => {
     const path = ctx.request.path;
     const isPost = ctx.request.method === 'POST';
     const isAuthRoute = AUTH_ROUTES.some((r) => path.includes(r));
     const isTokenRefresh = path === tokenRefreshPath;
+
+    const config = getPluginConfig();
+    if (
+      config.OIDC_SKIP_LOGIN_PAGE &&
+      ctx.request.method === 'GET' &&
+      (path === adminUrl || path.startsWith(`${adminUrl}/`)) &&
+      !EXCLUDED_ADMIN_PATHS.includes(path) &&
+      !STATIC_EXTENSIONS.some((ext) => path.endsWith(ext)) &&
+      !ctx.cookies.get(COOKIE_NAMES.adminRefresh)
+    ) {
+      ctx.redirect('/strapi-plugin-oidc/oidc');
+      return;
+    }
 
     if ((isAuthRoute && isPost) || isTokenRefresh) {
       try {

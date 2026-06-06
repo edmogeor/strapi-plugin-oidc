@@ -37,6 +37,22 @@ describe('pluginConfig utils', () => {
     });
   });
 
+  describe('OIDC_SKIP_LOGIN_PAGE', () => {
+    it('returns false by default', () => {
+      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBe(false);
+    });
+
+    it('returns true when configured', () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_SKIP_LOGIN_PAGE: true });
+      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBe(true);
+    });
+
+    it('coerces string "true" to true', () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_SKIP_LOGIN_PAGE: 'true' });
+      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBe(true);
+    });
+  });
+
   describe('isAuditLogEnabled', () => {
     it('returns true when retention days is positive', () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { AUDIT_LOG_RETENTION_DAYS: 30 });

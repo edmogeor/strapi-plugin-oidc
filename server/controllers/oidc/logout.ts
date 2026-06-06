@@ -28,6 +28,8 @@ export async function logout(ctx: StrapiContext) {
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;
+  const oidcSignInUrl = '/strapi-plugin-oidc/oidc';
+  const fallbackUrl = config.OIDC_SKIP_LOGIN_PAGE ? oidcSignInUrl : loginUrl;
 
   // Read before clearing (cookies are gone after clearAuthCookies).
   const isOidcSession = !!ctx.cookies.get(COOKIE_NAMES.authenticated);
@@ -37,7 +39,7 @@ export async function logout(ctx: StrapiContext) {
   clearAuthCookies(strapi, ctx);
 
   if (!isOidcSession) {
-    return ctx.redirect(loginUrl);
+    return ctx.redirect(fallbackUrl);
   }
 
   const logAudit = (action: AuditAction) =>
@@ -51,7 +53,7 @@ export async function logout(ctx: StrapiContext) {
       await logAudit('session_expired').catch((err) => {
         strapi.log.error('[strapi-plugin-oidc] Audit log failed on session expiry:', err);
       });
-      return ctx.redirect(loginUrl);
+      return ctx.redirect(fallbackUrl);
     }
     logAudit('logout').catch((err) => {
       strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
@@ -62,5 +64,5 @@ export async function logout(ctx: StrapiContext) {
   await logAudit('logout').catch((err) => {
     strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
   });
-  ctx.redirect(logoutUrl || loginUrl);
+  ctx.redirect(logoutUrl || fallbackUrl);
 }

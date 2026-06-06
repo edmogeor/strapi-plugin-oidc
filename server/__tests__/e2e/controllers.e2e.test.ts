@@ -87,6 +87,20 @@ describe('Controllers E2E', () => {
       expect(ctxPublic.body).toHaveProperty('ssoButtonText');
     });
 
+    it('should return skipLoginPage in public settings', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...strapi.config.get('plugin::strapi-plugin-oidc'),
+        OIDC_SKIP_LOGIN_PAGE: true,
+        OIDC_ENFORCE: null,
+      });
+
+      const ctxPublic = { body: null };
+      await whitelistController.publicSettings(ctxPublic);
+      expect(ctxPublic.body).toMatchObject({ skipLoginPage: true });
+      expect(ctxPublic.body).toHaveProperty('enforceOIDC');
+      expect(ctxPublic.body).toHaveProperty('ssoButtonText');
+    });
+
     it('should register and remove whitelist users via controller', async () => {
       const ctxRegister: MockCtx = {
         request: { body: { email: 'controller-test@whitelist.com' } },
