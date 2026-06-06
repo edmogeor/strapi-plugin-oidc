@@ -114,33 +114,28 @@ export default {
       });
     };
 
-    const startLoginObserver = (buttonText: string, enforced: boolean) => {
+    const startObserver = (tick: () => void) => {
       if (domObserver) return;
-
-      const tick = () => {
-        if (!isAuthRoute(window.location.pathname)) return;
-        injectSSOButton(buttonText);
-        if (enforced) removeEnforcedElements();
-        if (ssoButtonInjected && !enforced) domObserver?.disconnect();
-      };
-
       tick();
       domObserver = new MutationObserver(tick);
       domObserver.observe(document.body, { childList: true, subtree: true });
     };
 
-    const startSkipLoginRedirect = () => {
-      if (domObserver) return;
+    const startLoginObserver = (buttonText: string, enforced: boolean) => {
+      startObserver(() => {
+        if (!isAuthRoute(window.location.pathname)) return;
+        injectSSOButton(buttonText);
+        if (enforced) removeEnforcedElements();
+        if (ssoButtonInjected && !enforced) domObserver?.disconnect();
+      });
+    };
 
-      const tick = () => {
+    const startSkipLoginRedirect = () => {
+      startObserver(() => {
         if (isAuthRoute(window.location.pathname)) {
           window.location.href = OIDC_SIGN_IN_PATH;
         }
-      };
-
-      tick();
-      domObserver = new MutationObserver(tick);
-      domObserver.observe(document.body, { childList: true, subtree: true });
+      });
     };
 
     const applySettings = async () => {

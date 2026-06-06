@@ -28,8 +28,7 @@ export async function logout(ctx: StrapiContext) {
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;
-  const oidcSignInUrl = OIDC_SIGN_IN_PATH;
-  const fallbackUrl = config.OIDC_SKIP_LOGIN_PAGE ? oidcSignInUrl : loginUrl;
+  const fallbackUrl = config.OIDC_SKIP_LOGIN_PAGE ? OIDC_SIGN_IN_PATH : loginUrl;
 
   // Read before clearing (cookies are gone after clearAuthCookies).
   const isOidcSession = !!ctx.cookies.get(COOKIE_NAMES.authenticated);

@@ -94,8 +94,7 @@ When `OIDC_SKIP_LOGIN_PAGE` is enabled, the fallback after RP-initiated logout r
 
 ```ts
 const loginUrl = `${adminPanelUrl}/auth/login`;
-const oidcSignInUrl = '/strapi-plugin-oidc/oidc';
-const fallbackUrl = getPluginConfig().OIDC_SKIP_LOGIN_PAGE ? oidcSignInUrl : loginUrl;
+const fallbackUrl = getPluginConfig().OIDC_SKIP_LOGIN_PAGE ? OIDC_SIGN_IN_PATH : loginUrl;
 // ... use fallbackUrl where loginUrl was used
 ```
 
