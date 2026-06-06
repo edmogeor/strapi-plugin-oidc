@@ -35,26 +35,12 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
     const isTokenRefresh = path === tokenRefreshPath;
 
     const config = getPluginConfig();
-
-    const isAdminPage =
-      ctx.request.method === 'GET' &&
-      (path === adminUrl || path.startsWith(`${adminUrl}/`)) &&
-      !STATIC_EXTENSIONS.some((ext) => path.endsWith(ext));
-
-    if (isAdminPage) {
-      ctx.cookies.set(COOKIE_NAMES.skipLoginPage, config.OIDC_SKIP_LOGIN_PAGE ? '1' : '0', {
-        httpOnly: false,
-        signed: false,
-        sameSite: 'lax',
-        path: adminUrl,
-        secure: false,
-      });
-    }
-
     if (
       config.OIDC_SKIP_LOGIN_PAGE &&
-      isAdminPage &&
+      ctx.request.method === 'GET' &&
+      (path === adminUrl || path.startsWith(`${adminUrl}/`)) &&
       !EXCLUDED_ADMIN_PATHS.includes(path) &&
+      !STATIC_EXTENSIONS.some((ext) => path.endsWith(ext)) &&
       !ctx.cookies.get(COOKIE_NAMES.adminRefresh)
     ) {
       ctx.redirect(OIDC_SIGN_IN_PATH);

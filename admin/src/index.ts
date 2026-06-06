@@ -43,11 +43,9 @@ export default {
     const isAuthRoute = (path: string) =>
       /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
-    const hasSkipCookie = document.cookie
-      .split(';')
-      .some((c) => c.trim() === 'oidc_skip_login_page=1');
+    const isServerBounce = window.location.search.includes('oidc_redirect=1');
 
-    if (hasSkipCookie && isAuthRoute(window.location.pathname)) {
+    if (!isServerBounce && isAuthRoute(window.location.pathname)) {
       window.location.replace(OIDC_SIGN_IN_PATH);
       return;
     }

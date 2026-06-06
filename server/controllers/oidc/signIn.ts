@@ -10,8 +10,15 @@ import type { StrapiContext } from '../../types';
 
 export async function oidcSignIn(ctx: StrapiContext) {
   try {
-    const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } =
-      configValidation();
+    const config = configValidation();
+
+    if (!config.OIDC_SKIP_LOGIN_PAGE) {
+      const adminUrl = strapi.config.get('admin.url', '/admin') as string;
+      ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);
+      return;
+    }
+
+    const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } = config;
 
     const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
 
