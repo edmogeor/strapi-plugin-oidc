@@ -53,6 +53,7 @@ module.exports = ({ env }) => ({
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
       OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when Koa proxy mode is enabled (see below)
       OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
+      OIDC_SKIP_LOGIN_PAGE: false, // Skip the Strapi login page; redirects unauthenticated users straight to the OIDC provider
     },
   },
 });
@@ -96,6 +97,17 @@ Only headers that CDN/proxy vendors guarantee to strip from inbound client reque
 ## Login
 
 Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button injected into the Strapi login page.
+
+## Skip Login Page
+
+Set `OIDC_SKIP_LOGIN_PAGE: true` to prevent users from ever seeing the Strapi admin login page. Unauthenticated requests are redirected directly to the OIDC provider. This is typically used alongside `OIDC_ENFORCE: true`.
+
+Two independent mechanisms cover both entry points:
+
+- **Server-side** — A Koa middleware intercepts unauthenticated GET requests to `/admin` and redirects to `/strapi-plugin-oidc/oidc` before the SPA is served. Excluded from this redirect: API routes (`/admin/login`, `/admin/logout`, `/admin/init`, etc.), static assets (`.js`, `.css`, `.png`, etc.), and POST requests.
+- **Client-side** — A DOM `MutationObserver` watches for React Router navigations to `/auth/login` (triggered by session expiry or 401 responses) and redirects before the login form renders.
+
+After logout without a provider `end_session_endpoint`, the fallback URL becomes `/strapi-plugin-oidc/oidc` instead of `/admin/auth/login`, ensuring the user lands on the provider's own page.
 
 ## Logout
 
