@@ -63,6 +63,12 @@ describe('OIDC E2E Tests', () => {
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
+    // Skip-login-page redirects interfere with enforcement testing — disable it for this test.
+    strapi.config.set('plugin::strapi-plugin-oidc', {
+      ...MOCK_OIDC_CONFIG,
+      OIDC_SKIP_LOGIN_PAGE: false,
+    });
+
     // 1. Initial state (should be false)
     let res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
@@ -118,6 +124,9 @@ describe('OIDC E2E Tests', () => {
       .set('Accept', 'text/html')
       .redirects(0);
     expect(getLoginAllowedEnforced.status).not.toBe(302);
+
+    // Restore skipLoginPage for subsequent tests.
+    strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
@@ -639,7 +648,7 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).toBe('https://mock-oidc.com/logout');
       });
 
-      it('redirects to admin login when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
+      it('redirects to OIDC sign-in when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
         strapi.config.set('admin.url', '/admin');
 
         const res = await request(strapi.server.httpServer)
@@ -647,7 +656,7 @@ describe('OIDC E2E Tests', () => {
           .redirects(0); // no oidc_authenticated cookie
 
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('/admin/auth/login');
+        expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
 

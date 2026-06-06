@@ -29,6 +29,7 @@ export const MOCK_OIDC_CONFIG = {
   AUDIT_LOG_RETENTION_DAYS: 90,
   OIDC_GROUP_FIELD: 'groups',
   OIDC_GROUP_ROLE_MAP: '{}',
+  OIDC_SKIP_LOGIN_PAGE: true,
 };
 
 export const setSettings = (
