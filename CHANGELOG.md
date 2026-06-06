@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-06-06
+
+### Added
+
+- **`OIDC_SKIP_LOGIN_PAGE` option** — When enabled, unauthenticated users are redirected directly to the OIDC provider instead of the Strapi admin login page. Uses two independent mechanisms:
+  - **Server-side** Koa middleware intercepts unauthenticated GET requests to `/admin` and redirects to OIDC sign-in before the SPA is served. API routes, static assets, and POST requests are excluded.
+  - **Client-side** DOM `MutationObserver` watches for React Router navigations to `/auth/login` and redirects before the login form renders.
+- After logout without a provider `end_session_endpoint`, the fallback URL is now the OIDC sign-in endpoint instead of `/admin/auth/login`.
+
+### Changed
+
+- OIDC sign-in path (`/strapi-plugin-oidc/oidc`) is now a shared constant (`OIDC_SIGN_IN_PATH` in `shared/constants.ts`) used across server and admin code.
+
+### Fixed
+
+- Added `@strapi/sdk-plugin` to `ignoreDependencies` (CLI-only peer dep not needed at runtime).
+
+---
+
 ## [1.9.7] - 2026-04-28
 
 ### Fixed
