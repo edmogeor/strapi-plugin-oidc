@@ -78,12 +78,12 @@ When `skipLoginPage` is `true` in the public settings response, replace the SSO 
 if (data.skipLoginPage) {
   const tick = () => {
     if (isAuthRoute(window.location.pathname)) {
-      window.location.href = '/strapi-plugin-oidc/oidc';
+      window.location.href = OIDC_SIGN_IN_PATH;
     }
   };
-  tick(); // immediate check for initial page load
-  loginObserver = new MutationObserver(tick);
-  loginObserver.observe(document.body, { childList: true, subtree: true });
+  tick();
+  domObserver = new MutationObserver(tick);
+  domObserver.observe(document.body, { childList: true, subtree: true });
   return;
 }
 ```
@@ -120,27 +120,3 @@ User → `POST /admin/logout` → interceptor → `/strapi-plugin-oidc/logout` �
 | Session expires on admin page                | MutationObserver catches React Router nav to `/auth/login` |
 | OIDC not configured (missing issuer)         | `oidcSignIn` controller renders error page                 |
 | Logout followed by re-navigation to `/admin` | Server middleware catches it, redirects to OIDC            |
-
-## Usage
-
-Set in Strapi's `config/plugins.ts`:
-
-```ts
-'strapi-plugin-oidc': {
-  enabled: true,
-  config: {
-    OIDC_SKIP_LOGIN_PAGE: true,       // or process.env.OIDC_SKIP_LOGIN_PAGE
-    OIDC_ENFORCE: true,               // recommended alongside
-    OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID,
-    OIDC_CLIENT_SECRET: process.env.OIDC_CLIENT_SECRET,
-    OIDC_ISSUER: process.env.OIDC_ISSUER,
-    // ...
-  },
-},
-```
-
-Or via environment variable:
-
-```bash
-OIDC_SKIP_LOGIN_PAGE=true
-```

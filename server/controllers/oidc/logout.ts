@@ -2,7 +2,7 @@ import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
 import { getAuditLogService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
 import { getPluginConfig } from '../../utils/pluginConfig';
-import { LOGOUT_USERINFO_TIMEOUT_MS } from '../../../shared/constants';
+import { LOGOUT_USERINFO_TIMEOUT_MS, OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 import type { StrapiContext, AuditAction } from '../../types';
 
 // Returns true only when the provider explicitly rejects the token (4xx).
@@ -28,7 +28,7 @@ export async function logout(ctx: StrapiContext) {
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;
-  const oidcSignInUrl = '/strapi-plugin-oidc/oidc';
+  const oidcSignInUrl = OIDC_SIGN_IN_PATH;
   const fallbackUrl = config.OIDC_SKIP_LOGIN_PAGE ? oidcSignInUrl : loginUrl;
 
   // Read before clearing (cookies are gone after clearAuthCookies).

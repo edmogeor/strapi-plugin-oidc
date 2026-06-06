@@ -5,17 +5,17 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays, getPluginConfig } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
-import { CONTENT_TYPES as CT, PERMISSIONS } from '../shared/constants';
+import { CONTENT_TYPES as CT, PERMISSIONS, OIDC_SIGN_IN_PATH } from '../shared/constants';
 import { COOKIE_NAMES } from './utils/cookies';
 
 const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
+
+const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   await applyDiscovery(strapi);
   const adminUrl = strapi.config.get('admin.url', '/admin') as string;
   const tokenRefreshPath = `${adminUrl}/token/refresh`;
-
-  const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 
   const EXCLUDED_ADMIN_PATHS = [
     `${adminUrl}/login`,
@@ -43,7 +43,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
       !STATIC_EXTENSIONS.some((ext) => path.endsWith(ext)) &&
       !ctx.cookies.get(COOKIE_NAMES.adminRefresh)
     ) {
-      ctx.redirect('/strapi-plugin-oidc/oidc');
+      ctx.redirect(OIDC_SIGN_IN_PATH);
       return;
     }
 

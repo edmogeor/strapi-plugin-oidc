@@ -5,7 +5,7 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
-import { PERMISSIONS } from '../../shared/constants';
+import { PERMISSIONS, OIDC_SIGN_IN_PATH } from '../../shared/constants';
 import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
 const name = pluginPkg.strapi.displayName;
@@ -50,7 +50,7 @@ export default {
       /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
 
     let ssoButtonInjected = false;
-    let loginObserver: MutationObserver | null = null;
+    let domObserver: MutationObserver | null = null;
 
     const injectSSOButton = (buttonText: string) => {
       if (ssoButtonInjected) return;
@@ -65,7 +65,7 @@ export default {
       btn.type = 'button';
       btn.className = submitButton.className;
       btn.onclick = () => {
-        window.location.href = '/strapi-plugin-oidc/oidc';
+        window.location.href = OIDC_SIGN_IN_PATH;
       };
 
       const innerSpan = submitButton.querySelector('span');
@@ -115,32 +115,32 @@ export default {
     };
 
     const startLoginObserver = (buttonText: string, enforced: boolean) => {
-      if (loginObserver) return;
+      if (domObserver) return;
 
       const tick = () => {
         if (!isAuthRoute(window.location.pathname)) return;
         injectSSOButton(buttonText);
         if (enforced) removeEnforcedElements();
-        if (ssoButtonInjected && !enforced) loginObserver?.disconnect();
+        if (ssoButtonInjected && !enforced) domObserver?.disconnect();
       };
 
       tick();
-      loginObserver = new MutationObserver(tick);
-      loginObserver.observe(document.body, { childList: true, subtree: true });
+      domObserver = new MutationObserver(tick);
+      domObserver.observe(document.body, { childList: true, subtree: true });
     };
 
     const startSkipLoginRedirect = () => {
-      if (loginObserver) return;
+      if (domObserver) return;
 
       const tick = () => {
         if (isAuthRoute(window.location.pathname)) {
-          window.location.href = '/strapi-plugin-oidc/oidc';
+          window.location.href = OIDC_SIGN_IN_PATH;
         }
       };
 
       tick();
-      loginObserver = new MutationObserver(tick);
-      loginObserver.observe(document.body, { childList: true, subtree: true });
+      domObserver = new MutationObserver(tick);
+      domObserver.observe(document.body, { childList: true, subtree: true });
     };
 
     const applySettings = async () => {
