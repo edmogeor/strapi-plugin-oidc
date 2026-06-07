@@ -59,7 +59,7 @@ module.exports = ({ env }) => ({
 });
 ```
 
-`OIDC_PUBLIC_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. Only provide the scheme + host + port — no trailing slash or path.
+`OIDC_PUBLIC_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. If unset, falls back to the `PUBLIC_URL` environment variable. Only provide the scheme + host + port — no trailing slash or path.
 
 `OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
 
