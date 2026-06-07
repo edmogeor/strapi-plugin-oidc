@@ -26,7 +26,7 @@ export const roleUpdateSchema = z.object({
   roles: z.array(
     z.object({
       oauth_type: z.string(),
-      role: z.array(z.number()),
+      role: z.array(z.coerce.number()).default([]),
     }),
   ),
 });
