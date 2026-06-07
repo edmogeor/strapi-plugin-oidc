@@ -2,7 +2,7 @@ export default {
   default: {
     REMEMBER_ME: false,
 
-    STRAPI_URL: 'http://localhost:1337',
+    PUBLIC_URL: 'http://localhost:1337',
     OIDC_CLIENT_ID: '',
     OIDC_CLIENT_SECRET: '',
     OIDC_SCOPE: 'openid profile email',

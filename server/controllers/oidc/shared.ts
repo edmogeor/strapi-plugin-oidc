@@ -20,7 +20,7 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
-  return `${config.STRAPI_URL}${OIDC_CALLBACK_PATH}`;
+  return `${config.PUBLIC_URL}${OIDC_CALLBACK_PATH}`;
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();

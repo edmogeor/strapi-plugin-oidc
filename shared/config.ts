@@ -22,7 +22,7 @@ const coerceBoolNullable = z.preprocess(
 
 export const pluginConfigSchema = z.object({
   REMEMBER_ME: coerceBool(false),
-  STRAPI_URL: z.string().default(''),
+  PUBLIC_URL: z.string().default(''),
   OIDC_CLIENT_ID: z.string().default(''),
   OIDC_CLIENT_SECRET: z.string().default(''),
   OIDC_SCOPE: z.string().default('openid profile email'),
