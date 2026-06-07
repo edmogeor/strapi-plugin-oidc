@@ -20,7 +20,17 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
-  const publicUrl = config.OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
+  const publicUrl =
+    config.OIDC_PUBLIC_URL ||
+    process.env.PUBLIC_URL ||
+    (process.env.NODE_ENV !== 'production' ? 'http://localhost:1337' : '');
+
+  if (!publicUrl) {
+    throw new Error(
+      'OIDC_PUBLIC_URL or PUBLIC_URL must be set in production. Provide your Strapi origin (e.g. https://myapp.com).',
+    );
+  }
+
   return `${publicUrl}${OIDC_CALLBACK_PATH}`;
 }
 
