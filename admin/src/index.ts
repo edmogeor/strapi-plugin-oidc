@@ -45,7 +45,22 @@ export default {
 
     const isServerBounce = window.location.search.includes('oidc_redirect=1');
 
-    if (!isServerBounce && isAuthRoute(window.location.pathname)) {
+    const hasToken =
+      localStorage.getItem('jwtToken') ||
+      document.cookie.split(';').some((c) => c.trim().startsWith('jwtToken='));
+
+    const adminPath = '/admin';
+    const isAdminPage =
+      window.location.pathname === adminPath ||
+      window.location.pathname.startsWith(`${adminPath}/`);
+
+    // If unauthenticated and on any admin page, redirect to OIDC immediately.
+    // This runs synchronously in bootstrap, before React renders. We wipe the
+    // document first so nothing can mount even if the redirect is delayed.
+    // The server gate (signIn controller) decides whether to proceed with OIDC
+    // or bounce back with ?oidc_redirect=1.
+    if (!isServerBounce && !hasToken && isAdminPage) {
+      document.documentElement.innerHTML = '';
       window.location.replace(OIDC_SIGN_IN_PATH);
       return;
     }
