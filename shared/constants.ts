@@ -48,6 +48,8 @@ export const OIDC_DISCOVERY_PATH = '/.well-known/openid-configuration';
 
 export const OIDC_SIGN_IN_PATH = '/strapi-plugin-oidc/oidc';
 
+export const OIDC_CALLBACK_PATH = '/strapi-plugin-oidc/oidc/callback';
+
 export const AUTH_ROUTES = [
   'login',
   'register',

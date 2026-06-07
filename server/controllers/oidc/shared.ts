@@ -3,13 +3,14 @@ import type { JWTPayload } from 'jose';
 import { errorMessages } from '../../error-strings';
 import { OidcError } from '../../oidc-errors';
 import { toMessage } from '../../../shared/utils';
+import { OIDC_CALLBACK_PATH } from '../../../shared/constants';
 import type { PluginConfig } from '../../../shared/config';
+import type { StrapiContext } from '../../types';
 
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_ISSUER',
   'OIDC_CLIENT_ID',
   'OIDC_CLIENT_SECRET',
-  'OIDC_REDIRECT_URI',
   'OIDC_SCOPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
@@ -18,6 +19,11 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_USERINFO_ENDPOINT',
   'OIDC_AUTHORIZATION_ENDPOINT',
 ] as const;
+
+export function resolveRedirectUri(config: PluginConfig, ctx: StrapiContext): string {
+  if (config.OIDC_REDIRECT_URI) return config.OIDC_REDIRECT_URI;
+  return `${ctx.request.origin}${OIDC_CALLBACK_PATH}`;
+}
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 let jwksDisabledWarned = false;

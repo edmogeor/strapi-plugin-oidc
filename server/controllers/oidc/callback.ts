@@ -13,7 +13,7 @@ import {
   getAdminUserService,
 } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
-import { configValidation, verifyIdToken } from './shared';
+import { configValidation, verifyIdToken, resolveRedirectUri } from './shared';
 import { handleUserAuthentication } from './userAuth';
 import { handleCallbackError } from './errors';
 import type { StrapiContext, OidcUserInfo, AuditLogService, StrapiAdminUser } from '../../types';
@@ -159,7 +159,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     code: String(ctx.query.code),
     client_id: config.OIDC_CLIENT_ID,
     client_secret: config.OIDC_CLIENT_SECRET,
-    redirect_uri: config.OIDC_REDIRECT_URI,
+    redirect_uri: resolveRedirectUri(config, ctx),
     grant_type: 'authorization_code',
     code_verifier: codeVerifier ?? '',
   });

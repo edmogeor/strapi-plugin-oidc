@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
-import { configValidation } from './shared';
+import { configValidation, resolveRedirectUri } from './shared';
 import { getOauthService } from '../../utils/services';
 import { negotiateLocale, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
@@ -19,7 +19,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
       return;
     }
 
-    const { OIDC_CLIENT_ID, OIDC_REDIRECT_URI, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } = config;
+    const { OIDC_CLIENT_ID, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } = config;
 
     const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
 
@@ -39,10 +39,12 @@ export async function oidcSignIn(ctx: StrapiContext) {
     ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
     ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
 
+    const redirectUri = resolveRedirectUri(config, ctx);
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: OIDC_CLIENT_ID,
-      redirect_uri: OIDC_REDIRECT_URI,
+      redirect_uri: redirectUri,
       scope: OIDC_SCOPE,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
