@@ -20,15 +20,7 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
-  const raw = config.STRAPI_URL;
-  if (!raw) return '';
-
-  try {
-    return `${new URL(raw).origin}${OIDC_CALLBACK_PATH}`;
-  } catch {
-    strapi.log.warn(`[strapi-plugin-oidc] STRAPI_URL "${raw}" is not a valid URL — using as-is`);
-    return `${raw}${OIDC_CALLBACK_PATH}`;
-  }
+  return `${config.STRAPI_URL}${OIDC_CALLBACK_PATH}`;
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
