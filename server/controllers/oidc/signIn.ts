@@ -12,14 +12,18 @@ import type { StrapiContext } from '../../types';
 export async function oidcSignIn(ctx: StrapiContext) {
   try {
     const config = configValidation();
-    const whitelistService = getWhitelistService();
-    const settings = await whitelistService.getSettings();
 
-    if (!resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
-      const raw = strapi.config.get('admin.url');
-      const adminUrl = typeof raw === 'string' && raw.length > 0 ? raw : '/admin';
-      ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);
-      return;
+    // Only gate auto-redirects (those with ?oidc_redirect=1). Explicit SSO
+    // button clicks arrive without this param and always proceed.
+    if (ctx.query.oidc_redirect === '1') {
+      const whitelistService = getWhitelistService();
+      const settings = await whitelistService.getSettings();
+      if (!resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
+        const raw = strapi.config.get('admin.url');
+        const adminUrl = typeof raw === 'string' && raw.length > 0 ? raw : '/admin';
+        ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);
+        return;
+      }
     }
 
     const { OIDC_CLIENT_ID, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } = config;

@@ -49,8 +49,8 @@ export default {
     // If unauthenticated, redirect to OIDC immediately. This runs synchronously
     // in bootstrap — before React renders — so the login form never mounts.
     // We wipe the document first: nothing survives even if the redirect stalls.
-    // The server gate (signIn controller) decides whether to proceed with OIDC
-    // or bounce back with ?oidc_redirect=1.
+    // The ?oidc_redirect=1 query param lets the server distinguish auto-redirects
+    // from explicit SSO button clicks (skipLoginPage controls only auto-redirects).
     if (
       shouldRedirectToOidc({
         pathname: window.location.pathname,
@@ -60,12 +60,12 @@ export default {
       })
     ) {
       document.documentElement.innerHTML = '';
-      window.location.replace(OIDC_SIGN_IN_PATH);
+      window.location.replace(`${OIDC_SIGN_IN_PATH}?oidc_redirect=1`);
       // Fallback: if replace is blocked, try href after 2 seconds.
       // The page won't loop because OIDC_SIGN_IN_PATH is a server endpoint that
       // either proceeds with OIDC or bounces back with ?oidc_redirect=1.
       setTimeout(() => {
-        window.location.href = OIDC_SIGN_IN_PATH;
+        window.location.href = `${OIDC_SIGN_IN_PATH}?oidc_redirect=1`;
       }, 2000);
       return;
     }
@@ -160,7 +160,7 @@ export default {
     const startSkipLoginRedirect = () => {
       startObserver(() => {
         if (isAuthRoute(window.location.pathname)) {
-          window.location.href = OIDC_SIGN_IN_PATH;
+          window.location.href = `${OIDC_SIGN_IN_PATH}?oidc_redirect=1`;
         }
       });
     };
