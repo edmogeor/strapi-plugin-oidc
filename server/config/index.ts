@@ -2,7 +2,7 @@ export default {
   default: {
     REMEMBER_ME: false,
 
-    PUBLIC_URL: 'http://localhost:1337',
+    OIDC_PUBLIC_URL: 'http://localhost:1337',
     OIDC_CLIENT_ID: '',
     OIDC_CLIENT_SECRET: '',
     OIDC_SCOPE: 'openid profile email',

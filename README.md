@@ -35,7 +35,7 @@ module.exports = ({ env }) => ({
     enabled: true,
     config: {
       // Required
-      PUBLIC_URL: env('PUBLIC_URL'), // https://your-strapi.com
+      OIDC_PUBLIC_URL: env('PUBLIC_URL', 'http://localhost:1337'), // origin only — we append /strapi-plugin-oidc/oidc/callback
       OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
@@ -59,7 +59,7 @@ module.exports = ({ env }) => ({
 });
 ```
 
-`PUBLIC_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. Only provide the scheme + host + port — no trailing slash or path.
+`OIDC_PUBLIC_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. Only provide the scheme + host + port — no trailing slash or path.
 
 `OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
 

@@ -20,7 +20,8 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
-  return `${config.PUBLIC_URL}${OIDC_CALLBACK_PATH}`;
+  const publicUrl = config.OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
+  return `${publicUrl}${OIDC_CALLBACK_PATH}`;
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
