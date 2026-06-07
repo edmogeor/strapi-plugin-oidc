@@ -39,7 +39,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
     ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
     ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
 
-    const redirectUri = resolveRedirectUri(config, ctx);
+    const redirectUri = resolveRedirectUri(config);
 
     const params = new URLSearchParams({
       response_type: 'code',

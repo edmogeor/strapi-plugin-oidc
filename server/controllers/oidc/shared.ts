@@ -5,7 +5,6 @@ import { OidcError } from '../../oidc-errors';
 import { toMessage } from '../../../shared/utils';
 import { OIDC_CALLBACK_PATH } from '../../../shared/constants';
 import type { PluginConfig } from '../../../shared/config';
-import type { StrapiContext } from '../../types';
 
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_ISSUER',
@@ -20,9 +19,18 @@ const REQUIRED_CONFIG_KEYS = [
   'OIDC_AUTHORIZATION_ENDPOINT',
 ] as const;
 
-export function resolveRedirectUri(config: PluginConfig, ctx: StrapiContext): string {
-  if (config.OIDC_REDIRECT_URI) return config.OIDC_REDIRECT_URI;
-  return `${ctx.request.origin}${OIDC_CALLBACK_PATH}`;
+export function resolveRedirectUri(config: PluginConfig): string {
+  const raw = config.OIDC_REDIRECT_URI;
+  if (!raw) return '';
+
+  try {
+    return `${new URL(raw).origin}${OIDC_CALLBACK_PATH}`;
+  } catch {
+    strapi.log.warn(
+      `[strapi-plugin-oidc] OIDC_REDIRECT_URI "${raw}" is not a valid URL — using as-is`,
+    );
+    return `${raw}${OIDC_CALLBACK_PATH}`;
+  }
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();

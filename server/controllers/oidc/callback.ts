@@ -159,7 +159,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     code: String(ctx.query.code),
     client_id: config.OIDC_CLIENT_ID,
     client_secret: config.OIDC_CLIENT_SECRET,
-    redirect_uri: resolveRedirectUri(config, ctx),
+    redirect_uri: resolveRedirectUri(config),
     grant_type: 'authorization_code',
     code_verifier: codeVerifier ?? '',
   });
