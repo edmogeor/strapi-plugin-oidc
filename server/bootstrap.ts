@@ -5,10 +5,13 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getRetentionDays, getPluginConfig } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
-import { CONTENT_TYPES as CT, PERMISSIONS, OIDC_SIGN_IN_PATH } from '../shared/constants';
+import {
+  CONTENT_TYPES as CT,
+  PERMISSIONS,
+  AUTH_ROUTES,
+  OIDC_SIGN_IN_PATH,
+} from '../shared/constants';
 import { COOKIE_NAMES } from './utils/cookies';
-
-const AUTH_ROUTES = ['login', 'register', 'register-admin', 'forgot-password', 'reset-password'];
 
 const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 

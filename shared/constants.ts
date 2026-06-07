@@ -48,6 +48,20 @@ export const OIDC_DISCOVERY_PATH = '/.well-known/openid-configuration';
 
 export const OIDC_SIGN_IN_PATH = '/strapi-plugin-oidc/oidc';
 
+export const AUTH_ROUTES = [
+  'login',
+  'register',
+  'register-admin',
+  'forgot-password',
+  'reset-password',
+] as const;
+
+export const AUTH_ROUTES_WITHOUT_REGISTER_ADMIN: readonly string[] = AUTH_ROUTES.filter(
+  (r) => r !== 'register-admin',
+);
+
+export const JWT_TOKEN_KEY = 'jwtToken' as const;
+
 export const UI_DEFAULTS = {
   MIN_SPINNER_MS: 400,
 } as const;

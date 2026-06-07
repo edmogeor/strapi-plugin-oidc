@@ -5,7 +5,13 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
-import { PERMISSIONS, OIDC_SIGN_IN_PATH } from '../../shared/constants';
+import {
+  PERMISSIONS,
+  AUTH_ROUTES_WITHOUT_REGISTER_ADMIN,
+  JWT_TOKEN_KEY,
+  OIDC_SIGN_IN_PATH,
+} from '../../shared/constants';
+import { shouldRedirectToOidc } from './utils/shouldRedirect';
 import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
 const name = pluginPkg.strapi.displayName;
@@ -40,28 +46,31 @@ export default {
   },
 
   bootstrap() {
-    const isAuthRoute = (path: string) =>
-      /\/auth\/(login|register|forgot-password|reset-password)/.test(path);
+    const authRoutePattern = new RegExp(`/auth/(${AUTH_ROUTES_WITHOUT_REGISTER_ADMIN.join('|')})`);
 
-    const isServerBounce = window.location.search.includes('oidc_redirect=1');
+    const isAuthRoute = (path: string) => authRoutePattern.test(path);
 
-    const hasToken =
-      localStorage.getItem('jwtToken') ||
-      document.cookie.split(';').some((c) => c.trim().startsWith('jwtToken='));
-
-    const adminPath = '/admin';
-    const isAdminPage =
-      window.location.pathname === adminPath ||
-      window.location.pathname.startsWith(`${adminPath}/`);
-
-    // If unauthenticated and on any admin page, redirect to OIDC immediately.
-    // This runs synchronously in bootstrap, before React renders. We wipe the
-    // document first so nothing can mount even if the redirect is delayed.
+    // If unauthenticated, redirect to OIDC immediately. This runs synchronously
+    // in bootstrap — before React renders — so the login form never mounts.
+    // We wipe the document first: nothing survives even if the redirect stalls.
     // The server gate (signIn controller) decides whether to proceed with OIDC
     // or bounce back with ?oidc_redirect=1.
-    if (!isServerBounce && !hasToken && isAdminPage) {
+    if (
+      shouldRedirectToOidc({
+        pathname: window.location.pathname,
+        search: window.location.search,
+        localStorage: window.localStorage,
+        cookies: document.cookie,
+      })
+    ) {
       document.documentElement.innerHTML = '';
       window.location.replace(OIDC_SIGN_IN_PATH);
+      // Fallback: if replace is blocked, try href after 2 seconds.
+      // The page won't loop because OIDC_SIGN_IN_PATH is a server endpoint that
+      // either proceeds with OIDC or bounces back with ?oidc_redirect=1.
+      setTimeout(() => {
+        window.location.href = OIDC_SIGN_IN_PATH;
+      }, 2000);
       return;
     }
 
@@ -189,12 +198,12 @@ export default {
 
       if (isLogout) {
         window.dispatchEvent(new CustomEvent(LOGOUT_EVENT));
-        window.localStorage.removeItem('jwtToken');
+        window.localStorage.removeItem(JWT_TOKEN_KEY);
         window.localStorage.removeItem('isLoggedIn');
-        window.sessionStorage.removeItem('jwtToken');
+        window.sessionStorage.removeItem(JWT_TOKEN_KEY);
         window.sessionStorage.removeItem('isLoggedIn');
-        document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-        document.cookie = 'jwtToken=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin';
+        document.cookie = `${JWT_TOKEN_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        document.cookie = `${JWT_TOKEN_KEY}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/admin`;
         // Fire Strapi logout in the background so the server revokes the refresh token,
         // then navigate to the OIDC logout endpoint. We don't await Strapi's response
         // because navigating away would abort it anyway.

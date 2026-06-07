@@ -13,7 +13,8 @@ export async function oidcSignIn(ctx: StrapiContext) {
     const config = configValidation();
 
     if (!config.OIDC_SKIP_LOGIN_PAGE) {
-      const adminUrl = strapi.config.get('admin.url', '/admin') as string;
+      const raw = strapi.config.get('admin.url');
+      const adminUrl = typeof raw === 'string' && raw.length > 0 ? raw : '/admin';
       ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);
       return;
     }
