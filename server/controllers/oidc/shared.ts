@@ -31,7 +31,7 @@ export function resolveRedirectUri(config: PluginConfig): string {
     );
   }
 
-  return `${publicUrl}${OIDC_CALLBACK_PATH}`;
+  return `${publicUrl.replace(/\/+$/, '')}${OIDC_CALLBACK_PATH}`;
 }
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
