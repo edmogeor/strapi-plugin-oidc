@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.7] - 2026-06-07
+
+### Changed
+
+- **Skip Login Page → DB-backed toggle** — `OIDC_SKIP_LOGIN_PAGE` is now a toggle in the Admin UI under **Login Settings**, matching the `OIDC_ENFORCE` pattern. The env var still works as an override (`null` = defer to DB toggle; `true`/`false` = override). The toggle is grayed out when the env var is set.
+- **Shared config flag resolution** — Extracted `resolveConfigFlag.ts` as the SSOT for nullable boolean config→DB resolution; `enforceOIDC.ts` and `skipLoginPage.ts` delegate to it. Bootstrap config-sync blocks DRY'd into a loop.
+- **Deduplicated whitelist hydrate dispatch** — Extracted `hydrateWhitelist` helper in `useOidcSettings` to eliminate the duplicate dispatch block.
+- **README updated** — Documented the new toggle and reordered config table.
+
+---
+
 ## [1.10.6] - 2026-06-07
 
 ### Changed
