@@ -26,6 +26,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Clear legacy npm config
+        run: npm config delete always-auth 2>/dev/null || true
+
       - name: Install dependencies in root
         run: npm ci || npm install
 
