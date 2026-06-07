@@ -2,7 +2,7 @@ export default {
   default: {
     REMEMBER_ME: false,
 
-    OIDC_REDIRECT_URI: 'http://localhost:1337/strapi-plugin-oidc/oidc/callback',
+    STRAPI_URL: 'http://localhost:1337',
     OIDC_CLIENT_ID: '',
     OIDC_CLIENT_SECRET: '',
     OIDC_SCOPE: 'openid profile email',

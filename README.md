@@ -38,7 +38,7 @@ module.exports = ({ env }) => ({
       OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
-      OIDC_REDIRECT_URI: env('OIDC_REDIRECT_URI'), // https://your-strapi.com (origin only — we append /strapi-plugin-oidc/oidc/callback)
+      STRAPI_URL: env('STRAPI_URL'), // https://your-strapi.com (origin only — we append /strapi-plugin-oidc/oidc/callback)
 
       // Optional — defaults shown
       OIDC_SCOPE: 'openid profile email', // space-separated scopes

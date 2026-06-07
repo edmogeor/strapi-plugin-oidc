@@ -20,15 +20,13 @@ const REQUIRED_CONFIG_KEYS = [
 ] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
-  const raw = config.OIDC_REDIRECT_URI;
+  const raw = config.STRAPI_URL;
   if (!raw) return '';
 
   try {
     return `${new URL(raw).origin}${OIDC_CALLBACK_PATH}`;
   } catch {
-    strapi.log.warn(
-      `[strapi-plugin-oidc] OIDC_REDIRECT_URI "${raw}" is not a valid URL — using as-is`,
-    );
+    strapi.log.warn(`[strapi-plugin-oidc] STRAPI_URL "${raw}" is not a valid URL — using as-is`);
     return `${raw}${OIDC_CALLBACK_PATH}`;
   }
 }
