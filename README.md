@@ -203,30 +203,30 @@ Duplicate emails within the payload and emails already in the whitelist are sile
 ```bash
 # List
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist
+  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
 
 # Export
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist/export \
+  https://strapi.example.com/api/strapi-plugin-oidc/whitelist/export \
   -o whitelist.json
 
 # Add
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"email": "user@example.com"}' \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist
+  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
 
 # Bulk import
 curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
   -d '{"users": [{"email": "a@example.com"}, {"email": "b@example.com"}]}' \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist/import
+  https://strapi.example.com/api/strapi-plugin-oidc/whitelist/import
 
 # Delete one (by email)
 curl -X DELETE -H "Authorization: Bearer <token>" \
-  "http://localhost:1337/api/strapi-plugin-oidc/whitelist/user%40example.com"
+  "https://strapi.example.com/api/strapi-plugin-oidc/whitelist/user%40example.com"
 
 # Delete all
 curl -X DELETE -H "Authorization: Bearer <token>" \
-  http://localhost:1337/api/strapi-plugin-oidc/whitelist
+  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
 ```
 
 ## Audit Log API
@@ -294,7 +294,7 @@ curl -H "Authorization: Bearer <token>" -G \
   --data-urlencode 'filters[action][$eq]=login_failure' \
   --data-urlencode 'filters[createdAt][$gte]=2026-04-08T00:00:00.000Z' \
   --data-urlencode 'filters[createdAt][$lt]=2026-04-09T00:00:00.000Z' \
-  http://localhost:1337/api/strapi-plugin-oidc/audit-logs
+  https://strapi.example.com/api/strapi-plugin-oidc/audit-logs
 ```
 
 ### Recorded actions
@@ -321,11 +321,11 @@ Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc:
 ```bash
 # Paginated list
 curl -H "Authorization: Bearer <token>" \
-  "http://localhost:1337/api/strapi-plugin-oidc/audit-logs?page=1&pageSize=50"
+  "https://strapi.example.com/api/strapi-plugin-oidc/audit-logs?page=1&pageSize=50"
 
 # NDJSON export
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:1337/api/strapi-plugin-oidc/audit-logs/export \
+  https://strapi.example.com/api/strapi-plugin-oidc/audit-logs/export \
   -o oidc-audit-log.ndjson
 ```
 
