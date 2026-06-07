@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import pkceChallenge from 'pkce-challenge';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
-import { getOauthService } from '../../utils/services';
+import { getOauthService, getWhitelistService } from '../../utils/services';
+import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
 import { negotiateLocale, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
 import { PKCE_COOKIE_MAX_AGE_MS } from '../../../shared/constants';
@@ -11,8 +12,10 @@ import type { StrapiContext } from '../../types';
 export async function oidcSignIn(ctx: StrapiContext) {
   try {
     const config = configValidation();
+    const whitelistService = getWhitelistService();
+    const settings = await whitelistService.getSettings();
 
-    if (!config.OIDC_SKIP_LOGIN_PAGE) {
+    if (!resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
       const raw = strapi.config.get('admin.url');
       const adminUrl = typeof raw === 'string' && raw.length > 0 ? raw : '/admin';
       ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);

@@ -66,8 +66,9 @@ describe('OIDC E2E Tests', () => {
     // Skip-login-page redirects interfere with enforcement testing — disable it for this test.
     strapi.config.set('plugin::strapi-plugin-oidc', {
       ...MOCK_OIDC_CONFIG,
-      OIDC_SKIP_LOGIN_PAGE: false,
+      OIDC_SKIP_LOGIN_PAGE: null,
     });
+    await setSettings(strapi, false, false, false);
 
     // 1. Initial state (should be false)
     let res = await agent.get('/strapi-plugin-oidc/settings/public');
@@ -90,7 +91,7 @@ describe('OIDC E2E Tests', () => {
     expect(getLoginAllowed.status).not.toBe(302);
 
     // 2. Enable enforceOIDC in settings
-    await setSettings(strapi, true, true);
+    await setSettings(strapi, true, true, false);
 
     // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
@@ -127,6 +128,7 @@ describe('OIDC E2E Tests', () => {
 
     // Restore skipLoginPage for subsequent tests.
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+    await setSettings(strapi, false, false, false);
   });
 
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
@@ -650,6 +652,7 @@ describe('OIDC E2E Tests', () => {
 
       it('redirects to OIDC sign-in when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
         strapi.config.set('admin.url', '/admin');
+        await setSettings(strapi, false, true, true);
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')

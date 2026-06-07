@@ -9,6 +9,7 @@ export interface StrapiContext extends Context {
 export interface WhitelistSettings {
   useWhitelist: boolean;
   enforceOIDC: boolean;
+  skipLoginPage: boolean;
 }
 
 export interface WhitelistEntry {

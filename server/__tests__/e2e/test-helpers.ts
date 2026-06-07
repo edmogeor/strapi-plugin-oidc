@@ -29,18 +29,19 @@ export const MOCK_OIDC_CONFIG = {
   AUDIT_LOG_RETENTION_DAYS: 90,
   OIDC_GROUP_FIELD: 'groups',
   OIDC_GROUP_ROLE_MAP: '{}',
-  OIDC_SKIP_LOGIN_PAGE: true,
+  OIDC_SKIP_LOGIN_PAGE: null,
 };
 
 export const setSettings = (
   strapi: Core.Strapi,
   useWhitelist: boolean,
   enforceOIDC: boolean,
+  skipLoginPage = true,
 ): Promise<void> =>
   strapi
     .plugin('strapi-plugin-oidc')
     .service('whitelist')
-    .setSettings({ useWhitelist, enforceOIDC });
+    .setSettings({ useWhitelist, enforceOIDC, skipLoginPage });
 
 export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: string | null }> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
@@ -87,7 +88,7 @@ export function expectUserRoleIdsToContain(
 
 export async function applyDefaultOidcConfig(strapi: Core.Strapi) {
   strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-  await setSettings(strapi, false, false);
+  await setSettings(strapi, false, false, true);
 }
 
 export function createOidcAgent(strapi: Core.Strapi): ReturnType<typeof request.agent> {

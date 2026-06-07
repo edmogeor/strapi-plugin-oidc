@@ -114,6 +114,45 @@ function HomePage() {
                     </Flex>
                   </Box>
                 )}
+              <Flex alignItems="center" gap={3} wrap="wrap">
+                <Typography variant="omega" style={{ minWidth: '280px' }}>
+                  {formatMessage(getTrad('skipLoginPage.title'))}
+                </Typography>
+                <Box minWidth="160px">
+                  <CustomSwitch
+                    checked={state.skipLoginPage}
+                    onChange={actions.onToggleSkipLoginPage}
+                    disabled={state.skipLoginPageConfig !== null}
+                    label={
+                      state.skipLoginPage
+                        ? formatMessage(getTrad('skipLoginPage.toggle.enabled'))
+                        : formatMessage(getTrad('skipLoginPage.toggle.disabled'))
+                    }
+                  />
+                </Box>
+              </Flex>
+              {state.skipLoginPageConfig !== null && (
+                <Box background="primary100" padding={3} hasRadius>
+                  <Flex gap={3} alignItems="center">
+                    <Information fill="primary600" />
+                    <Typography textColor="primary600">
+                      {formatMessage(getTrad('skipLoginPage.config.info'))}
+                    </Typography>
+                  </Flex>
+                </Box>
+              )}
+              {state.skipLoginPageConfig === null &&
+                state.skipLoginPage &&
+                state.skipLoginPage !== state.initialSkipLoginPage && (
+                  <Box background="danger100" padding={3} hasRadius>
+                    <Flex gap={3} alignItems="center">
+                      <WarningCircle fill="danger600" />
+                      <Typography textColor="danger600">
+                        {formatMessage(getTrad('skipLoginPage.warning'))}
+                      </Typography>
+                    </Flex>
+                  </Box>
+                )}
             </Flex>
           </Box>
           <Flex justifyContent="flex-end" marginBottom={8}>

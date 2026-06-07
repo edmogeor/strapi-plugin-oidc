@@ -2,7 +2,8 @@ import type { Core } from '@strapi/types';
 import type { Context, Next } from 'koa';
 import { errorMessages } from './error-strings';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
-import { getRetentionDays, getPluginConfig } from './utils/pluginConfig';
+import { getSkipLoginPageConfig, resolveSkipLoginPage } from './utils/skipLoginPage';
+import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { applyDiscovery } from './utils/discovery';
 import {
@@ -38,18 +39,23 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
     const isPost = ctx.request.method === 'POST';
     const isAuthRoute = AUTH_ROUTES.some((r) => path.includes(r));
     const isTokenRefresh = path === tokenRefreshPath;
+    const isGet = ctx.request.method === 'GET';
+    const isAdminPath = path === adminUrl || path.startsWith(`${adminUrl}/`);
+    const isExcluded = EXCLUDED_ADMIN_PATHS.includes(path);
+    const isStatic = STATIC_EXTENSIONS.some((ext) => path.endsWith(ext));
+    const isAuthenticated = !!ctx.cookies.get(COOKIE_NAMES.adminRefresh);
 
-    const config = getPluginConfig();
-    if (
-      config.OIDC_SKIP_LOGIN_PAGE &&
-      ctx.request.method === 'GET' &&
-      (path === adminUrl || path.startsWith(`${adminUrl}/`)) &&
-      !EXCLUDED_ADMIN_PATHS.includes(path) &&
-      !STATIC_EXTENSIONS.some((ext) => path.endsWith(ext)) &&
-      !ctx.cookies.get(COOKIE_NAMES.adminRefresh)
-    ) {
-      ctx.redirect(OIDC_SIGN_IN_PATH);
-      return;
+    if (isGet && isAdminPath && !isExcluded && !isStatic && !isAuthenticated) {
+      try {
+        const whitelistService = getWhitelistService();
+        const settings = await whitelistService.getSettings();
+        if (resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
+          ctx.redirect(OIDC_SIGN_IN_PATH);
+          return;
+        }
+      } catch (err) {
+        strapi.log.error(errorMessages.ENFORCE_MIDDLEWARE_ERROR, err);
+      }
     }
 
     if ((isAuthRoute && isPost) || isTokenRefresh) {
@@ -117,19 +123,30 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
     strapi.contentAPI.permissions.providers.action.register(uid, { uid });
   }
 
-  const enforceOIDCConfig = getEnforceOIDCConfig(strapi);
-  if (enforceOIDCConfig !== null) {
-    try {
-      const whitelistService = getWhitelistService();
-      const settings = await whitelistService.getSettings();
-      if (settings.enforceOIDC !== enforceOIDCConfig) {
-        await whitelistService.setSettings({ ...settings, enforceOIDC: enforceOIDCConfig });
-        strapi.log.info(
-          `[strapi-plugin-oidc] OIDC_ENFORCE=${enforceOIDCConfig} written to database settings`,
-        );
+  const configSyncJobs = [
+    { key: 'OIDC_ENFORCE', getter: getEnforceOIDCConfig, dbField: 'enforceOIDC' as const },
+    {
+      key: 'OIDC_SKIP_LOGIN_PAGE',
+      getter: getSkipLoginPageConfig,
+      dbField: 'skipLoginPage' as const,
+    },
+  ];
+
+  for (const { key, getter, dbField } of configSyncJobs) {
+    const configValue = getter(strapi);
+    if (configValue !== null) {
+      try {
+        const whitelistService = getWhitelistService();
+        const settings = await whitelistService.getSettings();
+        if (settings[dbField] !== configValue) {
+          await whitelistService.setSettings({ ...settings, [dbField]: configValue });
+          strapi.log.info(
+            `[strapi-plugin-oidc] ${key}=${configValue} written to database settings`,
+          );
+        }
+      } catch (err) {
+        strapi.log.error(errorMessages.ENFORCE_SYNC_ERROR, err);
       }
-    } catch (err) {
-      strapi.log.error(errorMessages.ENFORCE_SYNC_ERROR, err);
     }
   }
 

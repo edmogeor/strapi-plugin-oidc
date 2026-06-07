@@ -30,8 +30,10 @@ export function useOidcSettings() {
           users: data.whitelistUsers,
           useWhitelist: data.useWhitelist,
           enforceOIDC: data.enforceOIDC,
+          skipLoginPage: data.skipLoginPage,
         },
         enforceOIDCConfig: data.enforceOIDCConfig ?? null,
+        skipLoginPageConfig: data.skipLoginPageConfig ?? null,
         auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
       });
     });
@@ -80,10 +82,15 @@ export function useOidcSettings() {
     dispatch({ type: 'toggle/enforceOIDC', value: e.target.checked });
   }, []);
 
+  const onToggleSkipLoginPage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: 'toggle/skipLoginPage', value: e.target.checked });
+  }, []);
+
   const isDirty = useMemo(
     () =>
       isDirtyPrimitive(state.current.useWhitelist, state.initial.useWhitelist) ||
       isDirtyPrimitive(state.current.enforceOIDC, state.initial.enforceOIDC) ||
+      isDirtyPrimitive(state.current.skipLoginPage, state.initial.skipLoginPage) ||
       isDirtyArray(state.current.oidcRoles, state.initial.oidcRoles) ||
       isDirtyArray(state.current.users, state.initial.users),
     [state.current, state.initial],
@@ -105,6 +112,7 @@ export function useOidcSettings() {
         put('/strapi-plugin-oidc/whitelist/settings', {
           useWhitelist: state.current.useWhitelist,
           enforceOIDC: state.current.enforceOIDC,
+          skipLoginPage: state.current.skipLoginPage,
         }),
       ]);
 
@@ -118,8 +126,10 @@ export function useOidcSettings() {
           users: data.whitelistUsers,
           useWhitelist: data.useWhitelist,
           enforceOIDC: data.enforceOIDC,
+          skipLoginPage: data.skipLoginPage,
         },
         enforceOIDCConfig: data.enforceOIDCConfig ?? null,
+        skipLoginPageConfig: data.skipLoginPageConfig ?? null,
         auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
       });
 
@@ -145,6 +155,9 @@ export function useOidcSettings() {
       enforceOIDC: state.current.enforceOIDC,
       enforceOIDCConfig: state.enforceOIDCConfig,
       initialEnforceOIDC: state.initial.enforceOIDC,
+      skipLoginPage: state.current.skipLoginPage,
+      skipLoginPageConfig: state.skipLoginPageConfig,
+      initialSkipLoginPage: state.initial.skipLoginPage,
       users: state.current.users,
       isDirty,
       auditLogEnabled: state.auditLogEnabled,
@@ -162,6 +175,7 @@ export function useOidcSettings() {
       onExport,
       onToggleWhitelist,
       onToggleEnforce,
+      onToggleSkipLoginPage,
       onSaveAll,
     },
   };

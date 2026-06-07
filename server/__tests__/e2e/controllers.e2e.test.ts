@@ -48,11 +48,15 @@ describe('Controllers E2E', () => {
 
     it('should get and update settings via controller', async () => {
       const ctxUpdate: MockCtx = {
-        request: { body: { useWhitelist: false, enforceOIDC: true } },
+        request: { body: { useWhitelist: false, enforceOIDC: true, skipLoginPage: false } },
       };
 
       await whitelistController.updateSettings(ctxUpdate);
-      expect(ctxUpdate.body).toEqual({ useWhitelist: false, enforceOIDC: true });
+      expect(ctxUpdate.body).toEqual({
+        useWhitelist: false,
+        enforceOIDC: true,
+        skipLoginPage: false,
+      });
 
       const ctxInfo: MockCtx = {};
       await whitelistController.info(ctxInfo);
@@ -66,17 +70,21 @@ describe('Controllers E2E', () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.whitelists').deleteMany({});
 
       const ctxUpdate: MockCtx = {
-        request: { body: { useWhitelist: true, enforceOIDC: true } },
+        request: { body: { useWhitelist: true, enforceOIDC: true, skipLoginPage: false } },
       };
 
       await whitelistController.updateSettings(ctxUpdate);
 
       // enforceOIDC should be forced to false
-      expect(ctxUpdate.body).toEqual({ useWhitelist: true, enforceOIDC: false });
+      expect(ctxUpdate.body).toEqual({
+        useWhitelist: true,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
 
       // Restore settings for the next test
       await whitelistController.updateSettings({
-        request: { body: { useWhitelist: false, enforceOIDC: true } },
+        request: { body: { useWhitelist: false, enforceOIDC: true, skipLoginPage: false } },
       });
     });
 
@@ -90,9 +98,13 @@ describe('Controllers E2E', () => {
     it('should return skipLoginPage in public settings', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
         ...strapi.config.get('plugin::strapi-plugin-oidc'),
-        OIDC_SKIP_LOGIN_PAGE: true,
         OIDC_ENFORCE: null,
+        OIDC_SKIP_LOGIN_PAGE: null,
       });
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: true });
 
       const ctxPublic = { body: null };
       await whitelistController.publicSettings(ctxPublic);
@@ -338,11 +350,16 @@ describe('Controllers E2E', () => {
 
     it('should redirect to Strapi login when provider explicitly rejects the token (401)', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_SKIP_LOGIN_PAGE: null,
         OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
         // mock-oidc.com/userinfo is intercepted by MSW; 'expired-token' returns 401
         OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
       });
       strapi.config.set('admin.url', '/admin');
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
 
       const ctxLogout = makeLogoutCtx({
         oidc_authenticated: '1',
@@ -372,9 +389,14 @@ describe('Controllers E2E', () => {
 
     it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_SKIP_LOGIN_PAGE: null,
         OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
       });
       strapi.config.set('admin.url', '/admin');
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
 
       const ctxLogout = makeLogoutCtx(); // no oidc_authenticated cookie
       await oidcController.logout(ctxLogout);
@@ -384,8 +406,15 @@ describe('Controllers E2E', () => {
     });
 
     it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_END_SESSION_ENDPOINT: undefined });
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        OIDC_SKIP_LOGIN_PAGE: null,
+        OIDC_END_SESSION_ENDPOINT: undefined,
+      });
       strapi.config.set('admin.url', '/custom-admin');
+      await strapi
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist')
+        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
 
       const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
       await oidcController.logout(ctxLogout);

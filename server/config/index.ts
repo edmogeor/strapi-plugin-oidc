@@ -15,7 +15,7 @@ export default {
     OIDC_REQUIRE_EMAIL_VERIFIED: true,
     OIDC_TRUSTED_IP_HEADER: '',
     OIDC_FORCE_SECURE_COOKIES: false,
-    OIDC_SKIP_LOGIN_PAGE: false,
+    OIDC_SKIP_LOGIN_PAGE: null, // null = use DB setting; true/false = override DB
     // Populated at bootstrap from OIDC_ISSUER — not user-configurable directly
     OIDC_AUTHORIZATION_ENDPOINT: '',
     OIDC_TOKEN_ENDPOINT: '',

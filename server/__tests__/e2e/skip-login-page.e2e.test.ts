@@ -6,24 +6,27 @@ import {
   applyDefaultOidcConfig,
   makeLogoutCtx,
   expectCookieCleared,
+  setSettings,
 } from './test-helpers';
 import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 
 describe('Skip Login Page E2E', () => {
   let strapi: Core.Strapi;
 
-  const enableSkipLoginPage = () => {
+  const enableSkipLoginPage = async () => {
     strapi.config.set('plugin::strapi-plugin-oidc', {
       ...MOCK_OIDC_CONFIG,
-      OIDC_SKIP_LOGIN_PAGE: true,
+      OIDC_SKIP_LOGIN_PAGE: null,
     });
+    await setSettings(strapi, false, false, true);
   };
 
-  const disableSkipLoginPage = () => {
+  const disableSkipLoginPage = async () => {
     strapi.config.set('plugin::strapi-plugin-oidc', {
       ...MOCK_OIDC_CONFIG,
-      OIDC_SKIP_LOGIN_PAGE: false,
+      OIDC_SKIP_LOGIN_PAGE: null,
     });
+    await setSettings(strapi, false, false, false);
   };
 
   beforeAll(async () => {
@@ -32,12 +35,12 @@ describe('Skip Login Page E2E', () => {
   });
 
   afterAll(async () => {
-    disableSkipLoginPage();
+    await disableSkipLoginPage();
   });
 
   describe('server-side redirect middleware', () => {
-    beforeEach(() => {
-      enableSkipLoginPage();
+    beforeEach(async () => {
+      await enableSkipLoginPage();
     });
 
     it('redirects GET /admin to /strapi-plugin-oidc/oidc when unauthenticated', async () => {
@@ -104,22 +107,19 @@ describe('Skip Login Page E2E', () => {
         .get('/admin')
         .set('Cookie', 'strapi_admin_refresh=fake-refresh-token')
         .redirects(0);
-      // Should not redirect to OIDC (the fake cookie won't authenticate, but the check
-      // for admin_refresh presence must skip the redirect)
       expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
     });
 
     it('does NOT redirect when skip is disabled', async () => {
-      disableSkipLoginPage();
+      await disableSkipLoginPage();
       const res = await request(strapi.server.httpServer).get('/admin').redirects(0);
-      // Should serve the admin SPA (200) or redirect to login (302 to /admin/auth/login)
       expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
     });
   });
 
   describe('logout controller with skip-login-page', () => {
-    beforeEach(() => {
-      enableSkipLoginPage();
+    beforeEach(async () => {
+      await enableSkipLoginPage();
       strapi.config.set('admin.url', '/admin');
     });
 
@@ -142,9 +142,10 @@ describe('Skip Login Page E2E', () => {
 
     it('falls back to OIDC sign-in when OIDC logout not configured', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: true,
+        OIDC_SKIP_LOGIN_PAGE: null,
         OIDC_END_SESSION_ENDPOINT: undefined,
       });
+      await setSettings(strapi, false, false, true);
 
       await logoutAndExpectRedirect(
         makeLogoutCtx({ oidc_authenticated: '1' }),
@@ -155,10 +156,11 @@ describe('Skip Login Page E2E', () => {
 
     it('falls back to OIDC sign-in when provider rejects expired token', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: true,
+        OIDC_SKIP_LOGIN_PAGE: null,
         OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
         OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
       });
+      await setSettings(strapi, false, false, true);
 
       await logoutAndExpectRedirect(
         makeLogoutCtx({ oidc_authenticated: '1', oidc_access_token: 'expired-token' }),

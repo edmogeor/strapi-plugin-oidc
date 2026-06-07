@@ -1,7 +1,8 @@
 import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
-import { getAuditLogService } from '../../utils/services';
+import { getAuditLogService, getWhitelistService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
 import { getPluginConfig } from '../../utils/pluginConfig';
+import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
 import { LOGOUT_USERINFO_TIMEOUT_MS, OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 import type { StrapiContext, AuditAction } from '../../types';
 
@@ -28,7 +29,11 @@ export async function logout(ctx: StrapiContext) {
   const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;
-  const fallbackUrl = config.OIDC_SKIP_LOGIN_PAGE ? OIDC_SIGN_IN_PATH : loginUrl;
+  const whitelistService = getWhitelistService();
+  const settings = await whitelistService.getSettings();
+  const fallbackUrl = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
+    ? OIDC_SIGN_IN_PATH
+    : loginUrl;
 
   // Read before clearing (cookies are gone after clearAuthCookies).
   const isOidcSession = !!ctx.cookies.get(COOKIE_NAMES.authenticated);

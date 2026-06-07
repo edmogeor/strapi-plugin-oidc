@@ -20,7 +20,7 @@ export default function whitelistService({ strapi }: { strapi: Core.Strapi }) {
       }
       let settings = (await getPluginStore().get({ key: 'settings' })) as WhitelistSettings | null;
       if (!settings) {
-        settings = { useWhitelist: true, enforceOIDC: false };
+        settings = { useWhitelist: true, enforceOIDC: false, skipLoginPage: false };
         await getPluginStore().set({ key: 'settings', value: settings });
       }
       settingsCache = { value: settings, ts: now };

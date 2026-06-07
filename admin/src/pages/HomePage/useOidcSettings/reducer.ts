@@ -5,6 +5,7 @@ type SettingsSnapshot = {
   users: WhitelistUser[];
   useWhitelist: boolean;
   enforceOIDC: boolean;
+  skipLoginPage: boolean;
 };
 
 type State = {
@@ -12,6 +13,7 @@ type State = {
   initial: SettingsSnapshot;
   roles: RoleDef[];
   enforceOIDCConfig: boolean | null;
+  skipLoginPageConfig: boolean | null;
   auditLogEnabled: boolean;
   loading: boolean;
   showSuccess: boolean;
@@ -25,6 +27,7 @@ type Action =
       type: 'hydrate/whitelist';
       snapshot: Partial<SettingsSnapshot>;
       enforceOIDCConfig: boolean | null;
+      skipLoginPageConfig: boolean | null;
       auditLogEnabled: boolean;
     }
   | { type: 'patch/oidcRole'; oidcId: string; values: string[] }
@@ -34,6 +37,7 @@ type Action =
   | { type: 'users/replace'; users: WhitelistUser[] }
   | { type: 'toggle/useWhitelist'; value: boolean }
   | { type: 'toggle/enforceOIDC'; value: boolean }
+  | { type: 'toggle/skipLoginPage'; value: boolean }
   | { type: 'commit'; snapshot?: Partial<SettingsSnapshot> }
   | { type: 'loading'; value: boolean }
   | { type: 'flash/success' }
@@ -45,6 +49,7 @@ const defaultSnapshot: SettingsSnapshot = {
   users: [],
   useWhitelist: false,
   enforceOIDC: false,
+  skipLoginPage: false,
 };
 
 export const initialState: State = {
@@ -52,6 +57,7 @@ export const initialState: State = {
   initial: { ...defaultSnapshot },
   roles: [],
   enforceOIDCConfig: null,
+  skipLoginPageConfig: null,
   auditLogEnabled: true,
   loading: false,
   showSuccess: false,
@@ -83,12 +89,14 @@ function reduceHydrate(state: State, action: Action): State | null {
         users: action.snapshot.users ?? state.current.users,
         useWhitelist: action.snapshot.useWhitelist ?? state.current.useWhitelist,
         enforceOIDC: action.snapshot.enforceOIDC ?? state.current.enforceOIDC,
+        skipLoginPage: action.snapshot.skipLoginPage ?? state.current.skipLoginPage,
       };
       return {
         ...state,
         current: snapshot,
         initial: structuredClone(snapshot),
         enforceOIDCConfig: action.enforceOIDCConfig,
+        skipLoginPageConfig: action.skipLoginPageConfig,
         auditLogEnabled: action.auditLogEnabled,
       };
     }
@@ -146,6 +154,8 @@ function reduceWhitelist(state: State, action: Action): State | null {
       };
     case 'toggle/enforceOIDC':
       return { ...state, current: { ...state.current, enforceOIDC: action.value } };
+    case 'toggle/skipLoginPage':
+      return { ...state, current: { ...state.current, skipLoginPage: action.value } };
     default:
       return null;
   }

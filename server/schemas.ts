@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const updateSettingsSchema = z.object({
   useWhitelist: z.boolean(),
   enforceOIDC: z.boolean(),
+  skipLoginPage: z.boolean(),
 });
 
 export const registerSchema = z.object({

@@ -38,8 +38,8 @@ describe('pluginConfig utils', () => {
   });
 
   describe('OIDC_SKIP_LOGIN_PAGE', () => {
-    it('returns false by default', () => {
-      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBe(false);
+    it('returns null by default (deferring to DB)', () => {
+      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBeNull();
     });
 
     it('returns true when configured', () => {
@@ -50,6 +50,11 @@ describe('pluginConfig utils', () => {
     it('coerces string "true" to true', () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_SKIP_LOGIN_PAGE: 'true' });
       expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBe(true);
+    });
+
+    it('returns null for invalid string values', () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_SKIP_LOGIN_PAGE: 'yes' });
+      expect(pluginConfig.getPluginConfig().OIDC_SKIP_LOGIN_PAGE).toBeNull();
     });
   });
 

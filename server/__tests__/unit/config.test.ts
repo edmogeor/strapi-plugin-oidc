@@ -4,9 +4,9 @@ import type { PluginConfig } from '../../../shared/config';
 
 describe('pluginConfigSchema', () => {
   describe('OIDC_SKIP_LOGIN_PAGE', () => {
-    it('defaults to false when not provided', () => {
+    it('defaults to null when not provided', () => {
       const result = pluginConfigSchema.parse({});
-      expect(result.OIDC_SKIP_LOGIN_PAGE).toBe(false);
+      expect(result.OIDC_SKIP_LOGIN_PAGE).toBeNull();
     });
 
     it('accepts boolean true', () => {
@@ -39,12 +39,14 @@ describe('pluginConfigSchema', () => {
       expect(result.OIDC_SKIP_LOGIN_PAGE).toBe(false);
     });
 
-    it('throws for invalid string values', () => {
-      expect(() => pluginConfigSchema.parse({ OIDC_SKIP_LOGIN_PAGE: 'yes' })).toThrow();
+    it('defaults to null for invalid string values', () => {
+      const result = pluginConfigSchema.parse({ OIDC_SKIP_LOGIN_PAGE: 'yes' });
+      expect(result.OIDC_SKIP_LOGIN_PAGE).toBeNull();
     });
 
-    it('throws for non-boolean non-string values', () => {
-      expect(() => pluginConfigSchema.parse({ OIDC_SKIP_LOGIN_PAGE: 42 })).toThrow();
+    it('defaults to null for non-boolean non-string values', () => {
+      const result = pluginConfigSchema.parse({ OIDC_SKIP_LOGIN_PAGE: 42 });
+      expect(result.OIDC_SKIP_LOGIN_PAGE).toBeNull();
     });
   });
 
@@ -63,7 +65,7 @@ describe('pluginConfigSchema', () => {
         OIDC_GROUP_ROLE_MAP: '{}',
         OIDC_REQUIRE_EMAIL_VERIFIED: true,
         OIDC_FORCE_SECURE_COOKIES: false,
-        OIDC_SKIP_LOGIN_PAGE: false,
+        OIDC_SKIP_LOGIN_PAGE: null,
       };
       for (const [key, expected] of Object.entries(defaults)) {
         expect((result as Record<string, unknown>)[key]).toBe(expected);

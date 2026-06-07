@@ -1,5 +1,6 @@
 import type { Context } from 'koa';
 import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
+import { getSkipLoginPageConfig, resolveSkipLoginPage } from '../utils/skipLoginPage';
 import { isAuditLogEnabled, getPluginConfig } from '../utils/pluginConfig';
 import { isValidEmail } from '../utils/email';
 import { getWhitelistService } from '../utils/services';
@@ -21,6 +22,8 @@ async function info(ctx: Context) {
     useWhitelist: settings.useWhitelist,
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     enforceOIDCConfig: getEnforceOIDCConfig(strapi),
+    skipLoginPage: resolveSkipLoginPage(strapi, settings.skipLoginPage),
+    skipLoginPageConfig: getSkipLoginPageConfig(strapi),
     whitelistUsers,
     auditLogEnabled: isAuditLogEnabled(),
   };
@@ -33,7 +36,7 @@ async function updateSettings(ctx: Context) {
     ctx.body = { error: errorMessages.WHITELIST_INVALID_REQUEST };
     return;
   }
-  const { useWhitelist, enforceOIDC } = parsed.data;
+  const { useWhitelist, enforceOIDC, skipLoginPage } = parsed.data;
   let enforceOIDCParsed = enforceOIDC;
   const whitelistService = getWhitelistService();
 
@@ -44,8 +47,12 @@ async function updateSettings(ctx: Context) {
     }
   }
 
-  await whitelistService.setSettings({ useWhitelist, enforceOIDC: enforceOIDCParsed });
-  ctx.body = { useWhitelist, enforceOIDC: enforceOIDCParsed };
+  await whitelistService.setSettings({
+    useWhitelist,
+    enforceOIDC: enforceOIDCParsed,
+    skipLoginPage,
+  });
+  ctx.body = { useWhitelist, enforceOIDC: enforceOIDCParsed, skipLoginPage };
 }
 
 async function publicSettings(ctx: Context) {
@@ -55,7 +62,7 @@ async function publicSettings(ctx: Context) {
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
-    skipLoginPage: config.OIDC_SKIP_LOGIN_PAGE,
+    skipLoginPage: resolveSkipLoginPage(strapi, settings.skipLoginPage),
   };
 }
 

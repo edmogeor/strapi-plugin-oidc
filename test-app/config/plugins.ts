@@ -16,7 +16,6 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       OIDC_GROUP_FIELD: env('OIDC_GROUP_FIELD', 'groups'),
       OIDC_GROUP_ROLE_MAP: env('OIDC_GROUP_ROLE_MAP', '{}'),
       OIDC_TRUSTED_IP_HEADER: env('OIDC_TRUSTED_IP_HEADER', ''),
-      OIDC_SKIP_LOGIN_PAGE: env('OIDC_SKIP_LOGIN_PAGE', false),
     },
   },
 });

@@ -44,7 +44,7 @@ export const pluginConfigSchema = z.object({
   OIDC_JWKS_URI: z.string().default(''),
   OIDC_ISSUER: z.string().default(''),
   OIDC_FORCE_SECURE_COOKIES: coerceBool(false),
-  OIDC_SKIP_LOGIN_PAGE: coerceBool(false),
+  OIDC_SKIP_LOGIN_PAGE: coerceBoolNullable,
 });
 
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;
