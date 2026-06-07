@@ -46,6 +46,7 @@ module.exports = ({ env }) => ({
       OIDC_GIVEN_NAME_FIELD: 'given_name',
       OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
       OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
+      OIDC_SKIP_LOGIN_PAGE: null, // null = use Admin UI toggle; true/false = override in config
       REMEMBER_ME: false, // Persist session across browser restarts
       AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
       OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
@@ -53,7 +54,6 @@ module.exports = ({ env }) => ({
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
       OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when Koa proxy mode is enabled (see below)
       OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
-      OIDC_SKIP_LOGIN_PAGE: false, // Skip the Strapi login page; redirects unauthenticated users straight to the OIDC provider
     },
   },
 });
@@ -123,6 +123,10 @@ Manage the plugin under **Settings → OIDC Plugin**.
 **Enforce OIDC Login** — Removes email/password fields from the login page and blocks direct login API calls. Automatically disabled when the whitelist is empty to prevent lockout.
 
 The toggle is grayed out when `OIDC_ENFORCE` is set in config. **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi.
+
+**Skip Login Page** — Redirects unauthenticated users straight to the OIDC provider without showing the Strapi login page. Toggle under **Settings → Login Settings**.
+
+The toggle is grayed out when `OIDC_SKIP_LOGIN_PAGE` is set in config. Set `OIDC_SKIP_LOGIN_PAGE: false` in your plugin config to disable and restart Strapi.
 
 ## Group-to-Role Mapping
 
@@ -337,7 +341,7 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 
 - OIDC-only (removed other SSO methods)
 - Redesigned whitelist and role management UI using native Strapi components
-- OIDC enforcement via admin toggle or `OIDC_ENFORCE` config
+- OIDC enforcement and skip-login-page via admin toggles, overridable via `OIDC_ENFORCE` / `OIDC_SKIP_LOGIN_PAGE` config
 - RP-initiated logout with smart session detection
 - Migrated to Vitest with e2e coverage
 - Config variable names aligned with OIDC discovery document field names

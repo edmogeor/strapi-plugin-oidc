@@ -103,9 +103,9 @@
   "audit.login_failure": "Fout: {message}",
   "audit.roles_updated": "Rollen bijgewerkt naar: {roles}",
   "audit.user_created": "Rollen toegewezen: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "Loginpagina overslaan",
+  "skipLoginPage.toggle.enabled": "Ingeschakeld",
+  "skipLoginPage.toggle.disabled": "Uitgeschakeld",
+  "skipLoginPage.warning": "Gebruikers worden rechtstreeks doorgestuurd naar de OIDC-provider zonder de Strapi-inlogpagina te zien. Zorg ervoor dat uw OIDC-provider correct is geconfigureerd.",
+  "skipLoginPage.config.info": "Het overslaan van de loginpagina wordt beheerd door de configuratievariabele OIDC_SKIP_LOGIN_PAGE en kan hier niet worden gewijzigd."
 }

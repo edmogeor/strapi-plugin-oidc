@@ -103,9 +103,9 @@
   "audit.login_failure": "Hata: {message}",
   "audit.roles_updated": "Roller şu şekilde güncellendi: {roles}",
   "audit.user_created": "Atanan roller: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "Giriş Sayfasını Atla",
+  "skipLoginPage.toggle.enabled": "Etkin",
+  "skipLoginPage.toggle.disabled": "Devre Dışı",
+  "skipLoginPage.warning": "Kullanıcılar, Strapi giriş sayfasını görmeden doğrudan OIDC sağlayıcısına yönlendirilecektir. OIDC sağlayıcınızın doğru yapılandırıldığından emin olun.",
+  "skipLoginPage.config.info": "Giriş sayfasını atlama, OIDC_SKIP_LOGIN_PAGE yapılandırma değişkeni tarafından kontrol edilir ve burada değiştirilemez."
 }

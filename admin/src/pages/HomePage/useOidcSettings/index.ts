@@ -2,6 +2,7 @@ import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { downloadJson } from '../../../utils/download';
 import { initialState, reducer } from './reducer';
+import type { WhitelistUser } from '../../../types';
 
 function isDirtyPrimitive(a: boolean, b: boolean): boolean {
   return a !== b;
@@ -15,6 +16,21 @@ export function useOidcSettings() {
   const { get, put, post } = useFetchClient();
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  const hydrateWhitelist = useCallback((data: Record<string, unknown>) => {
+    dispatch({
+      type: 'hydrate/whitelist',
+      snapshot: {
+        users: data.whitelistUsers as WhitelistUser[],
+        useWhitelist: data.useWhitelist as boolean,
+        enforceOIDC: data.enforceOIDC as boolean,
+        skipLoginPage: data.skipLoginPage as boolean,
+      },
+      enforceOIDCConfig: (data.enforceOIDCConfig as boolean | undefined) ?? null,
+      skipLoginPageConfig: (data.skipLoginPageConfig as boolean | undefined) ?? null,
+      auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
+    });
+  }, []);
+
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
       dispatch({ type: 'hydrate/oidcRoles', oidcRoles: response.data });
@@ -23,21 +39,9 @@ export function useOidcSettings() {
       dispatch({ type: 'hydrate/roles', roles: response.data.data });
     });
     get('/strapi-plugin-oidc/whitelist').then((response) => {
-      const data = response.data;
-      dispatch({
-        type: 'hydrate/whitelist',
-        snapshot: {
-          users: data.whitelistUsers,
-          useWhitelist: data.useWhitelist,
-          enforceOIDC: data.enforceOIDC,
-          skipLoginPage: data.skipLoginPage,
-        },
-        enforceOIDCConfig: data.enforceOIDCConfig ?? null,
-        skipLoginPageConfig: data.skipLoginPageConfig ?? null,
-        auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
-      });
+      hydrateWhitelist(response.data);
     });
-  }, [get]);
+  }, [get, hydrateWhitelist]);
 
   const onChangeRole = useCallback((values: string[], oidcId: string) => {
     dispatch({ type: 'patch/oidcRole', oidcId, values });
@@ -119,19 +123,7 @@ export function useOidcSettings() {
       dispatch({ type: 'commit' });
 
       const getResponse = await get('/strapi-plugin-oidc/whitelist');
-      const data = getResponse.data;
-      dispatch({
-        type: 'hydrate/whitelist',
-        snapshot: {
-          users: data.whitelistUsers,
-          useWhitelist: data.useWhitelist,
-          enforceOIDC: data.enforceOIDC,
-          skipLoginPage: data.skipLoginPage,
-        },
-        enforceOIDCConfig: data.enforceOIDCConfig ?? null,
-        skipLoginPageConfig: data.skipLoginPageConfig ?? null,
-        auditLogEnabled: (data.auditLogEnabled as boolean) ?? true,
-      });
+      hydrateWhitelist(getResponse.data);
 
       dispatch({ type: 'flash/success' });
       setTimeout(() => dispatch({ type: 'flash/clear', kind: 'success' }), 3000);

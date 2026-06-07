@@ -103,9 +103,9 @@
   "audit.login_failure": "오류: {message}",
   "audit.roles_updated": "역할이 다음과 같이 업데이트되었습니다: {roles}",
   "audit.user_created": "할당된 역할: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "로그인 페이지 건너뛰기",
+  "skipLoginPage.toggle.enabled": "활성화됨",
+  "skipLoginPage.toggle.disabled": "비활성화됨",
+  "skipLoginPage.warning": "사용자는 Strapi 로그인 페이지를 보지 않고 OIDC 공급자로 직접 리디렉션됩니다. OIDC 공급자가 올바르게 구성되었는지 확인하세요.",
+  "skipLoginPage.config.info": "로그인 페이지 건너뛰기는 OIDC_SKIP_LOGIN_PAGE 구성 변수에 의해 제어되며 여기서 변경할 수 없습니다."
 }

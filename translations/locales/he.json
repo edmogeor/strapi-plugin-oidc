@@ -103,9 +103,9 @@
   "audit.login_failure": "שגיאה: {message}",
   "audit.roles_updated": "התפקידים עודכנו ל: {roles}",
   "audit.user_created": "התפקידים שהוקצו: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "דלג על דף ההתחברות",
+  "skipLoginPage.toggle.enabled": "מופעל",
+  "skipLoginPage.toggle.disabled": "מושבת",
+  "skipLoginPage.warning": "משתמשים יופנו ישירות לספק ה-OIDC מבלי לראות את דף ההתחברות של Strapi. ודא שספק ה-OIDC שלך מוגדר כראוי.",
+  "skipLoginPage.config.info": "דילוג על דף ההתחברות נשלט על ידי משתנה התצורה OIDC_SKIP_LOGIN_PAGE ולא ניתן לשנותו כאן."
 }

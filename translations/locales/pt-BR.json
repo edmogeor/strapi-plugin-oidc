@@ -103,9 +103,9 @@
   "audit.login_failure": "Erro: {message}",
   "audit.roles_updated": "Papéis atualizados para: {roles}",
   "audit.user_created": "Papéis atribuídos: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "Pular página de login",
+  "skipLoginPage.toggle.enabled": "Habilitado",
+  "skipLoginPage.toggle.disabled": "Desabilitado",
+  "skipLoginPage.warning": "Os usuários serão redirecionados diretamente para o provedor OIDC sem ver a página de login do Strapi. Certifique-se de que seu provedor OIDC esteja configurado corretamente.",
+  "skipLoginPage.config.info": "Pular a página de login é controlado pela variável de configuração OIDC_SKIP_LOGIN_PAGE e não pode ser alterado aqui."
 }

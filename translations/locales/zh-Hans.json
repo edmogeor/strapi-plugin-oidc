@@ -103,9 +103,9 @@
   "audit.login_failure": "错误：{message}",
   "audit.roles_updated": "角色已更新为：{roles}",
   "audit.user_created": "已分配的角色：{roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "跳过登录页面",
+  "skipLoginPage.toggle.enabled": "已启用",
+  "skipLoginPage.toggle.disabled": "已禁用",
+  "skipLoginPage.warning": "用户将直接重定向到 OIDC 提供商，而不会看到 Strapi 登录页面。请确保您的 OIDC 提供商已正确配置。",
+  "skipLoginPage.config.info": "跳过登录页面由 OIDC_SKIP_LOGIN_PAGE 配置变量控制，无法在此更改。"
 }

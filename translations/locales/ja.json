@@ -103,9 +103,9 @@
   "audit.login_failure": "エラー：{message}",
   "audit.roles_updated": "役割が次のように更新されました：{roles}",
   "audit.user_created": "割り当てられた役割：{roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "ログインページをスキップ",
+  "skipLoginPage.toggle.enabled": "有効",
+  "skipLoginPage.toggle.disabled": "無効",
+  "skipLoginPage.warning": "ユーザーはStrapiのログインページを表示せずに、OIDCプロバイダーに直接リダイレクトされます。OIDCプロバイダーが正しく設定されていることを確認してください。",
+  "skipLoginPage.config.info": "ログインページのスキップは設定変数 OIDC_SKIP_LOGIN_PAGE によって制御されており、ここでは変更できません。"
 }

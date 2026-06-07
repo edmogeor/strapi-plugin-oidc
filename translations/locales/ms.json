@@ -103,9 +103,9 @@
   "audit.login_failure": "Ralat: {message}",
   "audit.roles_updated": "Peranan dikemas kini kepada: {roles}",
   "audit.user_created": "Peranan yang diperuntukkan: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "Langkau Halaman Log Masuk",
+  "skipLoginPage.toggle.enabled": "Dihidupkan",
+  "skipLoginPage.toggle.disabled": "Dimatikan",
+  "skipLoginPage.warning": "Pengguna akan dialihkan terus ke penyedia OIDC tanpa melihat halaman log masuk Strapi. Pastikan penyedia OIDC anda dikonfigurasikan dengan betul.",
+  "skipLoginPage.config.info": "Melangkau halaman log masuk dikawal oleh pemboleh ubah konfigurasi OIDC_SKIP_LOGIN_PAGE dan tidak boleh diubah di sini."
 }

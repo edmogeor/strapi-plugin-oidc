@@ -103,9 +103,9 @@
   "audit.login_failure": "ข้อผิดพลาด: {message}",
   "audit.roles_updated": "อัปเดตบทบาทเป็น: {roles}",
   "audit.user_created": "บทบาทที่กำหนด: {roles}",
-  "skipLoginPage.title": "Skip Login Page",
-  "skipLoginPage.toggle.enabled": "Enabled",
-  "skipLoginPage.toggle.disabled": "Disabled",
-  "skipLoginPage.warning": "Users will be redirected directly to the OIDC provider without seeing the Strapi login page. Ensure your OIDC provider is correctly configured.",
-  "skipLoginPage.config.info": "Skip login page is controlled by the OIDC_SKIP_LOGIN_PAGE config variable and cannot be changed here."
+  "skipLoginPage.title": "ข้ามหน้าเข้าสู่ระบบ",
+  "skipLoginPage.toggle.enabled": "เปิดใช้งาน",
+  "skipLoginPage.toggle.disabled": "ปิดใช้งาน",
+  "skipLoginPage.warning": "ผู้ใช้จะถูกเปลี่ยนเส้นทางไปยังผู้ให้บริการ OIDC โดยตรงโดยไม่เห็นหน้าล็อกอินของ Strapi ตรวจสอบให้แน่ใจว่าผู้ให้บริการ OIDC ของคุณได้รับการกำหนดค่าอย่างถูกต้อง",
+  "skipLoginPage.config.info": "การข้ามหน้าล็อกอินถูกควบคุมโดยตัวแปรการกำหนดค่า OIDC_SKIP_LOGIN_PAGE และไม่สามารถเปลี่ยนแปลงได้ที่นี่"
 }
