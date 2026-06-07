@@ -35,10 +35,10 @@ module.exports = ({ env }) => ({
     enabled: true,
     config: {
       // Required
+      STRAPI_URL: env('STRAPI_URL'), // https://your-strapi.com
       OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
-      STRAPI_URL: env('STRAPI_URL'), // https://your-strapi.com (origin only — we append /strapi-plugin-oidc/oidc/callback)
 
       // Optional — defaults shown
       OIDC_SCOPE: 'openid profile email', // space-separated scopes
@@ -59,9 +59,9 @@ module.exports = ({ env }) => ({
 });
 ```
 
-`OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
-
 `STRAPI_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. Only provide the scheme + host + port — no trailing slash or path.
+
+`OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
 
 ### Security features
 
@@ -99,17 +99,6 @@ Only headers that CDN/proxy vendors guarantee to strip from inbound client reque
 ## Login
 
 Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button injected into the Strapi login page.
-
-## Skip Login Page
-
-Set `OIDC_SKIP_LOGIN_PAGE: true` to prevent users from ever seeing the Strapi admin login page. Unauthenticated requests are redirected directly to the OIDC provider. This is typically used alongside `OIDC_ENFORCE: true`.
-
-Two independent mechanisms cover both entry points:
-
-- **Server-side** — A Koa middleware intercepts unauthenticated GET requests to `/admin` and redirects to `/strapi-plugin-oidc/oidc` before the SPA is served. Excluded from this redirect: API routes (`/admin/login`, `/admin/logout`, `/admin/init`, etc.), static assets (`.js`, `.css`, `.png`, etc.), and POST requests.
-- **Client-side** — A synchronous redirect in the plugin's `bootstrap()` runs before React mounts. It checks for the absence of a `jwtToken` in `localStorage` and cookies, wipes the document, and navigates to `/strapi-plugin-oidc/oidc`. A 2-second fallback `window.location.href` provides a safety net if `replace` is blocked. The server gate (`signIn` controller) either proceeds with OIDC or bounces back with `?oidc_redirect=1` (which the client detects to break the redirect loop).
-
-After logout without a provider `end_session_endpoint`, the fallback URL becomes `/strapi-plugin-oidc/oidc` instead of `/admin/auth/login`, ensuring the user lands on the provider's own page.
 
 ## Logout
 
