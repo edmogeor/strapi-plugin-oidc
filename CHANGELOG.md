@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.10.2] - 2026-06-06
+## [1.10.3] - 2026-06-07
+
+### Fixed
+
+- **Login page flash** — The client-side redirect now covers all admin paths (not just auth routes) by checking for `jwtToken` absence in `localStorage` and cookies. The document is wiped (`innerHTML = ''`) before navigating, so the login form never mounts even if the redirect stalls. A 2-second fallback `href` navigation provides a safety net. The server gate (`signIn` controller) persists: it either proceeds with OIDC or bounces back with `?oidc_redirect=1`.
+
+### Changed
+
+- **Maintainability improvements** — `AUTH_ROUTES` moved to `shared/constants.ts` as single-source-of-truth; `jwtToken` magic string extracted to `JWT_TOKEN_KEY`; redirect decision extracted to pure `shouldRedirectToOidc()` with 6 unit tests; `as string` casts replaced with runtime type narrowing in `bootstrap.ts` and `signIn.ts`.
+- **Code simplification** — `AUTH_ROUTES_WITHOUT_REGISTER_ADMIN` removed (client filters inline); `applySettings` DRY'd by inverting `response.ok` check.
+
+---
 
 ### Fixed
 
