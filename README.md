@@ -35,7 +35,7 @@ module.exports = ({ env }) => ({
     enabled: true,
     config: {
       // Required
-      OIDC_PUBLIC_URL: env('PUBLIC_URL', 'http://localhost:1337'), // origin only — we append /strapi-plugin-oidc/oidc/callback
+      OIDC_PUBLIC_URL: env('PUBLIC_URL', 'https://strapi.example.com'), // origin only — we append /strapi-plugin-oidc/oidc/callback
       OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
       OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
       OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
