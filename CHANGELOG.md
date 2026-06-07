@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Renamed `OIDC_REDIRECT_URI` to `OIDC_PUBLIC_URL`** — Users now provide just their Strapi origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` automatically. The old full-URL format is no longer supported.
-- **README updates** — `OIDC_PUBLIC_URL` moved to first required config item; verbose Skip Login Page section removed.
+- **Renamed `OIDC_REDIRECT_URI` to `OIDC_PUBLIC_URL`** — Users now provide just their Strapi origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` automatically. Falls back to the `PUBLIC_URL` environment variable if unset. In production, one of the two must be set; in development, defaults to `http://localhost:1337`.
+- **README updates** — `OIDC_PUBLIC_URL` moved to first required config item; verbose Skip Login Page section removed; API examples use `https://strapi.example.com`.
 
 ---
 
