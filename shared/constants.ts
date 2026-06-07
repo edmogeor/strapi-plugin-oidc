@@ -56,10 +56,6 @@ export const AUTH_ROUTES = [
   'reset-password',
 ] as const;
 
-export const AUTH_ROUTES_WITHOUT_REGISTER_ADMIN: readonly string[] = AUTH_ROUTES.filter(
-  (r) => r !== 'register-admin',
-);
-
 export const JWT_TOKEN_KEY = 'jwtToken' as const;
 
 export const UI_DEFAULTS = {

@@ -5,12 +5,7 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
-import {
-  PERMISSIONS,
-  AUTH_ROUTES_WITHOUT_REGISTER_ADMIN,
-  JWT_TOKEN_KEY,
-  OIDC_SIGN_IN_PATH,
-} from '../../shared/constants';
+import { PERMISSIONS, AUTH_ROUTES, JWT_TOKEN_KEY, OIDC_SIGN_IN_PATH } from '../../shared/constants';
 import { shouldRedirectToOidc } from './utils/shouldRedirect';
 import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
@@ -46,7 +41,8 @@ export default {
   },
 
   bootstrap() {
-    const authRoutePattern = new RegExp(`/auth/(${AUTH_ROUTES_WITHOUT_REGISTER_ADMIN.join('|')})`);
+    const authRouteNames = AUTH_ROUTES.filter((r) => r !== 'register-admin');
+    const authRoutePattern = new RegExp(`/auth/(${authRouteNames.join('|')})`);
 
     const isAuthRoute = (path: string) => authRoutePattern.test(path);
 
@@ -172,16 +168,16 @@ export default {
     const applySettings = async () => {
       try {
         const response = await window.fetch('/strapi-plugin-oidc/settings/public');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.skipLoginPage) {
-            startSkipLoginRedirect();
-            return;
-          }
-          startLoginObserver(data.ssoButtonText || defaultButtonText, !!data.enforceOIDC);
-        } else {
+        if (!response.ok) {
           startLoginObserver(defaultButtonText, false);
+          return;
         }
+        const data = await response.json();
+        if (data.skipLoginPage) {
+          startSkipLoginRedirect();
+          return;
+        }
+        startLoginObserver(data.ssoButtonText || defaultButtonText, !!data.enforceOIDC);
       } catch (error) {
         startLoginObserver(defaultButtonText, false);
         console.error('Failed to fetch OIDC settings:', error);

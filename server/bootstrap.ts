@@ -17,7 +17,9 @@ const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.js
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   await applyDiscovery(strapi);
-  const adminUrl = strapi.config.get('admin.url', '/admin') as string;
+  const rawAdminUrl = strapi.config.get('admin.url');
+  const adminUrl =
+    typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';
   const tokenRefreshPath = `${adminUrl}/token/refresh`;
 
   const EXCLUDED_ADMIN_PATHS = [
