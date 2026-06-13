@@ -1,0 +1,116 @@
+name: Bug Report
+description: Report a problem with the plugin
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out the sections below so we can reproduce and fix the issue quickly.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I have searched existing issues and this has not already been reported.
+          required: true
+        - label: I am using a supported version of the plugin and Strapi.
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Tell us how to reproduce the behavior.
+      placeholder: |
+        1. Configure the plugin with '...'
+        2. Navigate to '...'
+        3. Click on '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Paste any relevant log output, errors, or screenshots. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: config
+    attributes:
+      label: Plugin configuration
+      description: 'Your `strapi-plugin-oidc` config block from `config/plugins.js`. **Redact secrets** (e.g. `OIDC_CLIENT_SECRET`).'
+      render: javascript
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment setup
+      description: How is Strapi reachable? Many issues (Secure cookies, redirect URI scheme, client IP) depend on this.
+      options:
+        - Local development (localhost)
+        - Direct (no reverse proxy)
+        - Behind a reverse proxy / CDN (nginx, Cloudflare, etc.)
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      placeholder: e.g. 1.10.9
+    validations:
+      required: true
+  - type: dropdown
+    id: strapi-version
+    attributes:
+      label: Strapi version
+      options:
+        - Strapi 5.x
+        - Strapi 4.x
+        - Other (specify in description)
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      placeholder: e.g. 20.11.0
+    validations:
+      required: false
+  - type: dropdown
+    id: provider
+    attributes:
+      label: OIDC provider
+      description: Which identity provider are you using?
+      options:
+        - Keycloak
+        - Azure AD / Entra ID
+        - Auth0
+        - Okta
+        - Google
+        - Other (specify in description)
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here (configuration, environment, etc.).
+    validations:
+      required: false

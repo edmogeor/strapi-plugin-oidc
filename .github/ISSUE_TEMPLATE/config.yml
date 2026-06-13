@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / Discussion
+    url: https://github.com/edmogeor/strapi-plugin-oidc/discussions
+    about: Ask questions and discuss usage of the plugin here.
+  - name: Strapi Documentation
+    url: https://docs.strapi.io
+    about: General Strapi questions are best answered in the official docs.
