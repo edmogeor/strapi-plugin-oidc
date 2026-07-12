@@ -14,9 +14,6 @@
     <a href="./LICENSE">
       <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"/>
     </a>
-    <a href="https://buymeacoffee.com/edmogeor">
-      <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-edmogeor-orange" alt="Buy Me a Coffee"/>
-    </a>
   </p>
 </div>
 
@@ -352,6 +349,10 @@ This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudaclo
 - Whitelist REST API with JSON import/export, bulk delete, delete by email
 - Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, generic error messages on failure
 - Audit log: records all auth events to a queryable table with UI, JSON/NDJSON export, and REST API
+
+## Donations
+
+<a href="https://www.buymeacoffee.com/edmogeor" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## License
 
