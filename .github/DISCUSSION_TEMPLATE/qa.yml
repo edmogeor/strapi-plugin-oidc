@@ -1,0 +1,20 @@
+name: Q&A
+description: Ask a question about setting up or using the plugin
+body:
+  - type: input
+    id: strapi_version
+    attributes:
+      label: Strapi version
+      placeholder: '5.x'
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin version
+      placeholder: '1.10.9'
+  - type: textarea
+    id: body
+    attributes:
+      label: Question
+      description: What do you need help with?
+    validations:
+      required: true
