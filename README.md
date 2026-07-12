@@ -14,6 +14,9 @@
     <a href="./LICENSE">
       <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"/>
     </a>
+    <a href="https://buymeacoffee.com/edmogeor">
+      <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-edmogeor-orange" alt="Buy Me a Coffee"/>
+    </a>
   </p>
 </div>
 
