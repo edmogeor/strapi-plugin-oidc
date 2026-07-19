@@ -24,12 +24,7 @@ function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
   const msg = toMessage(e);
 
   let params: Record<string, string | number> | undefined;
-  if (
-    kind === 'id_token_parse_failed' ||
-    kind === 'id_token_invalid' ||
-    kind === 'provider_response_invalid' ||
-    kind === 'unknown'
-  ) {
+  if (kind === 'unknown') {
     params = { error: msg };
   } else if (kind === 'user_creation_failed' && userInfo?.email) {
     params = { email: userInfo.email, error: msg };

@@ -371,7 +371,7 @@ describe('cookies utils', () => {
     cookies: { calls: CookieCallArray };
   };
 
-  it('clearAuthCookies clears all OIDC and admin cookies', () => {
+  it('clearAuthCookies clears admin and OIDC cookies', () => {
     const ctx = makeCookieTestCtx(false) as unknown as TestCtx;
     cookiesUtils.clearAuthCookies(strapi, ctx);
     expect(
@@ -380,19 +380,7 @@ describe('cookies utils', () => {
       ),
     ).toBe(true);
     expect(
-      ctx.cookies.calls.some(
-        (c: CookieCall) => c.name === 'oidc_authenticated' && c.opts?.path === '/',
-      ),
-    ).toBe(true);
-    expect(
-      ctx.cookies.calls.some(
-        (c: CookieCall) => c.name === 'oidc_access_token' && c.opts?.path === '/',
-      ),
-    ).toBe(true);
-    expect(
-      ctx.cookies.calls.some(
-        (c: CookieCall) => c.name === 'oidc_user_email' && c.opts?.path === '/',
-      ),
+      ctx.cookies.calls.some((c: CookieCall) => c.name === 'oidc_id_token' && c.opts?.path === '/'),
     ).toBe(true);
   });
 

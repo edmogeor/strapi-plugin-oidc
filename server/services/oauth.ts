@@ -229,7 +229,6 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       }
 
       ctx.cookies.set(COOKIE_NAMES.adminRefresh, refreshToken, cookieOptions);
-      ctx.cookies.set(COOKIE_NAMES.authenticated, '1', { ...cookieOptions, path: '/' });
 
       const accessResult = await smAdmin.generateAccessToken(refreshToken);
       if ('error' in accessResult) {

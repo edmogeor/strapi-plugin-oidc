@@ -16,12 +16,6 @@ export default {
     OIDC_TRUSTED_IP_HEADER: '',
     OIDC_FORCE_SECURE_COOKIES: false,
     OIDC_SKIP_LOGIN_PAGE: null, // null = use DB setting; true/false = override DB
-    // Populated at bootstrap from OIDC_ISSUER — not user-configurable directly
-    OIDC_AUTHORIZATION_ENDPOINT: '',
-    OIDC_TOKEN_ENDPOINT: '',
-    OIDC_USERINFO_ENDPOINT: '',
-    OIDC_END_SESSION_ENDPOINT: '',
-    OIDC_JWKS_URI: '',
     OIDC_ISSUER: '',
   },
   validator() {},

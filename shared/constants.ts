@@ -15,10 +15,7 @@ export const PERMISSIONS = {
   AUDIT_DELETE: `${PLUGIN_UID}.audit.delete`,
 } as const;
 
-export const COOKIE_MAX_AGE_MS = 300000; // 5 minutes
 export const PKCE_COOKIE_MAX_AGE_MS = 600_000; // 10 minutes
-
-export const LOGOUT_USERINFO_TIMEOUT_MS = 1500;
 
 export const AUDIT_LOG_DEFAULTS = {
   PAGE_SIZE: 25,
@@ -42,9 +39,6 @@ export const CACHE_TTL = {
 export const DEFAULT_RETENTION_DAYS = 90;
 
 export const DAY_MS = 86_400_000;
-
-export const DISCOVERY_TIMEOUT_MS = 5000;
-export const OIDC_DISCOVERY_PATH = '/.well-known/openid-configuration';
 
 export const OIDC_SIGN_IN_PATH = '/strapi-plugin-oidc/oidc';
 

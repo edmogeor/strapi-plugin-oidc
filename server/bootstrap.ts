@@ -5,7 +5,7 @@ import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
 import { getSkipLoginPageConfig, resolveSkipLoginPage } from './utils/skipLoginPage';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
-import { applyDiscovery } from './utils/discovery';
+import { resetOidcConfig } from './utils/oidc-client';
 import {
   CONTENT_TYPES as CT,
   PERMISSIONS,
@@ -17,7 +17,7 @@ import { COOKIE_NAMES } from './utils/cookies';
 const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
-  await applyDiscovery(strapi);
+  resetOidcConfig();
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =
     typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';
@@ -78,7 +78,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           return;
         }
 
-        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get(COOKIE_NAMES.authenticated)) {
+        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get(COOKIE_NAMES.idToken)) {
           ctx.status = 401;
           ctx.body = {
             data: null,

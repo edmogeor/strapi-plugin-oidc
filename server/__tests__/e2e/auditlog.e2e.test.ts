@@ -329,7 +329,7 @@ describe('AuditLog E2E Integration', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it('token exchange failure creates a token_exchange_failed audit log entry', async () => {
+  it('token exchange failure creates a login_failure audit log entry', async () => {
     oidcServer.use(
       http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
     );
@@ -339,7 +339,7 @@ describe('AuditLog E2E Integration', () => {
     const state = locationUrl.searchParams.get('state');
     await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`);
 
-    const rows = await queryAuditLog(strapi, 'token_exchange_failed');
+    const rows = await queryAuditLog(strapi, 'login_failure');
     expect(rows.length).toBeGreaterThan(0);
   });
 

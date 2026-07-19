@@ -5,11 +5,9 @@ import type { StrapiContext } from '../types';
 export const COOKIE_NAMES = {
   state: 'oidc_state',
   codeVerifier: 'oidc_code_verifier',
-  nonce: 'oidc_nonce',
-  accessToken: 'oidc_access_token',
+  idToken: 'oidc_id_token',
   userEmail: 'oidc_user_email',
   adminRefresh: 'strapi_admin_refresh',
-  authenticated: 'oidc_authenticated',
 } as const;
 
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
@@ -44,7 +42,5 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
   const rootPathOptions = { ...options, path: '/' };
-  ctx.cookies.set(COOKIE_NAMES.authenticated, '', rootPathOptions);
-  ctx.cookies.set(COOKIE_NAMES.accessToken, '', rootPathOptions);
-  ctx.cookies.set(COOKIE_NAMES.userEmail, '', rootPathOptions);
+  ctx.cookies.set(COOKIE_NAMES.idToken, '', rootPathOptions);
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type {
@@ -12,7 +12,8 @@ import type {
   RegisterBody,
   ImportBody,
 } from './test-types';
-import { makeLogoutCtx, expectCookieCleared } from './test-helpers';
+import { makeLogoutCtx, expectCookieCleared, MOCK_OIDC_CONFIG } from './test-helpers';
+import { resetOidcConfig } from '../../utils/oidc-client';
 
 const whitelistFixture: { email: string }[] = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/whitelist-import.json'), 'utf-8'),
@@ -319,109 +320,53 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
-    it('should redirect to OIDC provider logout URL for OIDC sessions', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-      });
+    beforeEach(() => {
+      resetOidcConfig();
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+    });
 
-      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
+    it('should redirect to OIDC end session URL for OIDC sessions', async () => {
+      const ctxLogout = makeLogoutCtx({ oidc_id_token: 'mock-id-token' });
       await oidcController.logout(ctxLogout);
 
-      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
+      expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, 'oidc_authenticated');
+      expectCookieCleared(ctxLogout, 'oidc_id_token');
     });
 
-    it('should redirect to OIDC end-session when access token is valid', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-      });
-
-      const ctxLogout = makeLogoutCtx({
-        oidc_authenticated: '1',
-        oidc_access_token: 'valid-token',
-      });
-      await oidcController.logout(ctxLogout);
-
-      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
-    });
-
-    it('should redirect to Strapi login when provider explicitly rejects the token (401)', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: null,
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        // mock-oidc.com/userinfo is intercepted by MSW; 'expired-token' returns 401
-        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-      });
+    it('should redirect to Strapi login when no OIDC session (no id_token cookie)', async () => {
       strapi.config.set('admin.url', '/admin');
       await strapi
         .plugin('strapi-plugin-oidc')
         .service('whitelist')
         .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
 
-      const ctxLogout = makeLogoutCtx({
-        oidc_authenticated: '1',
-        oidc_access_token: 'expired-token',
-      });
-      await oidcController.logout(ctxLogout);
-
-      expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
-    });
-
-    it('should still redirect to OIDC provider when userinfo endpoint is unreachable', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        // .invalid TLD is guaranteed to fail DNS — network error should not block provider logout
-        OIDC_USERINFO_ENDPOINT: 'https://provider.invalid/userinfo',
-      });
-      strapi.config.set('admin.url', '/admin');
-
-      const ctxLogout = makeLogoutCtx({
-        oidc_authenticated: '1',
-        oidc_access_token: 'some-token',
-      });
-      await oidcController.logout(ctxLogout);
-
-      expect(ctxLogout.redirectedTo).toBe('https://mock-oidc.com/logout');
-    });
-
-    it('should redirect to admin login for non-OIDC sessions even if OIDC logout URL is configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: null,
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-      });
-      strapi.config.set('admin.url', '/admin');
-      await strapi
-        .plugin('strapi-plugin-oidc')
-        .service('whitelist')
-        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
-
-      const ctxLogout = makeLogoutCtx(); // no oidc_authenticated cookie
+      const ctxLogout = makeLogoutCtx(); // no oidc_id_token cookie
       await oidcController.logout(ctxLogout);
 
       expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
     });
 
-    it('should fallback to Strapi admin auth login if OIDC logout not configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: null,
-        OIDC_END_SESSION_ENDPOINT: undefined,
-      });
-      strapi.config.set('admin.url', '/custom-admin');
+    it('should redirect to OIDC sign-in when skipLoginPage is enabled and no OIDC session', async () => {
+      strapi.config.set('admin.url', '/admin');
       await strapi
         .plugin('strapi-plugin-oidc')
         .service('whitelist')
-        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
+        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: true });
 
-      const ctxLogout = makeLogoutCtx({ oidc_authenticated: '1' });
+      const ctxLogout = makeLogoutCtx(); // no oidc_id_token cookie
       await oidcController.logout(ctxLogout);
 
-      expect(ctxLogout.redirectedTo).toBe('/custom-admin/auth/login');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, 'oidc_authenticated');
+      expect(ctxLogout.redirectedTo).toBe('/strapi-plugin-oidc/oidc');
+    });
+
+    it('should redirect OIDC session to end session URL with id_token_hint', async () => {
+      const ctxLogout = makeLogoutCtx({ oidc_id_token: 'mock-id-token' });
+      await oidcController.logout(ctxLogout);
+
+      expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
+      expect(ctxLogout.redirectedTo).toContain('id_token_hint=');
     });
   });
 });
