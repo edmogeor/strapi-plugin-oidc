@@ -35,7 +35,7 @@ export const OIDC_ERROR_DISPATCH: Record<
   },
   invalid_email: {
     action: 'login_failure',
-    code: errorCodes.TOKEN_EXCHANGE_FAILED,
+    code: errorCodes.SIGN_IN_ERROR,
     key: 'sign_in_unknown',
   },
   email_not_verified: {
@@ -45,7 +45,7 @@ export const OIDC_ERROR_DISPATCH: Record<
   },
   unknown: {
     action: 'login_failure',
-    code: errorCodes.TOKEN_EXCHANGE_FAILED,
+    code: errorCodes.SIGN_IN_ERROR,
     key: 'sign_in_unknown',
   },
 };

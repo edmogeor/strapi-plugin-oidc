@@ -183,7 +183,7 @@ describe('OIDC E2E Tests', () => {
         handler: http.post('https://mock-oidc.com/token', () =>
           HttpResponse.json({}, { status: 401 }),
         ),
-        auditAction: 'token_exchange_failed',
+        auditAction: 'login_failure',
       },
       {
         scenario: 'token response lacks access_token',
@@ -264,6 +264,7 @@ describe('OIDC E2E Tests', () => {
     const userinfoWith = (overrides: Record<string, unknown>) =>
       http.get('https://mock-oidc.com/userinfo', () =>
         HttpResponse.json({
+          sub: 'mock-sub',
           email: 'verify-test@company.com',
           family_name: 'Doe',
           given_name: 'John',
@@ -562,6 +563,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'group-match@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -592,6 +594,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'audit-role@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -678,6 +681,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'role-removed@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -716,6 +720,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'group-changed@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -750,6 +755,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'whitelist-group@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -789,6 +795,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'existing-group@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -829,6 +836,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'no-role-user@test.com',
             email_verified: true,
             family_name: 'Existing',

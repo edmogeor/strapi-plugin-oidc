@@ -29,7 +29,6 @@ async function signMockIdToken(overrides: Record<string, unknown> = {}) {
     aud: 'mock-client-id',
     email: 'test@company.com',
     email_verified: true,
-    nonce: 'mock-nonce',
     ...overrides,
   })
     .setProtectedHeader({ alg: 'RS256', kid: jwk.kid })

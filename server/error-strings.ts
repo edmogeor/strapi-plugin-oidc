@@ -1,5 +1,5 @@
 export const errorCodes = {
-  TOKEN_EXCHANGE_FAILED: 'TOKEN_EXCHANGE_FAILED',
+  SIGN_IN_ERROR: 'SIGN_IN_ERROR',
   ROLE_RESOLUTION_FAILED: 'ROLE_RESOLUTION_FAILED',
   ROLE_UPDATE_FAILED: 'ROLE_UPDATE_FAILED',
   USER_CREATION_FAILED: 'USER_CREATION_FAILED',
@@ -41,21 +41,17 @@ export function getErrorDetail(
 }
 
 export const errorMessages = {
-  TOKEN_EXCHANGE_FAILED: 'Token exchange failed',
+  SIGN_IN_ERROR: 'Sign-in error',
   INVALID_EMAIL: 'Invalid email address received from OIDC provider',
   EMAIL_NOT_VERIFIED: 'Email address has not been verified by the OIDC provider',
   WHITELIST_NOT_PRESENT: 'Not present in whitelist',
   SESSION_MANAGER_UNSUPPORTED:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
-  OIDC_ISSUER_NOT_CONFIGURED:
-    '[strapi-plugin-oidc] OIDC_ISSUER is not configured — discovery skipped. OIDC sign-in will fail until OIDC_ISSUER is set in your plugin config.',
   ENFORCE_MIDDLEWARE_ERROR: 'Error checking OIDC enforcement in middleware:',
   ENFORCE_SYNC_ERROR: '[strapi-plugin-oidc] Failed to sync OIDC_ENFORCE to database:',
   DEFAULT_ROLE_INIT_ERROR: 'Could not initialize default OIDC role:',
   AUDIT_LOG_CLEANUP_ERROR: '[strapi-plugin-oidc] Audit log cleanup failed:',
   AUDIT_LOG_EXPORT_ERROR: 'NDJSON export stream failed',
-  DISCOVERY_FETCH_ERROR: (url: string, reason: string) =>
-    `[strapi-plugin-oidc] Failed to fetch OIDC discovery document from ${url}: ${reason}`,
   MISSING_CONFIG: (keys: string) => `Missing required config keys: ${keys}`,
   WHITELIST_INVALID_EMAIL: 'Please enter a valid email address',
   WHITELIST_INVALID_REQUEST: 'Invalid request body',
