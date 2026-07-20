@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import type { GroupRoleMap } from './constants';
 
+export const oidcUserInfoSchema = z
+  .object({
+    email: z.string().optional(),
+    email_verified: z.union([z.boolean(), z.string()]).optional(),
+    sub: z.string().optional(),
+  })
+  .passthrough();
+
+export type OidcUserInfo = z.infer<typeof oidcUserInfoSchema>;
+
 function toBoolCoerced(v: unknown): boolean | unknown {
   if (typeof v === 'boolean') return v;
   if (v === 'true' || v === '1') return true;

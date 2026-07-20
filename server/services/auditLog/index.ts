@@ -2,6 +2,7 @@ import type { Core } from '@strapi/types';
 import type { AuditEntry, AuditLogRecord } from '../../types';
 import type { AuditLogFilters } from '../../audit-log-filters';
 import { isAuditLogEnabled } from '../../utils/pluginConfig';
+import { getEventHub } from '../../utils/strapi-extensions';
 import { buildWhereClause } from './queryBuilder';
 import { CONTENT_TYPES, AUDIT_LOG_DEFAULTS, DAY_MS } from '../../../shared/constants';
 
@@ -27,14 +28,7 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
         },
       });
 
-      const eventHub =
-        (
-          strapi as Core.Strapi & {
-            serviceMap?: {
-              get: (name: string) => { emit: (event: string, data: unknown) => void };
-            };
-          }
-        ).serviceMap?.get?.('eventHub') ?? strapi.eventHub;
+      const eventHub = getEventHub(strapi);
       if (eventHub) {
         eventHub.emit(`strapi-plugin-oidc::auth.${action}`, {
           email,

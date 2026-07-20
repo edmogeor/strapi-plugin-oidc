@@ -160,26 +160,6 @@ export function mswUserInfoHandler(
   );
 }
 
-export function makeLogoutCtx(initialCookies: Record<string, string> = {}) {
-  const cookieCalls: Array<{ name: string; value: string; opts?: Record<string, unknown> }> = [];
-  return {
-    request: { secure: false },
-    redirectedTo: undefined as string | undefined,
-    cookies: {
-      get(name: string) {
-        return initialCookies[name];
-      },
-      set(name: string, value: string, opts?: Record<string, unknown>) {
-        cookieCalls.push({ name, value, opts });
-      },
-      calls: cookieCalls,
-    },
-    redirect(url: string) {
-      (this as { redirectedTo: string | undefined }).redirectedTo = url;
-    },
-  };
-}
-
 export function makeCookieTestCtx(secure = false) {
   const calls: Array<{ name: string; value: string; opts: Record<string, unknown> }> = [];
   return {
@@ -191,10 +171,6 @@ export function makeCookieTestCtx(secure = false) {
       calls,
     },
   };
-}
-
-export function expectCookieCleared(ctx: ReturnType<typeof makeLogoutCtx>, name: string) {
-  return expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
 }
 
 export function findAdminRefreshCookieCall(ctx: {

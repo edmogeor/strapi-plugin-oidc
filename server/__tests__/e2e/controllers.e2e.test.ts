@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import type {
@@ -6,14 +7,14 @@ import type {
   OidcRole,
   WhitelistController,
   RoleController,
-  OidcController,
   MockCtx,
   WhitelistInfoBody,
   RegisterBody,
   ImportBody,
 } from './test-types';
-import { makeLogoutCtx, expectCookieCleared, MOCK_OIDC_CONFIG } from './test-helpers';
+import { MOCK_OIDC_CONFIG } from './test-helpers';
 import { resetOidcConfig } from '../../utils/oidc-client';
+import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 
 const whitelistFixture: { email: string }[] = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/whitelist-import.json'), 'utf-8'),
@@ -23,13 +24,11 @@ describe('Controllers E2E', () => {
   let strapi: Core.Strapi;
   let whitelistController: WhitelistController;
   let roleController: RoleController;
-  let oidcController: OidcController;
 
   beforeAll(() => {
     strapi = globalThis.strapiInstance;
     whitelistController = strapi.plugin('strapi-plugin-oidc').controller('whitelist');
     roleController = strapi.plugin('strapi-plugin-oidc').controller('role');
-    oidcController = strapi.plugin('strapi-plugin-oidc').controller('oidc');
   });
 
   describe('Whitelist Controller', () => {
@@ -326,12 +325,19 @@ describe('Controllers E2E', () => {
     });
 
     it('should redirect to OIDC end session URL for OIDC sessions', async () => {
-      const ctxLogout = makeLogoutCtx({ '__Host-oidc_id_token': 'mock-id-token' });
-      await oidcController.logout(ctxLogout);
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .set('Cookie', '__Host-oidc_id_token=mock-id-token')
+        .redirects(0);
 
-      expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, '__Host-oidc_id_token');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('https://mock-oidc.com/logout');
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^__Host-oidc_id_token=;/),
+          expect.stringMatching(/^strapi_admin_refresh=;/),
+        ]),
+      );
     });
 
     it('should redirect to Strapi login when no OIDC session (no id_token cookie)', async () => {
@@ -341,11 +347,15 @@ describe('Controllers E2E', () => {
         .service('whitelist')
         .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
 
-      const ctxLogout = makeLogoutCtx(); // no __Host-oidc_id_token cookie
-      await oidcController.logout(ctxLogout);
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .redirects(0);
 
-      expect(ctxLogout.redirectedTo).toBe('/admin/auth/login');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe('/admin/auth/login');
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
+      );
     });
 
     it('should redirect to OIDC sign-in when skipLoginPage is enabled and no OIDC session', async () => {
@@ -355,18 +365,26 @@ describe('Controllers E2E', () => {
         .service('whitelist')
         .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: true });
 
-      const ctxLogout = makeLogoutCtx(); // no __Host-oidc_id_token cookie
-      await oidcController.logout(ctxLogout);
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .redirects(0);
 
-      expect(ctxLogout.redirectedTo).toBe('/strapi-plugin-oidc/oidc');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
+      );
     });
 
     it('should redirect OIDC session to end session URL with id_token_hint', async () => {
-      const ctxLogout = makeLogoutCtx({ '__Host-oidc_id_token': 'mock-id-token' });
-      await oidcController.logout(ctxLogout);
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .set('Cookie', '__Host-oidc_id_token=mock-id-token')
+        .redirects(0);
 
-      expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
-      expect(ctxLogout.redirectedTo).toContain('id_token_hint=');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('https://mock-oidc.com/logout');
+      expect(res.headers.location).toContain('id_token_hint=');
     });
   });
 });

@@ -2,6 +2,7 @@ import * as jose from 'jose';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getAuditLogService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
+import { getSessionManager } from '../../utils/strapi-extensions';
 import type { StrapiContext } from '../../types';
 
 const seenJtis = new Map<string, number>();
@@ -55,6 +56,8 @@ async function persistJti(jti: string): Promise<void> {
 }
 
 export async function pruneStoredJtis(): Promise<void> {
+  pruneJtis();
+
   try {
     const store = getJtiStore();
     const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
@@ -173,17 +176,9 @@ export async function backchannelLogout(ctx: StrapiContext) {
       return;
     }
 
-    const sessionManager = (strapi as { sessionManager?: (...args: unknown[]) => unknown })
-      .sessionManager;
-
-    if (sessionManager) {
-      const origin = sessionManager as unknown as { hasOrigin(origin: string): boolean };
-      const sm = sessionManager as unknown as (origin: string) => {
-        invalidateRefreshToken(id: string): Promise<void>;
-      };
-      if (origin.hasOrigin('admin')) {
-        await sm('admin').invalidateRefreshToken(String(user.id));
-      }
+    const sessionManager = getSessionManager(strapi);
+    if (sessionManager?.hasOrigin('admin')) {
+      await sessionManager('admin').invalidateRefreshToken(String(user.id));
     }
 
     await auditLog.log({ action: 'logout', ip, detailsKey: 'backchannel_logout' });

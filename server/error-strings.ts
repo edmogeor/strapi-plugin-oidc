@@ -1,3 +1,5 @@
+import { interpolate } from '../shared/utils';
+
 export const errorCodes = {
   SIGN_IN_ERROR: 'SIGN_IN_ERROR',
   ROLE_UPDATE_FAILED: 'ROLE_UPDATE_FAILED',
@@ -7,8 +9,6 @@ export const errorCodes = {
 } as const;
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
-
-import { interpolate } from '../shared/utils';
 
 const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   role_update_failed: 'Role update failed for user {userId}: {error}',
@@ -41,7 +41,6 @@ export const errorMessages = {
   DEFAULT_ROLE_INIT_ERROR: 'Could not initialize default OIDC role:',
   AUDIT_LOG_CLEANUP_ERROR: '[strapi-plugin-oidc] Audit log cleanup failed:',
   AUDIT_LOG_EXPORT_ERROR: 'NDJSON export stream failed',
-  MISSING_CONFIG: (keys: string) => `Missing required config keys: ${keys}`,
   WHITELIST_INVALID_EMAIL: 'Please enter a valid email address',
   WHITELIST_INVALID_REQUEST: 'Invalid request body',
   WHITELIST_IMPORT_INVALID: 'Expected { users: [{email}] }',

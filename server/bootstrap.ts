@@ -1,8 +1,12 @@
 import type { Core } from '@strapi/types';
 import type { Context, Next } from 'koa';
 import { errorMessages } from './error-strings';
-import { getEnforceOIDCConfig, resolveEnforceOIDC } from './utils/enforceOIDC';
-import { getSkipLoginPageConfig, resolveSkipLoginPage } from './utils/skipLoginPage';
+import {
+  getEnforceOIDCConfig,
+  resolveEnforceOIDC,
+  getSkipLoginPageConfig,
+  resolveSkipLoginPage,
+} from './utils/configFlag';
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { resetOidcConfig } from './utils/oidc-client';

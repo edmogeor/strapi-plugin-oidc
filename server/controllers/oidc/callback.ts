@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import * as client from 'openid-client';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
+import { oidcUserInfoSchema, type OidcUserInfo } from '../../../shared/config';
 import { negotiateLocale, t } from '../../i18n';
 import {
   getOauthService,
@@ -14,7 +15,7 @@ import { getClientIp } from '../../utils/ip';
 import { configValidation } from './shared';
 import { handleUserAuthentication } from './userAuth';
 import { handleCallbackError } from './errors';
-import type { StrapiContext, OidcUserInfo, AuditLogService, StrapiAdminUser } from '../../types';
+import type { StrapiContext, AuditLogService, StrapiAdminUser } from '../../types';
 
 function readAndClearPkceCookies(ctx: StrapiContext): {
   oidcState: string | undefined;
@@ -112,7 +113,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       });
     }
 
-    userInfo = userInfoData as unknown as OidcUserInfo;
+    userInfo = oidcUserInfoSchema.parse(userInfoData);
 
     const { activateUser, jwtToken, userCreated, rolesUpdated, resolvedRoleNames } =
       await handleUserAuthentication(

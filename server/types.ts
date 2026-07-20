@@ -1,6 +1,8 @@
 import type { Context } from 'koa';
 import type { AuditEntry, AuditLogRecord } from '../shared/audit-actions';
+import type { OidcUserInfo as OidcUserInfoType } from '../shared/config';
 export { AuditAction, AuditEntry, AuditLogRecord } from '../shared/audit-actions';
+export type OidcUserInfo = OidcUserInfoType;
 
 export interface StrapiContext extends Context {
   send(body: unknown, status?: number): void;
@@ -24,11 +26,6 @@ export interface StrapiAdminUser {
   lastname?: string;
   password?: string;
   roles?: Array<{ id: number; name: string; code: string }>;
-}
-
-export interface OidcUserInfo {
-  email?: string;
-  [key: string]: unknown;
 }
 
 export interface OAuthService {

@@ -77,11 +77,11 @@ describe('pluginConfig utils', () => {
 
 describe('enforceOIDC utils', () => {
   let strapi: Core.Strapi;
-  let enforceOIDC: typeof import('../../utils/enforceOIDC');
+  let enforceOIDC: typeof import('../../utils/configFlag');
 
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
-    enforceOIDC = await import('../../utils/enforceOIDC');
+    enforceOIDC = await import('../../utils/configFlag');
   });
 
   beforeEach(() => {

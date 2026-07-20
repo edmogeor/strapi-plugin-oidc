@@ -9,6 +9,7 @@ import { shouldMarkSecure, COOKIE_NAMES } from '../utils/cookies';
 import { normalizeEmail } from '../utils/email';
 import { escapeHtml } from '../../shared/utils';
 import { renderHtmlTemplate } from '../../shared/auth-template';
+import { getEventHub, getWebhookStore, getSessionManager } from '../utils/strapi-extensions';
 
 export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
   return {
@@ -56,36 +57,21 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       return headers['accept-language']?.includes('ja') ? 'ja' : 'en';
     },
     async triggerWebHook(user: StrapiAdminUser) {
+      const webhookStore = getWebhookStore(strapi);
+      const eventHub = getEventHub(strapi);
       let ENTRY_CREATE: string | undefined;
-      const webhookStore = (
-        strapi as Core.Strapi & {
-          serviceMap?: {
-            get: (name: string) => { allowedEvents: { get: (event: string) => string } };
-          };
-        }
-      ).serviceMap?.get('webhookStore');
-      const eventHub = (
-        strapi as Core.Strapi & {
-          serviceMap?: { get: (name: string) => { emit: (event: string, data: unknown) => void } };
-        }
-      ).serviceMap?.get('eventHub');
-
       if (webhookStore) {
         ENTRY_CREATE = webhookStore.allowedEvents.get('ENTRY_CREATE');
       }
       const modelDef = strapi.getModel('admin::user');
-      type SanitizeCtx = Parameters<
-        typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
-      >[0];
-      type SanitizeData = Parameters<
-        typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
-      >[1];
       const sanitizedEntity = (await strapiUtils.sanitize.sanitizers.defaultSanitizeOutput(
         {
           schema: modelDef,
           getModel: (uid2: string) => strapi.getModel(uid2 as UID.Schema),
-        } as unknown as SanitizeCtx,
-        user as unknown as SanitizeData,
+        } as unknown as Parameters<typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput>[0],
+        user as unknown as Parameters<
+          typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
+        >[1],
       )) as unknown as StrapiAdminUser;
       eventHub?.emit(ENTRY_CREATE ?? 'entry.create', {
         model: modelDef.modelName,
@@ -95,11 +81,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
     triggerSignInSuccess(user: StrapiAdminUser) {
       const userCopy = { ...user };
       delete userCopy.password;
-      const eventHub = (
-        strapi as Core.Strapi & {
-          serviceMap?: { get: (name: string) => { emit: (event: string, data: unknown) => void } };
-        }
-      ).serviceMap?.get('eventHub');
+      const eventHub = getEventHub(strapi);
       eventHub?.emit('admin.auth.success', {
         user: userCopy,
         provider: 'strapi-plugin-oidc',
@@ -164,9 +146,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       return renderHtmlTemplate(errorTitle, content, locale);
     },
     async generateToken(user: StrapiAdminUser, ctx: StrapiContext) {
-      const sessionManager = (
-        strapi as Core.Strapi & { sessionManager?: (...args: unknown[]) => unknown }
-      ).sessionManager;
+      const sessionManager = getSessionManager(strapi);
       if (!sessionManager) {
         throw new Error(errorMessages.SESSION_MANAGER_UNSUPPORTED);
       }
@@ -178,16 +158,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         | undefined;
       const rememberMe = !!config?.REMEMBER_ME;
 
-      const smAdmin = sessionManager('admin') as {
-        generateRefreshToken: (
-          userId: string,
-          deviceId: string,
-          opts: { type: 'refresh' | 'session' },
-        ) => Promise<{ token: string; absoluteExpiresAt: string }>;
-        generateAccessToken: (
-          refreshToken: string,
-        ) => Promise<{ token: string } | { error: string }>;
-      };
+      const smAdmin = sessionManager('admin');
 
       const { token: refreshToken, absoluteExpiresAt } = await smAdmin.generateRefreshToken(
         userId,

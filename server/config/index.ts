@@ -20,5 +20,4 @@ export default {
     OIDC_MAX_AGE: undefined,
     OIDC_PROMPT: '',
   },
-  validator() {},
 };

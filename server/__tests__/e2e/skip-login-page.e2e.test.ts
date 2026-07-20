@@ -1,13 +1,7 @@
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { Core } from './test-types';
-import {
-  MOCK_OIDC_CONFIG,
-  applyDefaultOidcConfig,
-  makeLogoutCtx,
-  expectCookieCleared,
-  setSettings,
-} from './test-helpers';
+import { MOCK_OIDC_CONFIG, applyDefaultOidcConfig, setSettings } from './test-helpers';
 import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 import { resetOidcConfig } from '../../utils/oidc-client';
 
@@ -129,21 +123,32 @@ describe('Skip Login Page E2E', () => {
       strapi.config.set('admin.url', '/admin');
     });
 
-    const getOidcController = () => strapi.plugin('strapi-plugin-oidc').controller('oidc');
-
     it('redirects non-OIDC sessions to OIDC sign-in instead of admin login', async () => {
-      const ctxLogout = makeLogoutCtx();
-      await getOidcController().logout(ctxLogout);
-      expect(ctxLogout.redirectedTo).toBe(OIDC_SIGN_IN_PATH);
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
+      );
     });
 
     it('redirects OIDC sessions to end session URL', async () => {
-      const ctxLogout = makeLogoutCtx({ '__Host-oidc_id_token': 'mock-id-token' });
-      await getOidcController().logout(ctxLogout);
-      expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
-      expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, '__Host-oidc_id_token');
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .set('Cookie', '__Host-oidc_id_token=mock-id-token')
+        .redirects(0);
+
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toContain('https://mock-oidc.com/logout');
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^__Host-oidc_id_token=;/),
+          expect.stringMatching(/^strapi_admin_refresh=;/),
+        ]),
+      );
     });
   });
 });

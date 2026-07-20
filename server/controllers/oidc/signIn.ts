@@ -3,7 +3,7 @@ import { COOKIE_NAMES } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
-import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
+import { resolveSkipLoginPage } from '../../utils/configFlag';
 import { negotiateLocale, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
 import { PKCE_COOKIE_MAX_AGE_MS } from '../../../shared/constants';

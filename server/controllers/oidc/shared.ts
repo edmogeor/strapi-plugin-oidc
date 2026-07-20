@@ -1,14 +1,6 @@
-import { errorMessages } from '../../error-strings';
+import { getPluginConfig } from '../../utils/pluginConfig';
 import { OIDC_CALLBACK_PATH } from '../../../shared/constants';
 import type { PluginConfig } from '../../../shared/config';
-
-const REQUIRED_CONFIG_KEYS = [
-  'OIDC_ISSUER',
-  'OIDC_CLIENT_ID',
-  'OIDC_SCOPE',
-  'OIDC_FAMILY_NAME_FIELD',
-  'OIDC_GIVEN_NAME_FIELD',
-] as const;
 
 export function resolveRedirectUri(config: PluginConfig): string {
   const publicUrl =
@@ -26,11 +18,16 @@ export function resolveRedirectUri(config: PluginConfig): string {
 }
 
 export function configValidation(): PluginConfig {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
+  const config = getPluginConfig();
 
-  const missing = REQUIRED_CONFIG_KEYS.filter((key) => !config[key]);
-  if (missing.length === 0) {
-    return config;
+  if (!config.OIDC_ISSUER || !config.OIDC_CLIENT_ID) {
+    const missing = [];
+    if (!config.OIDC_ISSUER) missing.push('OIDC_ISSUER');
+    if (!config.OIDC_CLIENT_ID) missing.push('OIDC_CLIENT_ID');
+    throw new Error(
+      `Missing required config keys: ${missing.join(', ')}. Set them via plugin config or environment variables.`,
+    );
   }
-  throw new Error(errorMessages.MISSING_CONFIG(missing.join(', ')));
+
+  return config;
 }

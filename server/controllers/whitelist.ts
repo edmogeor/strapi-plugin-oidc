@@ -1,6 +1,10 @@
 import type { Context } from 'koa';
-import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
-import { getSkipLoginPageConfig, resolveSkipLoginPage } from '../utils/skipLoginPage';
+import {
+  getEnforceOIDCConfig,
+  resolveEnforceOIDC,
+  getSkipLoginPageConfig,
+  resolveSkipLoginPage,
+} from '../utils/configFlag';
 import { isAuditLogEnabled, getPluginConfig } from '../utils/pluginConfig';
 import { isValidEmail, normalizeEmail } from '../utils/email';
 import { getWhitelistService } from '../utils/services';

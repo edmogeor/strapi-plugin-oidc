@@ -19,3 +19,19 @@ export function resolveConfigFlag(
   if (configValue !== null) return configValue;
   return dbValue ?? false;
 }
+
+export function getEnforceOIDCConfig(strapi: Core.Strapi): boolean | null {
+  return readConfigFlag(strapi, 'OIDC_ENFORCE');
+}
+
+export function resolveEnforceOIDC(strapi: Core.Strapi, dbValue: boolean | undefined): boolean {
+  return resolveConfigFlag(strapi, 'OIDC_ENFORCE', dbValue);
+}
+
+export function getSkipLoginPageConfig(strapi: Core.Strapi): boolean | null {
+  return readConfigFlag(strapi, 'OIDC_SKIP_LOGIN_PAGE');
+}
+
+export function resolveSkipLoginPage(strapi: Core.Strapi, dbValue: boolean | undefined): boolean {
+  return resolveConfigFlag(strapi, 'OIDC_SKIP_LOGIN_PAGE', dbValue);
+}

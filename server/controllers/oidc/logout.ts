@@ -3,7 +3,7 @@ import { getOidcConfig } from '../../utils/oidc-client';
 import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
 import { getAuditLogService, getWhitelistService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
-import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
+import { resolveSkipLoginPage } from '../../utils/configFlag';
 import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
 
