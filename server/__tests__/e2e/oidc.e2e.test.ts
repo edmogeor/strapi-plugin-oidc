@@ -328,7 +328,7 @@ describe('OIDC E2E Tests', () => {
     const logoutWithOidcSession = () =>
       request(strapi.server.httpServer)
         .post('/strapi-plugin-oidc/logout')
-        .set('Cookie', 'oidc_id_token=1')
+        .set('Cookie', '__Host-oidc_id_token=1')
         .redirects(0);
 
     beforeEach(async () => {
@@ -353,10 +353,10 @@ describe('OIDC E2E Tests', () => {
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
 
-      it('allows admin HTML through when both strapi_admin_refresh and oidc_id_token are present', async () => {
+      it('allows admin HTML through when both strapi_admin_refresh and __Host-oidc_id_token are present', async () => {
         const res = await request(strapi.server.httpServer)
           .get('/admin/auth/login')
-          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_id_token=1')
+          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; __Host-oidc_id_token=1')
           .set('Accept', 'text/html')
           .redirects(0);
 
@@ -409,10 +409,10 @@ describe('OIDC E2E Tests', () => {
         expect(res.body.error.message).toContain('OIDC');
       });
 
-      it('passes token refresh through to Strapi when oidc_id_token is present', async () => {
+      it('passes token refresh through to Strapi when __Host-oidc_id_token is present', async () => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/token/refresh')
-          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_id_token=1');
+          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; __Host-oidc_id_token=1');
 
         // Our middleware passes it through — Strapi may return 401 for the invalid
         // token itself, but the error must NOT be our OIDC enforcement message
@@ -432,25 +432,25 @@ describe('OIDC E2E Tests', () => {
     });
 
     // -------------------------------------------------------------------------
-    // Cookie lifecycle: oidc_id_token is set and cleared correctly
+    // Cookie lifecycle: __Host-oidc_id_token is set and cleared correctly
     // -------------------------------------------------------------------------
-    describe('oidc_id_token cookie lifecycle', () => {
-      it('sets oidc_id_token cookie after a successful OIDC callback', async () => {
+    describe('__Host-oidc_id_token cookie lifecycle', () => {
+      it('sets __Host-oidc_id_token cookie after a successful OIDC callback', async () => {
         await setSettings(strapi, false, false);
         const callbackRes = await loginAndExpectSuccess(agent);
 
         const cookies = parseCookies(callbackRes);
-        const oidcCookie = cookies.find((c) => c.startsWith('oidc_id_token='));
+        const oidcCookie = cookies.find((c) => c.startsWith('__Host-oidc_id_token='));
         expect(oidcCookie).toBeDefined();
       });
 
-      it('clears oidc_id_token cookie on logout', async () => {
+      it('clears __Host-oidc_id_token cookie on logout', async () => {
         const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
 
         const cookies = parseCookies(res);
-        expect(isCookieExpired(cookies, 'oidc_id_token')).toBe(true);
+        expect(isCookieExpired(cookies, '__Host-oidc_id_token')).toBe(true);
         expect(isCookieExpired(cookies, 'strapi_admin_refresh')).toBe(true);
       });
     });
@@ -459,20 +459,20 @@ describe('OIDC E2E Tests', () => {
     // Selective OIDC logout redirect
     // -------------------------------------------------------------------------
     describe('Selective OIDC logout redirect', () => {
-      it('redirects to OIDC end session URL when oidc_id_token cookie is present', async () => {
+      it('redirects to OIDC end session URL when __Host-oidc_id_token cookie is present', async () => {
         const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toContain('https://mock-oidc.com/logout');
       });
 
-      it('redirects to OIDC sign-in when oidc_id_token cookie is absent (non-OIDC session)', async () => {
+      it('redirects to OIDC sign-in when __Host-oidc_id_token cookie is absent (non-OIDC session)', async () => {
         strapi.config.set('admin.url', '/admin');
         await setSettings(strapi, false, true, true);
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')
-          .redirects(0); // no oidc_id_token cookie
+          .redirects(0); // no __Host-oidc_id_token cookie
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
@@ -484,7 +484,7 @@ describe('OIDC E2E Tests', () => {
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')
-          .set('Cookie', 'oidc_id_token=test-token; oidc_user_email=test@test.com')
+          .set('Cookie', '__Host-oidc_id_token=test-token; __Host-oidc_user_email=test@test.com')
           .redirects(0);
 
         const elapsed = Date.now() - startTime;

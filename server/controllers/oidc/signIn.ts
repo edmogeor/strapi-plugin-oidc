@@ -1,5 +1,5 @@
 import * as client from 'openid-client';
-import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
+import { COOKIE_NAMES } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
@@ -36,8 +36,9 @@ export async function oidcSignIn(ctx: StrapiContext) {
     const cookieOptions = {
       httpOnly: true,
       maxAge: PKCE_COOKIE_MAX_AGE_MS,
-      secure: shouldMarkSecure(strapi, ctx),
+      secure: true,
       sameSite: 'lax' as const,
+      path: '/',
     };
 
     ctx.cookies.set(COOKIE_NAMES.codeVerifier, codeVerifier, cookieOptions);

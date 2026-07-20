@@ -139,11 +139,11 @@ describe('Skip Login Page E2E', () => {
     });
 
     it('redirects OIDC sessions to end session URL', async () => {
-      const ctxLogout = makeLogoutCtx({ oidc_id_token: 'mock-id-token' });
+      const ctxLogout = makeLogoutCtx({ '__Host-oidc_id_token': 'mock-id-token' });
       await getOidcController().logout(ctxLogout);
       expect(ctxLogout.redirectedTo).toContain('https://mock-oidc.com/logout');
       expectCookieCleared(ctxLogout, 'strapi_admin_refresh');
-      expectCookieCleared(ctxLogout, 'oidc_id_token');
+      expectCookieCleared(ctxLogout, '__Host-oidc_id_token');
     });
   });
 });

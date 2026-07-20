@@ -109,12 +109,20 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       jwtToken: string,
       user: StrapiAdminUser,
       nonce: string,
+      secure: boolean,
       locale: string = 'en',
     ) {
       const config = strapi.config.get('plugin::strapi-plugin-oidc') as
         | { REMEMBER_ME?: boolean }
         | undefined;
       const isRememberMe = !!config?.REMEMBER_ME;
+      const secureFlag = secure ? '; Secure' : '';
+      const maxAgeSuffix = isRememberMe ? '; max-age=1209600' : '';
+      const encodedToken = encodeURIComponent(jwtToken);
+      const adminUrl = strapi.config.admin.url ?? '/admin';
+      const title = t(locale, 'auth.page.authenticating.title');
+      const noscriptHeading = t(locale, 'auth.page.authenticating.noscript.heading');
+      const noscriptBody = t(locale, 'auth.page.authenticating.noscript.body');
       const content = `
     <noscript>
       <div class="card">
@@ -123,23 +131,19 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
             <path d="M20 6 9 17l-5-5"/>
           </svg>
         </div>
-        <h1>${t(locale, 'auth.page.authenticating.noscript.heading')}</h1>
-        <p>${t(locale, 'auth.page.authenticating.noscript.body')}</p>
+        <h1>${noscriptHeading}</h1>
+        <p>${noscriptBody}</p>
       </div>
     </noscript>
     <script nonce="${nonce}">
      window.addEventListener('load', function() {
-      if(${isRememberMe}){
-        localStorage.setItem('jwtToken', '"${jwtToken}"');
-      }else{
-        document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/';
-      }
+      document.cookie = 'jwtToken=${encodedToken}; Path=/${secureFlag}; SameSite=Strict${maxAgeSuffix}';
       localStorage.setItem('isLoggedIn', 'true');
-      location.href = '${strapi.config.admin.url ?? '/admin'}'
+      location.href = '${adminUrl}'
      })
     </script>`;
 
-      return renderHtmlTemplate(t(locale, 'auth.page.authenticating.title'), content, locale);
+      return renderHtmlTemplate(title, content, locale);
     },
     renderSignUpError(message: string, locale: string = 'en') {
       const errorTitle = t(locale, 'auth.page.error.title');

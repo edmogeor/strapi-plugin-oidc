@@ -3,11 +3,11 @@ import { getPluginConfig } from './pluginConfig';
 import type { StrapiContext } from '../types';
 
 export const COOKIE_NAMES = {
-  state: 'oidc_state',
-  codeVerifier: 'oidc_code_verifier',
-  nonce: 'oidc_nonce',
-  idToken: 'oidc_id_token',
-  userEmail: 'oidc_user_email',
+  state: '__Host-oidc_state',
+  codeVerifier: '__Host-oidc_code_verifier',
+  nonce: '__Host-oidc_nonce',
+  idToken: '__Host-oidc_id_token',
+  userEmail: '__Host-oidc_user_email',
   adminRefresh: 'strapi_admin_refresh',
 } as const;
 
@@ -42,7 +42,20 @@ function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
 export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
-  const rootPathOptions = { ...options, path: '/' };
-  ctx.cookies.set(COOKIE_NAMES.idToken, '', rootPathOptions);
-  ctx.cookies.set(COOKIE_NAMES.userEmail, '', rootPathOptions);
+  ctx.cookies.set(COOKIE_NAMES.idToken, '', {
+    httpOnly: true,
+    secure: true,
+    path: '/',
+    sameSite: 'lax' as const,
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  ctx.cookies.set(COOKIE_NAMES.userEmail, '', {
+    httpOnly: true,
+    secure: true,
+    path: '/',
+    sameSite: 'lax' as const,
+    maxAge: 0,
+    expires: new Date(0),
+  });
 }

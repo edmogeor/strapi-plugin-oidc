@@ -47,6 +47,7 @@ export interface OAuthService {
     jwtToken: string,
     user: StrapiAdminUser,
     nonce: string,
+    secure: boolean,
     locale?: string,
   ): string;
   renderSignUpError(message: string, locale?: string): string;

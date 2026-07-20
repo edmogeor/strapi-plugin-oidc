@@ -6,6 +6,11 @@ import type { StrapiContext } from '../../types';
 
 const seenJtis = new Map<string, number>();
 const JTI_TTL_MS = 5 * 60 * 1000;
+const JTI_STORE_KEY = 'backchannel_jtis';
+
+function getJtiStore() {
+  return strapi.store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc' });
+}
 
 function pruneJtis(): void {
   const cutoff = Date.now() - JTI_TTL_MS;
@@ -13,6 +18,58 @@ function pruneJtis(): void {
     if (timestamp < cutoff) {
       seenJtis.delete(jti);
     }
+  }
+}
+
+async function isJtiReplayed(jti: string): Promise<boolean> {
+  pruneJtis();
+  if (seenJtis.has(jti)) return true;
+
+  try {
+    const store = getJtiStore();
+    const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+    const cutoff = Date.now() - JTI_TTL_MS;
+    if (stored && stored[jti] && stored[jti] > cutoff) return true;
+  } catch {
+    // Fall through — if the store is unavailable, rely on in-memory Map only
+  }
+
+  return false;
+}
+
+async function persistJti(jti: string): Promise<void> {
+  seenJtis.set(jti, Date.now());
+  try {
+    const store = getJtiStore();
+    let stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+    if (!stored) stored = {};
+    const cutoff = Date.now() - JTI_TTL_MS;
+    for (const key of Object.keys(stored)) {
+      if (stored[key] < cutoff) delete stored[key];
+    }
+    stored[jti] = Date.now();
+    await store.set({ key: JTI_STORE_KEY, value: stored });
+  } catch {
+    // Accept in-memory-only persistence when the store is unavailable
+  }
+}
+
+export async function pruneStoredJtis(): Promise<void> {
+  try {
+    const store = getJtiStore();
+    const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+    if (!stored) return;
+    const cutoff = Date.now() - JTI_TTL_MS;
+    for (const key of Object.keys(stored)) {
+      if (stored[key] < cutoff) delete stored[key];
+    }
+    if (Object.keys(stored).length === 0) {
+      await store.delete({ key: JTI_STORE_KEY });
+    } else {
+      await store.set({ key: JTI_STORE_KEY, value: stored });
+    }
+  } catch {
+    // Nothing to clean up if the store is unavailable
   }
 }
 
@@ -72,8 +129,8 @@ export async function backchannelLogout(ctx: StrapiContext) {
   })();
 
   if (jti) {
-    pruneJtis();
-    if (seenJtis.has(jti)) {
+    const replayed = await isJtiReplayed(jti);
+    if (replayed) {
       ctx.status = 200;
       return;
     }
@@ -102,7 +159,7 @@ export async function backchannelLogout(ctx: StrapiContext) {
     }
 
     if (jti) {
-      seenJtis.set(jti, Date.now());
+      await persistJti(jti);
     }
 
     const user = await strapi.db.query('admin::user').findOne({

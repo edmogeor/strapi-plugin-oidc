@@ -107,7 +107,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       ctx.cookies.set(COOKIE_NAMES.idToken, idToken, {
         httpOnly: true,
         path: '/',
-        secure: secureFlag,
+        secure: true,
         sameSite: 'lax' as const,
       });
     }
@@ -139,7 +139,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {
       httpOnly: true,
       path: '/',
-      secure: secureFlag,
+      secure: true,
       sameSite: 'lax' as const,
     });
 
@@ -154,7 +154,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
     const nonce = randomUUID();
     ctx.set('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
-    ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce, locale));
+    ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce, secureFlag, locale));
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);
   }

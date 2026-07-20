@@ -111,6 +111,7 @@ describe('OIDC Services E2E', () => {
         'mock-jwt',
         { id: 1, email: 'test@test.com' },
         'mock-nonce',
+        false,
       );
       expect(html).toContain("localStorage.setItem('isLoggedIn', 'true')");
     });

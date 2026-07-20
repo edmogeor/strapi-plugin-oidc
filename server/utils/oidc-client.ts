@@ -3,6 +3,7 @@ import type { Configuration, ClientAuth } from 'openid-client';
 import * as jose from 'jose';
 import type { PluginConfig } from '../../shared/config';
 import { parseClientAssertion } from '../../shared/config';
+import { OIDC_DISCOVERY_TIMEOUT_MS } from '../../shared/constants';
 
 let configPromise: Promise<Configuration> | null = null;
 
@@ -26,7 +27,15 @@ export function getOidcConfig(): Promise<Configuration> {
         metadata = OIDC_CLIENT_SECRET;
       }
 
-      return client.discovery(new URL(OIDC_ISSUER), OIDC_CLIENT_ID, metadata, clientAuthentication);
+      return client.discovery(
+        new URL(OIDC_ISSUER),
+        OIDC_CLIENT_ID,
+        metadata,
+        clientAuthentication,
+        {
+          timeout: OIDC_DISCOVERY_TIMEOUT_MS,
+        },
+      );
     })().catch((err) => {
       configPromise = null;
       throw err;

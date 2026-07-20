@@ -379,11 +379,13 @@ describe('cookies utils', () => {
       ),
     ).toBe(true);
     expect(
-      ctx.cookies.calls.some((c: CookieCall) => c.name === 'oidc_id_token' && c.opts?.path === '/'),
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === '__Host-oidc_id_token' && c.opts?.path === '/',
+      ),
     ).toBe(true);
     expect(
       ctx.cookies.calls.some(
-        (c: CookieCall) => c.name === 'oidc_user_email' && c.opts?.path === '/',
+        (c: CookieCall) => c.name === '__Host-oidc_user_email' && c.opts?.path === '/',
       ),
     ).toBe(true);
   });

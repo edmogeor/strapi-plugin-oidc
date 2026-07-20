@@ -38,6 +38,8 @@ export const DEFAULT_RETENTION_DAYS = 90;
 
 export const DAY_MS = 86_400_000;
 
+export const OIDC_DISCOVERY_TIMEOUT_MS = 10_000;
+
 export const OIDC_SIGN_IN_PATH = '/strapi-plugin-oidc/oidc';
 
 export const OIDC_CALLBACK_PATH = '/strapi-plugin-oidc/oidc/callback';

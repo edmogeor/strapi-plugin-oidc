@@ -6,6 +6,7 @@ import { getSkipLoginPageConfig, resolveSkipLoginPage } from './utils/skipLoginP
 import { getRetentionDays } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { resetOidcConfig } from './utils/oidc-client';
+import { pruneStoredJtis } from './controllers/oidc/backchannelLogout';
 import {
   CONTENT_TYPES as CT,
   PERMISSIONS,
@@ -174,6 +175,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
         try {
           const retentionDays = getRetentionDays();
           await getAuditLogService().cleanup(retentionDays);
+          await pruneStoredJtis();
         } catch (err) {
           strapi.log.warn(errorMessages.AUDIT_LOG_CLEANUP_ERROR, (err as Error).message);
         }
