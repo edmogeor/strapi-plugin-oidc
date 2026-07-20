@@ -1,5 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "ignorePatterns": ["test-app/**", "test-app/**/*", "**/test-app/**"],
-  "ignoreDependencies": ["better-sqlite3", "@strapi/types", "koa", "qs", "@strapi/sdk-plugin"]
+  "ignorePatterns": [
+    "test-app/**",
+    "test-app/**/*",
+    "**/test-app/**",
+    "references/strapi-source/**"
+  ],
+  "ignoreDependencies": ["better-sqlite3", "@strapi/types", "koa", "qs", "@strapi/sdk-plugin"],
+  "ignoreExports": [
+    { "file": "server/types.ts", "exports": ["*"] },
+    { "file": "shared/config.ts", "exports": ["*"] }
+  ]
 }

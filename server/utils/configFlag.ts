@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/types';
 
-export function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null {
+function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null {
   const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
   const val = config[key];
   if (val === null || val === undefined) return null;
@@ -10,7 +10,7 @@ export function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null
   return null;
 }
 
-export function resolveConfigFlag(
+function resolveConfigFlag(
   strapi: Core.Strapi,
   key: string,
   dbValue: boolean | undefined,
