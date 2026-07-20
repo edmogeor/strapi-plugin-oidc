@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "已启用",
   "skipLoginPage.toggle.disabled": "已禁用",
   "skipLoginPage.warning": "用户将直接重定向到 OIDC 提供商，而不会看到 Strapi 登录页面。请确保您的 OIDC 提供商已正确配置。",
-  "skipLoginPage.config.info": "跳过登录页面由 OIDC_SKIP_LOGIN_PAGE 配置变量控制，无法在此更改。"
+  "skipLoginPage.config.info": "跳过登录页面由 OIDC_SKIP_LOGIN_PAGE 配置变量控制，无法在此更改。",
+  "audit.backchannel_logout": "用户会话已通过反向通道注销失效。",
+  "audit.backchannel_logout_config_error": "反向通道注销失败 — OIDC 提供商配置不完整。",
+  "audit.backchannel_logout_unknown_sub": "反向通道注销收到了未知的主体标识符。"
 }

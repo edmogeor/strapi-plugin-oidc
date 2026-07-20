@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "مفعّل",
   "skipLoginPage.toggle.disabled": "معطّل",
   "skipLoginPage.warning": "سيتم إعادة توجيه المستخدمين مباشرة إلى مزود OIDC دون رؤية صفحة تسجيل الدخول الخاصة بـ Strapi. تأكد من تكوين مزود OIDC الخاص بك بشكل صحيح.",
-  "skipLoginPage.config.info": "يتم التحكم في تخطي صفحة تسجيل الدخول بواسطة متغير التكوين OIDC_SKIP_LOGIN_PAGE ولا يمكن تغييره هنا."
+  "skipLoginPage.config.info": "يتم التحكم في تخطي صفحة تسجيل الدخول بواسطة متغير التكوين OIDC_SKIP_LOGIN_PAGE ولا يمكن تغييره هنا.",
+  "audit.backchannel_logout": "تم إبطال جلسة المستخدم عبر تسجيل الخروج من القناة الخلفية.",
+  "audit.backchannel_logout_config_error": "فشل تسجيل الخروج من القناة الخلفية — تكوين مزود OIDC غير مكتمل.",
+  "audit.backchannel_logout_unknown_sub": "تلقى تسجيل الخروج من القناة الخلفية معرف موضوع غير معروف."
 }

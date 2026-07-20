@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "מופעל",
   "skipLoginPage.toggle.disabled": "מושבת",
   "skipLoginPage.warning": "משתמשים יופנו ישירות לספק ה-OIDC מבלי לראות את דף ההתחברות של Strapi. ודא שספק ה-OIDC שלך מוגדר כראוי.",
-  "skipLoginPage.config.info": "דילוג על דף ההתחברות נשלט על ידי משתנה התצורה OIDC_SKIP_LOGIN_PAGE ולא ניתן לשנותו כאן."
+  "skipLoginPage.config.info": "דילוג על דף ההתחברות נשלט על ידי משתנה התצורה OIDC_SKIP_LOGIN_PAGE ולא ניתן לשנותו כאן.",
+  "audit.backchannel_logout": "פג תוקף הפעלת המשתמש באמצעות התנתקות בערוץ אחורי.",
+  "audit.backchannel_logout_config_error": "התנתקות בערוץ אחורי נכשלה — תצורת ספק OIDC אינה מלאה.",
+  "audit.backchannel_logout_unknown_sub": "התנתקות בערוץ אחורי קיבלה מזהה נושא לא ידוע."
 }

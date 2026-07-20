@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Đã bật",
   "skipLoginPage.toggle.disabled": "Đã tắt",
   "skipLoginPage.warning": "Người dùng sẽ được chuyển hướng trực tiếp đến nhà cung cấp OIDC mà không thấy trang đăng nhập Strapi. Đảm bảo nhà cung cấp OIDC của bạn được cấu hình đúng.",
-  "skipLoginPage.config.info": "Bỏ qua trang đăng nhập được kiểm soát bởi biến cấu hình OIDC_SKIP_LOGIN_PAGE và không thể thay đổi ở đây."
+  "skipLoginPage.config.info": "Bỏ qua trang đăng nhập được kiểm soát bởi biến cấu hình OIDC_SKIP_LOGIN_PAGE và không thể thay đổi ở đây.",
+  "audit.backchannel_logout": "Phiên người dùng đã bị vô hiệu hóa thông qua đăng xuất kênh sau.",
+  "audit.backchannel_logout_config_error": "Đăng xuất kênh sau thất bại — cấu hình nhà cung cấp OIDC không đầy đủ.",
+  "audit.backchannel_logout_unknown_sub": "Đăng xuất kênh sau nhận được mã định danh chủ thể không xác định."
 }

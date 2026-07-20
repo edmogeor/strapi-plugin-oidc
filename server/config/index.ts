@@ -17,6 +17,8 @@ export default {
     OIDC_FORCE_SECURE_COOKIES: false,
     OIDC_SKIP_LOGIN_PAGE: null, // null = use DB setting; true/false = override DB
     OIDC_ISSUER: '',
+    OIDC_MAX_AGE: undefined,
+    OIDC_PROMPT: '',
   },
   validator() {},
 };

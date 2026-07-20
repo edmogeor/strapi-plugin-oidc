@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Etkin",
   "skipLoginPage.toggle.disabled": "Devre Dışı",
   "skipLoginPage.warning": "Kullanıcılar, Strapi giriş sayfasını görmeden doğrudan OIDC sağlayıcısına yönlendirilecektir. OIDC sağlayıcınızın doğru yapılandırıldığından emin olun.",
-  "skipLoginPage.config.info": "Giriş sayfasını atlama, OIDC_SKIP_LOGIN_PAGE yapılandırma değişkeni tarafından kontrol edilir ve burada değiştirilemez."
+  "skipLoginPage.config.info": "Giriş sayfasını atlama, OIDC_SKIP_LOGIN_PAGE yapılandırma değişkeni tarafından kontrol edilir ve burada değiştirilemez.",
+  "audit.backchannel_logout": "Kullanıcı oturumu arka kanal oturum kapatma ile geçersiz kılındı.",
+  "audit.backchannel_logout_config_error": "Arka kanal oturum kapatma başarısız oldu — OIDC sağlayıcı yapılandırması eksik.",
+  "audit.backchannel_logout_unknown_sub": "Arka kanal oturum kapatma bilinmeyen bir özne tanımlayıcısı aldı."
 }

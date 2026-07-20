@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "활성화됨",
   "skipLoginPage.toggle.disabled": "비활성화됨",
   "skipLoginPage.warning": "사용자는 Strapi 로그인 페이지를 보지 않고 OIDC 공급자로 직접 리디렉션됩니다. OIDC 공급자가 올바르게 구성되었는지 확인하세요.",
-  "skipLoginPage.config.info": "로그인 페이지 건너뛰기는 OIDC_SKIP_LOGIN_PAGE 구성 변수에 의해 제어되며 여기서 변경할 수 없습니다."
+  "skipLoginPage.config.info": "로그인 페이지 건너뛰기는 OIDC_SKIP_LOGIN_PAGE 구성 변수에 의해 제어되며 여기서 변경할 수 없습니다.",
+  "audit.backchannel_logout": "백채널 로그아웃을 통해 사용자 세션이 무효화되었습니다.",
+  "audit.backchannel_logout_config_error": "백채널 로그아웃 실패 — OIDC 공급자 구성이 불완전합니다.",
+  "audit.backchannel_logout_unknown_sub": "백채널 로그아웃이 알 수 없는 주체 식별자를 수신했습니다."
 }

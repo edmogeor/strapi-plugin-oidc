@@ -28,8 +28,6 @@ export const AUDIT_LOG_DEFAULTS = {
 export const RATE_LIMIT = {
   WINDOW_MS: 60_000,
   MAX_REQUESTS: 1_000,
-  MAX_MAP_SIZE: 10_000,
-  PRUNE_THRESHOLD: 1_000,
 } as const;
 
 export const CACHE_TTL = {

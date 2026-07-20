@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Aktivert",
   "skipLoginPage.toggle.disabled": "Deaktivert",
   "skipLoginPage.warning": "Brukere vil bli omdirigert direkte til OIDC-leverandøren uten å se Strapi-innloggingssiden. Sørg for at OIDC-leverandøren er riktig konfigurert.",
-  "skipLoginPage.config.info": "Hopp over innloggingssiden styres av konfigurasjonsvariabelen OIDC_SKIP_LOGIN_PAGE og kan ikke endres her."
+  "skipLoginPage.config.info": "Hopp over innloggingssiden styres av konfigurasjonsvariabelen OIDC_SKIP_LOGIN_PAGE og kan ikke endres her.",
+  "audit.backchannel_logout": "Brukerøkt ugyldiggjort via backchannel-utlogging.",
+  "audit.backchannel_logout_config_error": "Backchannel-utlogging mislyktes — OIDC-leverandørkonfigurasjon er ufullstendig.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel-utlogging mottok en ukjent subjektidentifikator."
 }

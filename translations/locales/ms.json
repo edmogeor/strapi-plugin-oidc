@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Dihidupkan",
   "skipLoginPage.toggle.disabled": "Dimatikan",
   "skipLoginPage.warning": "Pengguna akan dialihkan terus ke penyedia OIDC tanpa melihat halaman log masuk Strapi. Pastikan penyedia OIDC anda dikonfigurasikan dengan betul.",
-  "skipLoginPage.config.info": "Melangkau halaman log masuk dikawal oleh pemboleh ubah konfigurasi OIDC_SKIP_LOGIN_PAGE dan tidak boleh diubah di sini."
+  "skipLoginPage.config.info": "Melangkau halaman log masuk dikawal oleh pemboleh ubah konfigurasi OIDC_SKIP_LOGIN_PAGE dan tidak boleh diubah di sini.",
+  "audit.backchannel_logout": "Sesi pengguna dibatalkan melalui log keluar saluran belakang.",
+  "audit.backchannel_logout_config_error": "Log keluar saluran belakang gagal — konfigurasi penyedia OIDC tidak lengkap.",
+  "audit.backchannel_logout_unknown_sub": "Log keluar saluran belakang menerima pengecam subjek yang tidak diketahui."
 }

@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Aktif",
   "skipLoginPage.toggle.disabled": "Nonaktif",
   "skipLoginPage.warning": "Pengguna akan dialihkan langsung ke penyedia OIDC tanpa melihat halaman login Strapi. Pastikan penyedia OIDC Anda dikonfigurasi dengan benar.",
-  "skipLoginPage.config.info": "Melewati halaman login dikendalikan oleh variabel konfigurasi OIDC_SKIP_LOGIN_PAGE dan tidak dapat diubah di sini."
+  "skipLoginPage.config.info": "Melewati halaman login dikendalikan oleh variabel konfigurasi OIDC_SKIP_LOGIN_PAGE dan tidak dapat diubah di sini.",
+  "audit.backchannel_logout": "Sesi pengguna dibatalkan melalui backchannel logout.",
+  "audit.backchannel_logout_config_error": "Backchannel logout gagal — konfigurasi penyedia OIDC tidak lengkap.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel logout menerima pengenal subjek yang tidak dikenal."
 }

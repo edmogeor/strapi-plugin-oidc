@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Aktiveret",
   "skipLoginPage.toggle.disabled": "Deaktiveret",
   "skipLoginPage.warning": "Brugere vil blive omdirigeret direkte til OIDC-udbyderen uden at se Strapi-loginsiden. Sørg for, at din OIDC-udbyder er korrekt konfigureret.",
-  "skipLoginPage.config.info": "Spring over login-siden styres af konfigurationsvariablen OIDC_SKIP_LOGIN_PAGE og kan ikke ændres her."
+  "skipLoginPage.config.info": "Spring over login-siden styres af konfigurationsvariablen OIDC_SKIP_LOGIN_PAGE og kan ikke ændres her.",
+  "audit.backchannel_logout": "Brugersession ugyldiggjort via backchannel-logout.",
+  "audit.backchannel_logout_config_error": "Backchannel-logout mislykkedes — OIDC-udbyderkonfiguration er ufuldstændig.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel-logout modtog en ukendt subject-identifikator."
 }

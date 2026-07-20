@@ -126,15 +126,14 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       );
 
     if (sub) {
-      strapi.db
-        .query('admin::user')
-        .update({
+      try {
+        await strapi.db.query('admin::user').update({
           where: { id: activateUser.id },
           data: { oidc_sub: sub },
-        })
-        .catch((err: unknown) => {
-          strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
         });
+      } catch (err: unknown) {
+        strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
+      }
     }
 
     ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {

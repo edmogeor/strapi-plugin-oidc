@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "有効",
   "skipLoginPage.toggle.disabled": "無効",
   "skipLoginPage.warning": "ユーザーはStrapiのログインページを表示せずに、OIDCプロバイダーに直接リダイレクトされます。OIDCプロバイダーが正しく設定されていることを確認してください。",
-  "skipLoginPage.config.info": "ログインページのスキップは設定変数 OIDC_SKIP_LOGIN_PAGE によって制御されており、ここでは変更できません。"
+  "skipLoginPage.config.info": "ログインページのスキップは設定変数 OIDC_SKIP_LOGIN_PAGE によって制御されており、ここでは変更できません。",
+  "audit.backchannel_logout": "バックチャネルログアウトによりユーザーセッションが無効化されました。",
+  "audit.backchannel_logout_config_error": "バックチャネルログアウトに失敗しました — OIDCプロバイダー設定が不完全です。",
+  "audit.backchannel_logout_unknown_sub": "バックチャネルログアウトが不明なサブジェクト識別子を受信しました。"
 }

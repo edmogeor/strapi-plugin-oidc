@@ -104,5 +104,8 @@
   "settings.configuration": "Configuration",
   "audit.login_failure": "Error: {message}",
   "audit.roles_updated": "Roles updated to: {roles}",
-  "audit.user_created": "Roles assigned: {roles}"
+  "audit.user_created": "Roles assigned: {roles}",
+  "audit.backchannel_logout": "User session invalidated via backchannel logout.",
+  "audit.backchannel_logout_config_error": "Backchannel logout failed — OIDC provider configuration is incomplete.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel logout received an unknown subject identifier."
 }

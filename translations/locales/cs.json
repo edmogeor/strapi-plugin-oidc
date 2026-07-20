@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Povoleno",
   "skipLoginPage.toggle.disabled": "Zakázáno",
   "skipLoginPage.warning": "Uživatelé budou přesměrováni přímo k poskytovateli OIDC, aniž by viděli přihlašovací stránku Strapi. Ujistěte se, že je váš poskytovatel OIDC správně nakonfigurován.",
-  "skipLoginPage.config.info": "Přeskočení přihlašovací stránky je řízeno konfigurační proměnnou OIDC_SKIP_LOGIN_PAGE a nelze jej zde změnit."
+  "skipLoginPage.config.info": "Přeskočení přihlašovací stránky je řízeno konfigurační proměnnou OIDC_SKIP_LOGIN_PAGE a nelze jej zde změnit.",
+  "audit.backchannel_logout": "Relace uživatele zneplatněna prostřednictvím backchannel odhlášení.",
+  "audit.backchannel_logout_config_error": "Backchannel odhlášení selhalo — konfigurace poskytovatele OIDC je neúplná.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel odhlášení obdrželo neznámý identifikátor subjektu."
 }

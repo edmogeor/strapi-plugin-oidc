@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Abilitato",
   "skipLoginPage.toggle.disabled": "Disabilitato",
   "skipLoginPage.warning": "Gli utenti verranno reindirizzati direttamente al provider OIDC senza visualizzare la pagina di accesso di Strapi. Assicurati che il tuo provider OIDC sia configurato correttamente.",
-  "skipLoginPage.config.info": "Il salto della pagina di accesso è controllato dalla variabile di configurazione OIDC_SKIP_LOGIN_PAGE e non può essere modificato qui."
+  "skipLoginPage.config.info": "Il salto della pagina di accesso è controllato dalla variabile di configurazione OIDC_SKIP_LOGIN_PAGE e non può essere modificato qui.",
+  "audit.backchannel_logout": "Sessione utente invalidata tramite logout backchannel.",
+  "audit.backchannel_logout_config_error": "Logout backchannel non riuscito — configurazione del provider OIDC incompleta.",
+  "audit.backchannel_logout_unknown_sub": "Logout backchannel ha ricevuto un identificatore soggetto sconosciuto."
 }

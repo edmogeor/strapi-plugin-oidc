@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Habilitado",
   "skipLoginPage.toggle.disabled": "Deshabilitado",
   "skipLoginPage.warning": "Los usuarios serán redirigidos directamente al proveedor OIDC sin ver la página de inicio de sesión de Strapi. Asegúrese de que su proveedor OIDC esté correctamente configurado.",
-  "skipLoginPage.config.info": "Omitir la página de inicio de sesión está controlado por la variable de configuración OIDC_SKIP_LOGIN_PAGE y no se puede cambiar aquí."
+  "skipLoginPage.config.info": "Omitir la página de inicio de sesión está controlado por la variable de configuración OIDC_SKIP_LOGIN_PAGE y no se puede cambiar aquí.",
+  "audit.backchannel_logout": "Sesión de usuario invalidada mediante cierre de sesión de canal posterior.",
+  "audit.backchannel_logout_config_error": "Error en cierre de sesión de canal posterior — la configuración del proveedor OIDC está incompleta.",
+  "audit.backchannel_logout_unknown_sub": "Cierre de sesión de canal posterior recibió un identificador de sujeto desconocido."
 }

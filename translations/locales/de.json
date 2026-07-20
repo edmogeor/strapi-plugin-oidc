@@ -104,5 +104,8 @@
   "settings.configuration": "Konfiguration",
   "audit.login_failure": "Fehler: {message}",
   "audit.roles_updated": "Rollen aktualisiert auf: {roles}",
-  "audit.user_created": "Zugewiesene Rollen: {roles}"
+  "audit.user_created": "Zugewiesene Rollen: {roles}",
+  "audit.backchannel_logout": "Benutzersitzung über Backchannel-Logout invalidiert.",
+  "audit.backchannel_logout_config_error": "Backchannel-Logout fehlgeschlagen — OIDC-Provider-Konfiguration ist unvollständig.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel-Logout erhielt eine unbekannte Subjektkennung."
 }

@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "เปิดใช้งาน",
   "skipLoginPage.toggle.disabled": "ปิดใช้งาน",
   "skipLoginPage.warning": "ผู้ใช้จะถูกเปลี่ยนเส้นทางไปยังผู้ให้บริการ OIDC โดยตรงโดยไม่เห็นหน้าล็อกอินของ Strapi ตรวจสอบให้แน่ใจว่าผู้ให้บริการ OIDC ของคุณได้รับการกำหนดค่าอย่างถูกต้อง",
-  "skipLoginPage.config.info": "การข้ามหน้าล็อกอินถูกควบคุมโดยตัวแปรการกำหนดค่า OIDC_SKIP_LOGIN_PAGE และไม่สามารถเปลี่ยนแปลงได้ที่นี่"
+  "skipLoginPage.config.info": "การข้ามหน้าล็อกอินถูกควบคุมโดยตัวแปรการกำหนดค่า OIDC_SKIP_LOGIN_PAGE และไม่สามารถเปลี่ยนแปลงได้ที่นี่",
+  "audit.backchannel_logout": "เซสชันผู้ใช้ถูกยกเลิกผ่านการออกจากระบบแบบแบ็คแชนแนล",
+  "audit.backchannel_logout_config_error": "การออกจากระบบแบบแบ็คแชนแนลล้มเหลว — การกำหนดค่าผู้ให้บริการ OIDC ไม่สมบูรณ์",
+  "audit.backchannel_logout_unknown_sub": "การออกจากระบบแบบแบ็คแชนแนลได้รับตัวระบุหัวข้อที่ไม่รู้จัก"
 }

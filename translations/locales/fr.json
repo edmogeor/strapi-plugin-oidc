@@ -104,5 +104,8 @@
   "settings.configuration": "Configuration",
   "audit.login_failure": "Erreur : {message}",
   "audit.roles_updated": "Rôles mis à jour vers : {roles}",
-  "audit.user_created": "Rôles attribués : {roles}"
+  "audit.user_created": "Rôles attribués : {roles}",
+  "audit.backchannel_logout": "Session utilisateur invalidée via déconnexion backchannel.",
+  "audit.backchannel_logout_config_error": "Échec de la déconnexion backchannel — configuration du fournisseur OIDC incomplète.",
+  "audit.backchannel_logout_unknown_sub": "Déconnexion backchannel reçue avec un identifiant de sujet inconnu."
 }

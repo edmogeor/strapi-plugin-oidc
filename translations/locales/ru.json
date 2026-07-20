@@ -104,5 +104,8 @@
   "skipLoginPage.toggle.enabled": "Включено",
   "skipLoginPage.toggle.disabled": "Отключено",
   "skipLoginPage.warning": "Пользователи будут перенаправлены напрямую к провайдеру OIDC, минуя страницу входа Strapi. Убедитесь, что ваш провайдер OIDC настроен правильно.",
-  "skipLoginPage.config.info": "Пропуск страницы входа управляется переменной конфигурации OIDC_SKIP_LOGIN_PAGE и не может быть изменен здесь."
+  "skipLoginPage.config.info": "Пропуск страницы входа управляется переменной конфигурации OIDC_SKIP_LOGIN_PAGE и не может быть изменен здесь.",
+  "audit.backchannel_logout": "Сеанс пользователя аннулирован через фоновый выход из системы.",
+  "audit.backchannel_logout_config_error": "Фоновый выход из системы не удался — конфигурация провайдера OIDC неполная.",
+  "audit.backchannel_logout_unknown_sub": "Фоновый выход из системы получил неизвестный идентификатор субъекта."
 }

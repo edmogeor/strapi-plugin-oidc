@@ -5,7 +5,6 @@ import type { PluginConfig } from '../../../shared/config';
 const REQUIRED_CONFIG_KEYS = [
   'OIDC_ISSUER',
   'OIDC_CLIENT_ID',
-  'OIDC_CLIENT_SECRET',
   'OIDC_SCOPE',
   'OIDC_FAMILY_NAME_FIELD',
   'OIDC_GIVEN_NAME_FIELD',
