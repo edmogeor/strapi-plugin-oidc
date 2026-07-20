@@ -123,27 +123,6 @@ export async function initiateLogin(agent: ReturnType<typeof request.agent>): Pr
   return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${new URL(loginRes.headers.location).searchParams.get('state')}`;
 }
 
-export async function loginWithGroups(
-  strapi: Core.Strapi,
-  _email: string,
-  _groups: string[],
-  groupRoleMap: Record<string, string[]>,
-): Promise<void> {
-  setGroupRoleMap(strapi, groupRoleMap);
-  const agent = request.agent(strapi.server.httpServer);
-  await initiateLoginAndCallback(agent);
-}
-
-async function applyRoleMapConfig(
-  strapi: Core.Strapi,
-  groupRoleMap: Record<string, string[]>,
-): Promise<ReturnType<typeof request.agent>> {
-  setGroupRoleMap(strapi, groupRoleMap);
-  return request.agent(strapi.server.httpServer);
-}
-
-export { applyRoleMapConfig as applyRoleMap };
-
 export function setGroupRoleMap(strapi: Core.Strapi, groupRoleMap: Record<string, string[]>) {
   const config = { ...MOCK_OIDC_CONFIG };
   config.OIDC_GROUP_ROLE_MAP = JSON.stringify(groupRoleMap);

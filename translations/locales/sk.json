@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Používateľ bol úspešne autentifikovaný cez OIDC a bol mu udelený prístup.",
   "auditlog.action.user_created": "Pri prvom OIDC prihlásení bol pre tohto používateľa vytvorený nový účet administrátora Strapi.",
   "auditlog.action.logout": "Používateľ sa odhlásil a jeho OIDC relácia bola ukončená.",
-  "auditlog.action.session_expired": "Prístupový token OIDC vypršal v čase, keď sa používateľ odhlásil, takže relácia poskytovateľa nemohla byť ukončená vzdialene.",
   "auditlog.action.login_failure": "Počas OIDC prihlasovacieho toku došlo k neočakávanej chybe.",
   "auditlog.action.missing_code": "OIDC callback bol prijatý bez autorizačného kódu. To môže naznačovať nesprávne nakonfigurovaného poskytovateľa alebo poškodený dopyt.",
   "auditlog.action.state_mismatch": "Parameter stavu v callbacku sa nezhodoval s tým uloženým v relácii. To môže naznačovať pokus o CSRF alebo vypršanú prihlasovaciu reláciu.",

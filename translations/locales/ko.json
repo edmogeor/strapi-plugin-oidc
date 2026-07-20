@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "사용자가 OIDC를 통해 성공적으로 인증받고 액세스가 부여되었습니다.",
   "auditlog.action.user_created": "이 사용자의 첫 번째 OIDC 로그인 시新しい Strapi 관리자 계정이 생성되었습니다.",
   "auditlog.action.logout": "사용자가 로그아웃하고 OIDC 세션이 종료되었습니다.",
-  "auditlog.action.session_expired": "사용자가 로그아웃할 때 OIDC 액세스 토큰이 만료되어 공급자 세션을 원격으로 종료할 수 없었습니다.",
   "auditlog.action.login_failure": "OIDC 로그인 흐름 중에 예기치 않은 오류가 발생했습니다.",
   "auditlog.action.missing_code": "OIDC 콜백이 인증 코드 없이 수신되었습니다. 이것은 잘못 구성된 공급자 또는 변조된 요청을 나타낼 수 있습니다.",
   "auditlog.action.state_mismatch": "콜백의 상태 매개변수가 세션에 저장된ものと 일치하지 않았습니다. 이것은 CSRF 시도 또는 만료된 로그인 세션을 나타낼 수 있습니다.",

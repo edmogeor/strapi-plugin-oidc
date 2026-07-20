@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "使用者已透過OIDC成功驗證並被授予存取權限。",
   "auditlog.action.user_created": "在使用者首次OIDC登入時，為該使用者建立了新的Strapi管理員帳戶。",
   "auditlog.action.logout": "使用者已登出，其OIDC工作階段已結束。",
-  "auditlog.action.session_expired": "OIDC存取權杖在使用者登出時已過期，因此無法遠端終止供應商工作階段。",
   "auditlog.action.login_failure": "在OIDC登入流程期間發生意外錯誤。",
   "auditlog.action.missing_code": "收到的OIDC回呼沒有授權碼。這可能表示設定錯誤的供應商或被竄改的請求。",
   "auditlog.action.state_mismatch": "回呼中的狀態參數與工作階段中儲存的不符合。這可能表示CSRF嘗試或過期的登入工作階段。",

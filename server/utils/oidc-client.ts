@@ -27,7 +27,10 @@ export function getOidcConfig(): Promise<Configuration> {
       }
 
       return client.discovery(new URL(OIDC_ISSUER), OIDC_CLIENT_ID, metadata, clientAuthentication);
-    })();
+    })().catch((err) => {
+      configPromise = null;
+      throw err;
+    });
   }
   return configPromise;
 }

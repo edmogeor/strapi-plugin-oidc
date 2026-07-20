@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Kullanıcı OIDC üzerinden başarıyla kimlik doğrulandı ve erişim aldı.",
   "auditlog.action.user_created": "Bu kullanıcı için ilk OIDC girişinde yeni bir Strapi yönetici hesabı oluşturuldu.",
   "auditlog.action.logout": "Kullanıcı çıkış yaptı ve OIDC oturumu sonlandırıldı.",
-  "auditlog.action.session_expired": "OIDC erişim belirteci, kullanıcının çıkış yaptığı sırada süresi dolmuştu, bu nedenle sağlayıcı oturumu uzaktan sonlandırılamadı.",
   "auditlog.action.login_failure": "OIDC giriş akışı sırasında beklenmeyen bir hata oluştu.",
   "auditlog.action.missing_code": "OIDC geri araması, yetkilendirme kodu olmadan alındı. Bu, yanlış yapılandırılmış bir sağlayıcıya veya değiştirilmiş bir isteğe işaret edebilir.",
   "auditlog.action.state_mismatch": "Geri aramadaki durum parametresi, oturumda depolananla eşleşmedi. Bu, bir CSRF girişimi veya süresi dolmuş bir giriş oturumuna işaret edebilir.",

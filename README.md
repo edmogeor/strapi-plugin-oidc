@@ -303,20 +303,16 @@ curl -H "Authorization: Bearer <token>" -G \
 
 ### Recorded actions
 
-| Action                  | Trigger                                                           |
-| ----------------------- | ----------------------------------------------------------------- |
-| `login_success`         | Successful OIDC authentication                                    |
-| `user_created`          | New Strapi admin user created during login                        |
-| `login_failure`         | Unexpected error during the OIDC login flow                       |
-| `missing_code`          | Callback received without an authorisation code                   |
-| `state_mismatch`        | CSRF state cookie does not match callback parameter               |
-| `nonce_mismatch`        | ID token nonce does not match the session nonce                   |
-| `token_exchange_failed` | Provider returned an error during token exchange                  |
-| `whitelist_rejected`    | Email not present in the active whitelist                         |
-| `email_not_verified`    | Provider did not report `email_verified=true`                     |
-| `id_token_invalid`      | ID token failed signature, issuer, audience, or expiry validation |
-| `logout`                | User logged out via `/logout`                                     |
-| `session_expired`       | Logout attempted but provider session already stale               |
+| Action               | Trigger                                             |
+| -------------------- | --------------------------------------------------- |
+| `login_success`      | Successful OIDC authentication                      |
+| `user_created`       | New Strapi admin user created during login          |
+| `login_failure`      | Unexpected error during the OIDC login flow         |
+| `missing_code`       | Callback received without an authorisation code     |
+| `state_mismatch`     | CSRF state cookie does not match callback parameter |
+| `whitelist_rejected` | Email not present in the active whitelist           |
+| `email_not_verified` | Provider did not report `email_verified=true`       |
+| `logout`             | User logged out (RP-initiated or backchannel)       |
 
 Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc::auth.<action>`, which Enterprise audit log listeners pick up automatically.
 

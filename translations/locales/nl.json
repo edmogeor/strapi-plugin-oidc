@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Gebruiker is succesvol geverifieerd via OIDC en kreeg toegang.",
   "auditlog.action.user_created": "Er is een nieuw Strapi-adminaccount aangemaakt voor deze gebruiker bij hun eerste OIDC-inlog.",
   "auditlog.action.logout": "Gebruiker is uitgelogd en hun OIDC-sessie werd beëindigd.",
-  "auditlog.action.session_expired": "Het OIDC-toegangstoken was verlopen op het moment dat de gebruiker uitlogde, dus de providersessie kon niet op afstand worden beëindigd.",
   "auditlog.action.login_failure": "Er is een onverwachte fout opgetreden tijdens de OIDC-inlogstroom.",
   "auditlog.action.missing_code": "De OIDC-callback werd ontvangen zonder autorisatiecode. Dit kan wijzen op een verkeerd geconfigureerde provider of een gemanipuleerd verzoek.",
   "auditlog.action.state_mismatch": "De statusparameter in de callback kwam niet overeen met de in de sessie opgeslagen versie. Dit kan wijzen op een CSRF-poging of een verlopen inlogsessie.",

@@ -24,9 +24,9 @@ function readAndClearPkceCookies(ctx: StrapiContext): {
   const oidcState = ctx.cookies.get(COOKIE_NAMES.state);
   const codeVerifier = ctx.cookies.get(COOKIE_NAMES.codeVerifier);
   const oidcNonce = ctx.cookies.get(COOKIE_NAMES.nonce);
-  ctx.cookies.set(COOKIE_NAMES.state, null);
-  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null);
-  ctx.cookies.set(COOKIE_NAMES.nonce, null);
+  ctx.cookies.set(COOKIE_NAMES.state, null, { maxAge: 0, expires: new Date(0) });
+  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null, { maxAge: 0, expires: new Date(0) });
+  ctx.cookies.set(COOKIE_NAMES.nonce, null, { maxAge: 0, expires: new Date(0) });
   return { oidcState, codeVerifier, oidcNonce };
 }
 

@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "ユーザーはOIDCを通じて正常に認証され、アクセスが許可されました。",
   "auditlog.action.user_created": "このユーザーの初回OIDCログイン時に、新しいStrapi管理者アカウントが作成されました。",
   "auditlog.action.logout": "ユーザーがログアウトし、OIDCセッションが終了しました。",
-  "auditlog.action.session_expired": "ユーザーのログアウト時にOIDCアクセストークンが有効期限切れになっていたため、プロバイダーセッションをリモートで終了できませんでした。",
   "auditlog.action.login_failure": "OIDCログインフロー中に予期しないエラーが発生しました。",
   "auditlog.action.missing_code": "OIDCコールバックが認証コードなしで受信されました。これは構成ミスのあるプロバイダーまたは改ざんされたリクエストを示している可能性があります。",
   "auditlog.action.state_mismatch": "コールバックの状態パラメーターがセッションに保存されたものと一致しませんでした。これはCSRFの試みまたは期限切れのログインセッションを示している可能性があります。",

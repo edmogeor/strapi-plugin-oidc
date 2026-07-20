@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Pengguna berjayaDiaktifkan melalui OIDC dan diberikan akses.",
   "auditlog.action.user_created": "Akaun pentadbir Strapi baharu dicipta untuk pengguna ini pada log masuk OIDC pertama mereka.",
   "auditlog.action.logout": "Pengguna log keluar dan sesi OIDC mereka berakhir.",
-  "auditlog.action.session_expired": "Token akses OIDC telah tamat tempoh pada masa pengguna log keluar, jadi sesi pembekal tidak boleh ditamatkan dari jauh.",
   "auditlog.action.login_failure": "Ralat yang tidak dijangka berlaku semasa aliran log masuk OIDC.",
   "auditlog.action.missing_code": "Callback OIDC diterima tanpa kod kebenaran. Ini mungkin menunjukkan pembekal yang salah konfigurasi atau permintaan yang dirosakkan.",
   "auditlog.action.state_mismatch": "Parameter status dalam callback tidak sepadan dengan yang disimpan dalam sesi. Ini mungkin menunjukkan percubaan CSRF atau sesi log masuk yang tamat tempoh.",

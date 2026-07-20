@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Pengguna berhasil diautentikasi melalui OIDC dan diberikan akses.",
   "auditlog.action.user_created": "Akun admin Strapi baru dibuat untuk pengguna ini pada login OIDC pertama mereka.",
   "auditlog.action.logout": "Pengguna keluar dan sesi OIDC mereka berakhir.",
-  "auditlog.action.session_expired": "Token akses OIDC telah kedaluwarsa pada saat pengguna keluar, sehingga sesi penyedia tidak dapat dihentikan dari jarak jauh.",
   "auditlog.action.login_failure": "Terjadi kesalahan tak terduga selama alur login OIDC.",
   "auditlog.action.missing_code": "Callback OIDC diterima tanpa kode otorisasi. Ini mungkin menunjukkan penyedia yang salah dikonfigurasi atau permintaan yang dirusak.",
   "auditlog.action.state_mismatch": "Parameter status dalam callback tidak cocok dengan yang tersimpan dalam sesi. Ini mungkin menunjukkan upaya CSRF atau sesi login kedaluwarsa.",

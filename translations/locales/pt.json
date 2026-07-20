@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Utilizador autenticado com sucesso via OIDC e obteve acesso.",
   "auditlog.action.user_created": "Uma nova conta de administrador Strapi foi criada para este utilizador no primeiro início de sessão OIDC.",
   "auditlog.action.logout": "Utilizador terminou sessão e a sua sessão OIDC foi encerrada.",
-  "auditlog.action.session_expired": "O token de acesso OIDC tinha expirado no momento em que o utilizador terminou sessão, então a sessão do fornecedor não pôde ser encerrada remotamente.",
   "auditlog.action.login_failure": "Ocorreu um erro inesperado durante o fluxo de início de sessão OIDC.",
   "auditlog.action.missing_code": "O callback OIDC foi recebido sem um código de autorização. Isto pode indicar um fornecedor mal configurado ou um pedido adulterado.",
   "auditlog.action.state_mismatch": "O parâmetro de estado no callback não correspondeu ao armazenado na sessão. Isto pode indicar uma tentativa de CSRF ou uma sessão de início de sessão expirada.",

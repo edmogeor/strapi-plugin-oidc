@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "用户已通过OIDC成功认证并被授予访问权限。",
   "auditlog.action.user_created": "在用户首次OIDC登录时，为该用户创建了新的Strapi管理员账户。",
   "auditlog.action.logout": "用户已登出，其OIDC会话已结束。",
-  "auditlog.action.session_expired": "OIDC访问令牌在用户登出时已过期，因此无法远程终止提供商会话。",
   "auditlog.action.login_failure": "在OIDC登录流程期间发生意外错误。",
   "auditlog.action.missing_code": "收到的OIDC回调没有授权码。这可能表示配置错误的提供商或被篡改的请求。",
   "auditlog.action.state_mismatch": "回调中的状态参数与会话中存储的不匹配。这可能表示CSRF尝试或过期的登录会话。",

@@ -135,7 +135,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         document.cookie = 'jwtToken=${encodeURIComponent(jwtToken)}; Path=/';
       }
       localStorage.setItem('isLoggedIn', 'true');
-      location.href = '${strapi.config.admin.url}'
+      location.href = '${strapi.config.admin.url ?? '/admin'}'
      })
     </script>`;
 
@@ -155,7 +155,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
     </div>
     <h1>${errorTitle}</h1>
     <p>${safeMessage}</p>
-    <a href="${strapi.config.admin.url}" class="btn">${t(locale, 'auth.page.error.returnToLogin')}</a>
+    <a href="${strapi.config.admin.url ?? '/admin'}" class="btn">${t(locale, 'auth.page.error.returnToLogin')}</a>
   </div>`;
       return renderHtmlTemplate(errorTitle, content, locale);
     },

@@ -86,7 +86,6 @@
   "auditlog.action.login_success": "Benutzer wurde erfolgreich über OIDC authentifiziert und erhielt Zugang.",
   "auditlog.action.user_created": "Bei der ersten OIDC-Anmeldung wurde ein neues Strapi-Admin-Konto für diesen Benutzer erstellt.",
   "auditlog.action.logout": "Benutzer hat sich abgemeldet und seine OIDC-Sitzung wurde beendet.",
-  "auditlog.action.session_expired": "Das OIDC-Zugriffstoken war zum Zeitpunkt der Abmeldung des Benutzers abgelaufen, sodass die Provider-Sitzung nicht remote beendet werden konnte.",
   "auditlog.action.login_failure": "During des OIDC-Anmeldungsflows ist ein unerwarteter Fehler aufgetreten.",
   "auditlog.action.missing_code": "Der OIDC-Callback wurde ohne Autorisierungscode empfangen. Dies kann auf einen falsch konfigurierten Provider oder eine manipulierte Anfrage hindeuten.",
   "auditlog.action.state_mismatch": "Der Statusparameter im Callback stimmte nicht mit dem in der Sitzung gespeicherten überein. Dies kann auf einen CSRF-Versuch oder eine abgelaufene Anmeldungssitzung hindeuten.",

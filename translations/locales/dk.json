@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Bruger blev успешно authentificeret via OIDC og fik adgang.",
   "auditlog.action.user_created": "En ny Strapi-administratorkonto blev oprettet til denne bruger ved deres første OIDC-login.",
   "auditlog.action.logout": "Bruger loggede ud, og deres OIDC-session blev afsluttet.",
-  "auditlog.action.session_expired": "OIDC-adgangstokenet var udløbet på tidspunktet for brugerens logout, så providersessionen kunne ikke afsluttes fjernbetjent.",
   "auditlog.action.login_failure": "Der opstod en uventet fejl under OIDC-loginflowet.",
   "auditlog.action.missing_code": "OIDC-callbacket blev modtaget uden en autorisationskode. Dette kan indikere en fejlkonfigureret provider eller en manipuleret anmodning.",
   "auditlog.action.state_mismatch": "State-parameteren i callbacket matchedte ikke den, der var gemt i sessionen. Dette kan indikere et CSRF-forsøg eller en udløbet loginsession.",

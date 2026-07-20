@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Użytkownik został pomyślnie uwierzytelniony przez OIDC i otrzymał dostęp.",
   "auditlog.action.user_created": "Nowe konto administratora Strapi zostało utworzone dla tego użytkownika przy jego pierwszym logowaniu OIDC.",
   "auditlog.action.logout": "Użytkownik wylogował się, a jego sesja OIDC została zakończona.",
-  "auditlog.action.session_expired": "Token dostępu OIDC wygasł w momencie wylogowania użytkownika, więc sesja dostawcy nie mogła zostać zakończona zdalnie.",
   "auditlog.action.login_failure": "Wystąpił nieoczekiwany błąd podczas przepływu logowania OIDC.",
   "auditlog.action.missing_code": "Otrzymano wywołanie zwrotne OIDC bez kodu autoryzacji. Może to wskazywać na błędnie skonfigurowanego dostawcę lub zmodyfikowane żądanie.",
   "auditlog.action.state_mismatch": "Parametr stanu w wywołaniu zwrotnym nie odpowiadał temu przechowywanemu w sesji. Może to wskazywać na próbę CSRF lub wygasłą sesję logowania.",

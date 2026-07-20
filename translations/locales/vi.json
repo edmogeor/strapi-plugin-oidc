@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "Người dùng đã xác thực thành công qua OIDC và được cấp quyền truy cập.",
   "auditlog.action.user_created": "Một tài khoản quản trị Strapi mới đã được tạo cho người dùng này trong lần đăng nhập OIDC đầu tiên.",
   "auditlog.action.logout": "Người dùng đã đăng xuất và phiên OIDC của họ đã kết thúc.",
-  "auditlog.action.session_expired": "Mã thông báo truy cập OIDC đã hết hạn vào thời điểm người dùng đăng xuất, do đó phiên của nhà cung cấp không thể kết thúc từ xa.",
   "auditlog.action.login_failure": "Đã xảy ra lỗi không mong đợi trong luồng đăng nhập OIDC.",
   "auditlog.action.missing_code": "Đã nhận được cuộc gọi lại OIDC mà không có mã ủy quyền. Điều này có thể chỉ ra nhà cung cấp được định cấu hình sai hoặc yêu cầu bị giả mạo.",
   "auditlog.action.state_mismatch": "Tham số trạng thái trong cuộc gọi lại không khớp với tham số được lưu trữ trong phiên. Điều này có thể chỉ ra nỗ lực CSRF hoặc phiên đăng nhập đã hết hạn.",

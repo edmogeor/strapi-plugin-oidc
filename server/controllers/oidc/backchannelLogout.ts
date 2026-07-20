@@ -87,7 +87,7 @@ export async function backchannelLogout(ctx: StrapiContext) {
 
     if (!issuer || !jwksUri) {
       await auditLog.log({
-        action: 'login_failure',
+        action: 'logout',
         ip,
         detailsKey: 'backchannel_logout_config_error',
       });

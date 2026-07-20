@@ -155,7 +155,7 @@ describe('rate-limit map bounding and pruning', () => {
     expect(getRateLimitMapSize()).toBe(0);
   });
 
-  it('map size never exceeds MAX_MAP_SIZE across many distinct IPs', async () => {
+  it('rate limiter bounds storage size across many distinct IPs', async () => {
     const request = (await import('supertest')).default;
     const strapi = globalThis.strapiInstance;
 
@@ -167,7 +167,6 @@ describe('rate-limit map bounding and pruning', () => {
         .set('user-agent', `bot-${i}`)
         .redirects(0);
     }
-    // MAX_MAP_SIZE is 10_000 — size must not grow without bound
     expect(getRateLimitMapSize()).toBeLessThanOrEqual(10_000);
   });
 });

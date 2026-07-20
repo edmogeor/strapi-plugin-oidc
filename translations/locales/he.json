@@ -81,7 +81,6 @@
   "auditlog.action.login_success": "המשתמש אומת בהצלחה דרך OIDC וקיבל גישה.",
   "auditlog.action.user_created": "חשבון מנהל Strapi חדש נוצר עבור משתמש זה בהתחברות ה-OIDC הראשונה שלו.",
   "auditlog.action.logout": "המשתמש התנתק והפעלת ה-OIDC שלו הסתיימה.",
-  "auditlog.action.session_expired": "אסימון הגישה של OIDC פג תוקף בזמן שהמשתמש התנתק, כך שלא ניתן היה לסיים את הפעלת הספק מרחוק.",
   "auditlog.action.login_failure": "אירעה שגיאה לא צפויה במהלך התהליך של התחברות OIDC.",
   "auditlog.action.missing_code": "קריאת ה-OIDC התקבלה ללא קוד הרשאה. הדבר עשוי להצביע על ספק שהוגדר בצורה שגויה או על בקשה מזויפת.",
   "auditlog.action.state_mismatch": "פרמטר המצב בקריאה החוזרת לא התאים לזה שמאוחסן בהפעלה. הדבר עשוי להצביע על ניסיון CSRF או הפעלת התחברות שפג תוקפה.",

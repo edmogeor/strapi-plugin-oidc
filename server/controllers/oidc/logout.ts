@@ -11,7 +11,8 @@ export async function logout(ctx: StrapiContext) {
   let oidcConfig;
   try {
     oidcConfig = await getOidcConfig();
-  } catch {
+  } catch (err) {
+    strapi.log.error('[strapi-plugin-oidc] Failed to fetch OIDC config for logout:', err);
     oidcConfig = null;
   }
 
