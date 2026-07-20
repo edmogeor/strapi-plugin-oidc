@@ -32,17 +32,23 @@ export function useAuditLogs(page: number, filters: FilterState) {
       setLoading(true);
       const startTime = Date.now();
       let newRecords: AuditLogEntry[] = [];
-      let newPagination = { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 };
+      let newPagination: PaginationInfo = { page: p, pageSize: PAGE_SIZE, total: 0, pageCount: 1 };
       try {
         const queryString = buildQueryString({ filters: f, page: p, pageSize: PAGE_SIZE });
         const response = await get(`/strapi-plugin-oidc/audit-logs?${queryString}`);
-        newRecords = response.data.results ?? [];
-        newPagination = response.data.pagination ?? {
-          page: p,
-          pageSize: PAGE_SIZE,
-          total: 0,
-          pageCount: 1,
+        const data = response.data as {
+          results?: AuditLogEntry[];
+          pagination?: PaginationInfo;
         };
+        newRecords = data.results ?? [];
+        newPagination =
+          data.pagination ??
+          ({
+            page: p,
+            pageSize: PAGE_SIZE,
+            total: 0,
+            pageCount: 1,
+          } as PaginationInfo);
       } catch {
         // ignored — newRecords stays []
       }
