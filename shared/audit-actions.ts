@@ -6,7 +6,6 @@ export const AUDIT_ACTIONS = [
   'whitelist_rejected',
   'email_not_verified',
   'logout',
-  'session_expired',
   'user_created',
 ] as const;
 

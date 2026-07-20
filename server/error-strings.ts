@@ -5,9 +5,7 @@ export const errorCodes = {
   USER_CREATION_FAILED: 'USER_CREATION_FAILED',
   JWT_GENERATION_FAILED: 'JWT_GENERATION_FAILED',
   WHITELIST_CHECK_FAILED: 'WHITELIST_CHECK_FAILED',
-  STATE_MISMATCH: 'STATE_MISMATCH',
   MISSING_CODE: 'MISSING_CODE',
-  INVALID_EMAIL: 'INVALID_EMAIL',
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   WHITELIST_NOT_PRESENT: 'WHITELIST_NOT_PRESENT',
   SESSION_MANAGER_UNSUPPORTED: 'SESSION_MANAGER_UNSUPPORTED',
@@ -15,21 +13,17 @@ export const errorCodes = {
 
 export type ErrorCode = (typeof errorCodes)[keyof typeof errorCodes];
 
+import { interpolate } from '../shared/utils';
+
 const ERROR_DETAIL_TEMPLATES: Record<string, string> = {
   role_update_failed: 'Role update failed for user {userId}: {error}',
   user_creation_failed: 'User creation failed for {email}: {error}',
   sign_in_unknown: 'Unknown sign-in error: {error}',
-  invalid_email: 'Invalid email address received from OIDC provider',
   email_not_verified: 'Email address has not been verified by the OIDC provider',
-  whitelist_not_present: 'Email not present in whitelist',
+  whitelist_rejected: 'Email not present in whitelist',
   session_manager_unsupported:
     'sessionManager is not supported. Please upgrade to Strapi v5.24.1 or later.',
 };
-
-function interpolate(template: string, params?: Record<string, string | number>): string {
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? `{${key}}`));
-}
 
 export function getErrorDetail(
   key: string,

@@ -19,12 +19,15 @@ import type { StrapiContext, OidcUserInfo, AuditLogService, StrapiAdminUser } fr
 function readAndClearPkceCookies(ctx: StrapiContext): {
   oidcState: string | undefined;
   codeVerifier: string | undefined;
+  oidcNonce: string | undefined;
 } {
   const oidcState = ctx.cookies.get(COOKIE_NAMES.state);
   const codeVerifier = ctx.cookies.get(COOKIE_NAMES.codeVerifier);
+  const oidcNonce = ctx.cookies.get(COOKIE_NAMES.nonce);
   ctx.cookies.set(COOKIE_NAMES.state, null);
   ctx.cookies.set(COOKIE_NAMES.codeVerifier, null);
-  return { oidcState, codeVerifier };
+  ctx.cookies.set(COOKIE_NAMES.nonce, null);
+  return { oidcState, codeVerifier, oidcNonce };
 }
 
 async function logSuccessfulAuth(
@@ -71,7 +74,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     return ctx.send(oauthService.renderSignUpError(t(locale, 'user.missing_code'), locale));
   }
 
-  const { oidcState, codeVerifier } = readAndClearPkceCookies(ctx);
+  const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: getClientIp(ctx) });
@@ -84,6 +87,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     const tokens = await client.authorizationCodeGrant(oidcConfig, currentUrl, {
       pkceCodeVerifier: codeVerifier,
       expectedState: oidcState,
+      expectedNonce: oidcNonce,
       idTokenExpected: true,
     });
 
@@ -102,6 +106,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     if (idToken) {
       ctx.cookies.set(COOKIE_NAMES.idToken, idToken, {
         httpOnly: true,
+        path: '/',
         secure: secureFlag,
         sameSite: 'lax' as const,
       });
@@ -119,6 +124,18 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
         config,
         ctx,
       );
+
+    if (sub) {
+      strapi.db
+        .query('admin::user')
+        .update({
+          where: { id: activateUser.id },
+          data: { oidc_sub: sub },
+        })
+        .catch((err: unknown) => {
+          strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
+        });
+    }
 
     ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {
       httpOnly: true,

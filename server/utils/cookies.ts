@@ -5,6 +5,7 @@ import type { StrapiContext } from '../types';
 export const COOKIE_NAMES = {
   state: 'oidc_state',
   codeVerifier: 'oidc_code_verifier',
+  nonce: 'oidc_nonce',
   idToken: 'oidc_id_token',
   userEmail: 'oidc_user_email',
   adminRefresh: 'strapi_admin_refresh',
@@ -43,4 +44,5 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
   const rootPathOptions = { ...options, path: '/' };
   ctx.cookies.set(COOKIE_NAMES.idToken, '', rootPathOptions);
+  ctx.cookies.set(COOKIE_NAMES.userEmail, '', rootPathOptions);
 }

@@ -1,30 +1,33 @@
 import { createHash } from 'node:crypto';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
 import type { Next } from 'koa';
 import type { StrapiContext } from '../types';
 import { getClientIp } from '../utils/ip';
 import { PERMISSIONS, RATE_LIMIT } from '../../shared/constants';
 
-const rateLimitMap = new Map<string, number[]>();
+const rateLimiter = new RateLimiterMemory({
+  points: RATE_LIMIT.MAX_REQUESTS,
+  duration: Math.ceil(RATE_LIMIT.WINDOW_MS / 1000),
+});
 
-export const clearRateLimitMap = (): void => rateLimitMap.clear();
+const backchannelLogoutLimiter = new RateLimiterMemory({
+  keyPrefix: 'bc-logout',
+  points: 30,
+  duration: 60,
+});
 
-export const getRateLimitMapSize = (): number => rateLimitMap.size;
+export const clearRateLimitMap = (): void => {
+  (
+    rateLimiter as { _memoryStorage?: { _storage?: Map<unknown, unknown> } }
+  )._memoryStorage?._storage?.clear();
+};
 
-function pruneExpiredEntries(now: number): void {
-  const windowStart = now - RATE_LIMIT.WINDOW_MS;
-  for (const [key, stamps] of rateLimitMap) {
-    if (stamps.length === 0 || stamps[stamps.length - 1] <= windowStart) {
-      rateLimitMap.delete(key);
-    }
-  }
-}
-
-function evictOldestEntry(): void {
-  const oldest = rateLimitMap.keys().next().value;
-  if (oldest !== undefined) {
-    rateLimitMap.delete(oldest);
-  }
-}
+export const getRateLimitMapSize = (): number => {
+  return (
+    (rateLimiter as { _memoryStorage?: { _storage?: Map<unknown, unknown> } })._memoryStorage
+      ?._storage?.size ?? 0
+  );
+};
 
 function getRateLimitKey(ctx: StrapiContext): string {
   const ip = getClientIp(ctx);
@@ -33,31 +36,26 @@ function getRateLimitKey(ctx: StrapiContext): string {
   return `${ip}:${uaHash}`;
 }
 
-function rateLimitMiddleware(ctx: StrapiContext, next: Next): unknown {
-  const key = getRateLimitKey(ctx);
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT.WINDOW_MS;
-
-  if (rateLimitMap.size > RATE_LIMIT.PRUNE_THRESHOLD) {
-    pruneExpiredEntries(now);
-  }
-
-  const requestStamps = (rateLimitMap.get(key) ?? []).filter((ts) => ts > windowStart);
-
-  if (requestStamps.length >= RATE_LIMIT.MAX_REQUESTS) {
+async function rateLimitMiddleware(ctx: StrapiContext, next: Next): Promise<void> {
+  try {
+    await rateLimiter.consume(getRateLimitKey(ctx));
+  } catch {
     ctx.status = 429;
     ctx.body = 'Too Many Requests';
     return;
   }
+  await next();
+}
 
-  requestStamps.push(now);
-
-  if (!rateLimitMap.has(key) && rateLimitMap.size >= RATE_LIMIT.MAX_MAP_SIZE) {
-    evictOldestEntry();
+async function backchannelLogoutMiddleware(ctx: StrapiContext, next: Next): Promise<void> {
+  try {
+    await backchannelLogoutLimiter.consume(getClientIp(ctx));
+  } catch {
+    ctx.status = 429;
+    ctx.body = 'Too Many Requests';
+    return;
   }
-  rateLimitMap.set(key, requestStamps);
-
-  return next();
+  await next();
 }
 
 function adminPolicies(action: 'read' | 'update'): { policies: unknown[] } {
@@ -111,6 +109,12 @@ export default {
         path: '/logout',
         handler: 'oidc.logout',
         config: { auth: false },
+      },
+      {
+        method: 'POST',
+        path: '/backchannel-logout',
+        handler: 'oidc.backchannelLogout',
+        config: { auth: false, middlewares: [backchannelLogoutMiddleware] },
       },
       {
         method: 'GET',
@@ -187,10 +191,6 @@ export default {
     ],
   },
 
-  // API-token-authenticated routes for programmatic whitelist management.
-  // Accessible at /strapi-plugin-oidc/... using a Strapi API token
-  // (full-access or custom) in the Authorization: Bearer <token> header.
-  // Custom tokens must be granted one or more of the semantic scopes below.
   'content-api': {
     type: 'content-api',
     routes: [

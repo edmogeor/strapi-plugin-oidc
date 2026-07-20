@@ -6,6 +6,8 @@ import type { StrapiContext, StrapiAdminUser } from '../types';
 import { errorMessages } from '../error-strings';
 import { t } from '../i18n';
 import { shouldMarkSecure, COOKIE_NAMES } from '../utils/cookies';
+import { normalizeEmail } from '../utils/email';
+import { escapeHtml } from '../../shared/utils';
 import { renderHtmlTemplate } from '../../shared/auth-template';
 
 export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
@@ -18,7 +20,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       roles: string[] = [],
     ) {
       const userService = strapi.service('admin::user');
-      const normalizedEmail = email.toLowerCase();
+      const normalizedEmail = normalizeEmail(email);
 
       const createdUser = await userService.create({
         firstname: firstname || 'unset',
@@ -141,12 +143,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
     },
     renderSignUpError(message: string, locale: string = 'en') {
       const errorTitle = t(locale, 'auth.page.error.title');
-      const safeMessage = String(message)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+      const safeMessage = escapeHtml(String(message));
       const content = `
   <div class="card">
     <div class="icon">

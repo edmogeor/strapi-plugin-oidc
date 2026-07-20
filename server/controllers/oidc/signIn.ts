@@ -31,6 +31,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
     const codeVerifier = client.randomPKCECodeVerifier();
     const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
     const state = client.randomState();
+    const nonce = client.randomNonce();
 
     const cookieOptions = {
       httpOnly: true,
@@ -41,6 +42,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
 
     ctx.cookies.set(COOKIE_NAMES.codeVerifier, codeVerifier, cookieOptions);
     ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
+    ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
 
     const redirectUri = resolveRedirectUri(config);
     const authUrl = client.buildAuthorizationUrl(oidcConfig, {
@@ -49,6 +51,9 @@ export async function oidcSignIn(ctx: StrapiContext) {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
       state,
+      nonce,
+      ...(config.OIDC_MAX_AGE ? { max_age: String(config.OIDC_MAX_AGE) } : {}),
+      ...(config.OIDC_PROMPT ? { prompt: config.OIDC_PROMPT } : {}),
     });
 
     ctx.set('Location', authUrl.href);

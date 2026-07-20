@@ -40,9 +40,48 @@ export const pluginConfigSchema = z.object({
   OIDC_ISSUER: z.string().default(''),
   OIDC_FORCE_SECURE_COOKIES: coerceBool(false),
   OIDC_SKIP_LOGIN_PAGE: coerceBoolNullable,
+  OIDC_MAX_AGE: z.number().int().positive().optional(),
+  OIDC_PROMPT: z.string().default(''),
+  OIDC_CLIENT_ASSERTION: z
+    .union([
+      z.string(),
+      z.object({
+        privateKey: z.string(),
+        keyId: z.string().optional(),
+        algorithm: z.string().default('RS256'),
+      }),
+    ])
+    .default(''),
 });
 
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;
+
+export type ClientAssertionConfig = {
+  privateKey: string;
+  keyId?: string;
+  algorithm: string;
+};
+
+export function parseClientAssertion(raw: unknown): ClientAssertionConfig | null {
+  if (typeof raw === 'string') {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ClientAssertionConfig;
+    } catch {
+      return null;
+    }
+  }
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.privateKey !== 'string' || !obj.privateKey) return null;
+    return {
+      privateKey: obj.privateKey as string,
+      keyId: typeof obj.keyId === 'string' ? obj.keyId : undefined,
+      algorithm: typeof obj.algorithm === 'string' ? obj.algorithm : 'RS256',
+    };
+  }
+  return null;
+}
 
 export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
   if (typeof raw !== 'string') {

@@ -382,6 +382,11 @@ describe('cookies utils', () => {
     expect(
       ctx.cookies.calls.some((c: CookieCall) => c.name === 'oidc_id_token' && c.opts?.path === '/'),
     ).toBe(true);
+    expect(
+      ctx.cookies.calls.some(
+        (c: CookieCall) => c.name === 'oidc_user_email' && c.opts?.path === '/',
+      ),
+    ).toBe(true);
   });
 
   describe('in production with domain and strict sameSite', () => {
