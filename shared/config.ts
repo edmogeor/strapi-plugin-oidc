@@ -38,7 +38,7 @@ export const pluginConfigSchema = z.object({
   OIDC_SCOPE: z.string().default('openid profile email'),
   OIDC_FAMILY_NAME_FIELD: z.string().default('family_name'),
   OIDC_GIVEN_NAME_FIELD: z.string().default('given_name'),
-  OIDC_SSO_BUTTON_TEXT: z.string().default('Sign in with OIDC'),
+  OIDC_SSO_BUTTON_TEXT: z.string().default('Login via SSO'),
   OIDC_ENFORCE: coerceBoolNullable,
   AUDIT_LOG_RETENTION_DAYS: z.number().default(90),
   OIDC_GROUP_FIELD: z.string().default('groups'),
