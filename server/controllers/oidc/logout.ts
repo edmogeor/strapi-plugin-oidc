@@ -4,6 +4,7 @@ import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
 import { getAuditLogService, getWhitelistService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
 import { resolveSkipLoginPage } from '../../utils/configFlag';
+import { getPluginConfig } from '../../utils/pluginConfig';
 import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
 
@@ -23,9 +24,14 @@ export async function logout(ctx: StrapiContext) {
   const loginUrl = `${adminPanelUrl}/auth/login`;
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const fallbackUrl = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
+  const relativeFallback = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
     ? OIDC_SIGN_IN_PATH
     : loginUrl;
+
+  const publicUrl = getPluginConfig().OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
+  const fallbackUrl = publicUrl
+    ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
+    : relativeFallback;
 
   clearAuthCookies(strapi, ctx);
 
