@@ -23,6 +23,12 @@ const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.js
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   resetOidcConfig();
+
+  try {
+    await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sub TEXT');
+  } catch {
+    // Column already exists
+  }
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =
     typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';

@@ -128,10 +128,10 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
     if (sub) {
       try {
-        await strapi.db.query('admin::user').update({
-          where: { id: activateUser.id },
-          data: { oidc_sub: sub },
-        });
+        await strapi.db.connection.raw('UPDATE admin_users SET oidc_sub = ? WHERE id = ?', [
+          sub,
+          activateUser.id,
+        ]);
       } catch (err: unknown) {
         strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
       }

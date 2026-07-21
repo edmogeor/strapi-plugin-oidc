@@ -12,16 +12,15 @@ export const COOKIE_NAMES = {
 } as const;
 
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
-  const isProduction = strapi.config.get('environment') === 'production';
-  if (!isProduction) return false;
-
   const config = getPluginConfig();
   if (config.OIDC_FORCE_SECURE_COOKIES === true) return true;
 
+  const isProduction = strapi.config.get('environment') === 'production';
+  if (!isProduction) return false;
+
   if (ctx.request.secure) return true;
 
-  const proxyTrusted = ctx.app?.proxy === true;
-  if (proxyTrusted && ctx.get('x-forwarded-proto') === 'https') return true;
+  if (ctx.get('x-forwarded-proto') === 'https') return true;
 
   return false;
 }
