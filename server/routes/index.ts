@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import type { Next } from 'koa';
+import type { Core } from '@strapi/types';
 import type { StrapiContext } from '../types';
 import { getClientIp } from '../utils/ip';
 import { PERMISSIONS, RATE_LIMIT } from '../../shared/constants';
@@ -29,8 +30,8 @@ export const getRateLimitMapSize = (): number => {
   );
 };
 
-function getRateLimitKey(ctx: StrapiContext): string {
-  const ip = getClientIp(ctx);
+function getRateLimitKey(strapi: Core.Strapi, ctx: StrapiContext): string {
+  const ip = getClientIp(strapi, ctx);
   const ua = ctx.request.header['user-agent'] ?? '';
   const uaHash = createHash('sha256').update(ua).digest('hex').slice(0, 16);
   return `${ip}:${uaHash}`;
@@ -38,7 +39,7 @@ function getRateLimitKey(ctx: StrapiContext): string {
 
 async function rateLimitMiddleware(ctx: StrapiContext, next: Next): Promise<void> {
   try {
-    await rateLimiter.consume(getRateLimitKey(ctx));
+    await rateLimiter.consume(getRateLimitKey(strapi, ctx));
   } catch {
     ctx.status = 429;
     ctx.body = 'Too Many Requests';
@@ -49,7 +50,7 @@ async function rateLimitMiddleware(ctx: StrapiContext, next: Next): Promise<void
 
 async function backchannelLogoutMiddleware(ctx: StrapiContext, next: Next): Promise<void> {
   try {
-    await backchannelLogoutLimiter.consume(getClientIp(ctx));
+    await backchannelLogoutLimiter.consume(getClientIp(strapi, ctx));
   } catch {
     ctx.status = 429;
     ctx.body = 'Too Many Requests';

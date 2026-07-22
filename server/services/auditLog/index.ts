@@ -16,7 +16,7 @@ interface AuditLogResult {
 export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
   return {
     async log({ action, email, ip, detailsKey, detailsParams }: AuditEntry): Promise<void> {
-      if (!isAuditLogEnabled()) return;
+      if (!isAuditLogEnabled(strapi)) return;
 
       await strapi.db.query(CONTENT_TYPES.AUDIT_LOG).create({
         data: {

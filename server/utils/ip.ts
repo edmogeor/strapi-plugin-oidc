@@ -1,3 +1,4 @@
+import type { Core } from '@strapi/types';
 import type { StrapiContext } from '../types';
 import type { PluginConfig } from '../../shared/config';
 
@@ -17,7 +18,7 @@ const TRUSTED_IP_HEADERS = new Set([
   'x-nf-client-connection-ip',
 ]);
 
-function getTrustedHeaderName(): string | undefined {
+function getTrustedHeaderName(strapi: Core.Strapi): string | undefined {
   const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
   const raw = config.OIDC_TRUSTED_IP_HEADER;
   if (typeof raw !== 'string' || !raw) return undefined;
@@ -25,11 +26,11 @@ function getTrustedHeaderName(): string | undefined {
   return TRUSTED_IP_HEADERS.has(normalized) ? normalized : undefined;
 }
 
-export function getClientIp(ctx: StrapiContext): string {
+export function getClientIp(strapi: Core.Strapi, ctx: StrapiContext): string {
   const proxyTrusted = ctx.app?.proxy === true;
 
   if (proxyTrusted) {
-    const trustedHeader = getTrustedHeaderName();
+    const trustedHeader = getTrustedHeaderName(strapi);
     if (trustedHeader) {
       const value = ctx.get(trustedHeader);
       if (value) return value.split(',')[0].trim();

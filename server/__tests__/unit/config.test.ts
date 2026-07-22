@@ -58,7 +58,7 @@ describe('pluginConfigSchema', () => {
         OIDC_SCOPE: 'openid profile email',
         OIDC_FAMILY_NAME_FIELD: 'family_name',
         OIDC_GIVEN_NAME_FIELD: 'given_name',
-        OIDC_SSO_BUTTON_TEXT: 'Sign in with OIDC',
+        OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
         OIDC_ENFORCE: null,
         AUDIT_LOG_RETENTION_DAYS: 90,
         OIDC_GROUP_FIELD: 'groups',

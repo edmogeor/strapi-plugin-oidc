@@ -12,7 +12,7 @@ export const COOKIE_NAMES = {
 } as const;
 
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
-  const config = getPluginConfig();
+  const config = getPluginConfig(strapi);
   if (config.OIDC_FORCE_SECURE_COOKIES === true) return true;
 
   const isProduction = strapi.config.get('environment') === 'production';
@@ -40,10 +40,11 @@ function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
 
 export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
+  const secureFlag = shouldMarkSecure(strapi, ctx);
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
   ctx.cookies.set(COOKIE_NAMES.idToken, '', {
     httpOnly: true,
-    secure: true,
+    secure: secureFlag,
     path: '/',
     sameSite: 'lax' as const,
     maxAge: 0,
@@ -51,7 +52,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   });
   ctx.cookies.set(COOKIE_NAMES.userEmail, '', {
     httpOnly: true,
-    secure: true,
+    secure: secureFlag,
     path: '/',
     sameSite: 'lax' as const,
     maxAge: 0,

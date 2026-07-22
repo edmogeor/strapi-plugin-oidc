@@ -22,6 +22,7 @@ export const MOCK_OIDC_CONFIG = {
   OIDC_FAMILY_NAME_FIELD: 'family_name',
   OIDC_GIVEN_NAME_FIELD: 'given_name',
   OIDC_ENFORCE: null,
+  OIDC_FORCE_SECURE_COOKIES: false,
   AUDIT_LOG_RETENTION_DAYS: 90,
   OIDC_GROUP_FIELD: 'groups',
   OIDC_GROUP_ROLE_MAP: '{}',
@@ -158,33 +159,6 @@ export function mswUserInfoHandler(
       groups,
     }),
   );
-}
-
-export function makeCookieTestCtx(secure = false) {
-  const calls: Array<{ name: string; value: string; opts: Record<string, unknown> }> = [];
-  return {
-    request: { secure },
-    cookies: {
-      set(name: string, value: string, opts: Record<string, unknown>) {
-        calls.push({ name, value, opts });
-      },
-      calls,
-    },
-  };
-}
-
-export function findAdminRefreshCookieCall(ctx: {
-  cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> };
-}) {
-  return ctx.cookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-}
-
-export function expectAdminCookieSecure(
-  ctx: { cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> } },
-  secure: boolean,
-) {
-  const adminCall = findAdminRefreshCookieCall(ctx);
-  expect(adminCall?.opts?.secure).toBe(secure);
 }
 
 export async function setupGroupRoleMapping(

@@ -18,7 +18,7 @@ export function resolveRedirectUri(config: PluginConfig): string {
 }
 
 export function configValidation(): PluginConfig {
-  const config = getPluginConfig();
+  const config = getPluginConfig(strapi);
 
   if (!config.OIDC_ISSUER || !config.OIDC_CLIENT_ID) {
     const missing = [];

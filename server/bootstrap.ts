@@ -183,7 +183,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
     'strapi-plugin-oidc-audit-log-cleanup': {
       task: async () => {
         try {
-          const retentionDays = getRetentionDays();
+          const retentionDays = getRetentionDays(strapi);
           await getAuditLogService().cleanup(retentionDays);
           await pruneStoredJtis();
         } catch (err) {

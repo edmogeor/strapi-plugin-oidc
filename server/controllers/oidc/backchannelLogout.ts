@@ -111,7 +111,7 @@ async function validateLogoutToken(
 
 export async function backchannelLogout(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
-  const ip = getClientIp(ctx);
+  const ip = getClientIp(strapi, ctx);
 
   const body = ctx.request.body as { logout_token?: string };
   const logoutToken = body?.logout_token;

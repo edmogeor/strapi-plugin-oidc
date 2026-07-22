@@ -28,7 +28,7 @@ export async function logout(ctx: StrapiContext) {
     ? OIDC_SIGN_IN_PATH
     : loginUrl;
 
-  const publicUrl = getPluginConfig().OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
+  const publicUrl = getPluginConfig(strapi).OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
   const fallbackUrl = publicUrl
     ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
     : relativeFallback;
@@ -42,7 +42,7 @@ export async function logout(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   if (userEmail) {
     await auditLog
-      .log({ action: 'logout', email: userEmail, ip: getClientIp(ctx) })
+      .log({ action: 'logout', email: userEmail, ip: getClientIp(strapi, ctx) })
       .catch((err) => {
         strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
       });

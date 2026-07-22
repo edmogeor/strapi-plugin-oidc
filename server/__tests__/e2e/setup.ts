@@ -1,5 +1,5 @@
-import { createStrapi } from '@strapi/strapi';
 import path from 'path';
+import fs from 'fs';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import dotenv from 'dotenv';
@@ -37,7 +37,6 @@ async function signMockIdToken(overrides: Record<string, unknown> = {}) {
     .sign(privateKey);
 }
 
-// Mock OIDC Provider
 export const oidcServer = setupServer(
   http.get('https://mock-oidc.com/.well-known/openid-configuration', () => {
     return HttpResponse.json({
@@ -82,17 +81,36 @@ export const oidcServer = setupServer(
   }),
 );
 
+const workerId = process.env.VITEST_WORKER_ID ?? '0';
+const dbFileName = `.tmp/test-${workerId}.db`;
 let instance: Core.Strapi | undefined;
 
 export async function setupStrapi(): Promise<Core.Strapi> {
   if (!instance) {
     const appDir = path.resolve(__dirname, '../../../test-app');
+
+    process.env.PROXY = 'false';
+    process.env.OIDC_FORCE_SECURE_COOKIES = 'false';
+
     dotenv.config({ path: path.join(appDir, '.env') });
+
+    process.env.DATABASE_FILENAME = dbFileName;
+
+    const { createStrapi } = await import('@strapi/strapi');
     instance = createStrapi({
       appDir: appDir,
       distDir: path.join(appDir, 'dist'),
     }) as unknown as Core.Strapi;
     await instance.load();
+
+    const requestProto = Object.getPrototypeOf(instance.server.app.request);
+    Object.defineProperty(requestProto, 'secure', {
+      get() {
+        return true;
+      },
+      configurable: true,
+    });
+
     await instance.server.mount();
   }
   return instance;
@@ -125,6 +143,20 @@ async function deleteFixtureAdminUsers(strapi: Core.Strapi): Promise<void> {
   );
 }
 
+function cleanupDatabaseFiles() {
+  const dbPath = path.resolve(__dirname, '../../../', dbFileName);
+  for (const suffix of ['', '-wal', '-shm']) {
+    const p = dbPath + suffix;
+    if (fs.existsSync(p)) {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // Best effort cleanup
+      }
+    }
+  }
+}
+
 afterAll(async () => {
   oidcServer.close();
   if (globalThis.strapiInstance) {
@@ -137,4 +169,5 @@ afterAll(async () => {
   if (globalThis.strapiInstance?.server?.httpServer) {
     globalThis.strapiInstance.server.httpServer.close();
   }
+  cleanupDatabaseFiles();
 });

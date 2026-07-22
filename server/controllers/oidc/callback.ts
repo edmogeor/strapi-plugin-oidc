@@ -44,7 +44,7 @@ async function logSuccessfulAuth(
     auditLog.log({
       action: 'login_success',
       email: user.email,
-      ip: getClientIp(ctx),
+      ip: getClientIp(strapi, ctx),
       detailsKey: rolesUpdated ? 'roles_updated' : undefined,
       detailsParams: rolesUpdated ? { roles } : undefined,
     }),
@@ -54,7 +54,7 @@ async function logSuccessfulAuth(
       auditLog.log({
         action: 'user_created',
         email: user.email,
-        ip: getClientIp(ctx),
+        ip: getClientIp(strapi, ctx),
         detailsKey: 'user_created',
         detailsParams: { roles },
       }),
@@ -71,14 +71,14 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
   const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
 
   if (!ctx.query.code) {
-    await auditLog.log({ action: 'missing_code', ip: getClientIp(ctx) });
+    await auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
     return ctx.send(oauthService.renderSignUpError(t(locale, 'user.missing_code'), locale));
   }
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
-    await auditLog.log({ action: 'state_mismatch', ip: getClientIp(ctx) });
+    await auditLog.log({ action: 'state_mismatch', ip: getClientIp(strapi, ctx) });
     return ctx.send(oauthService.renderSignUpError(t(locale, 'user.invalid_state'), locale));
   }
 
@@ -108,7 +108,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       ctx.cookies.set(COOKIE_NAMES.idToken, idToken, {
         httpOnly: true,
         path: '/',
-        secure: true,
+        secure: secureFlag,
         sameSite: 'lax' as const,
       });
     }
@@ -140,7 +140,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {
       httpOnly: true,
       path: '/',
-      secure: true,
+      secure: secureFlag,
       sameSite: 'lax' as const,
     });
 

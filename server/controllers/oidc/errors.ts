@@ -51,7 +51,7 @@ export async function handleCallbackError(
   await auditLog.log({
     action: errorInfo.action,
     email: userInfo?.email,
-    ip: getClientIp(ctx),
+    ip: getClientIp(strapi, ctx),
     detailsKey: errorInfo.action,
     detailsParams: errorInfo.action === 'login_failure' ? { message } : undefined,
   });

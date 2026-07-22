@@ -29,7 +29,7 @@ async function info(ctx: Context) {
     skipLoginPage: resolveSkipLoginPage(strapi, settings.skipLoginPage),
     skipLoginPageConfig: getSkipLoginPageConfig(strapi),
     whitelistUsers,
-    auditLogEnabled: isAuditLogEnabled(),
+    auditLogEnabled: isAuditLogEnabled(strapi),
   };
 }
 
@@ -62,7 +62,7 @@ async function updateSettings(ctx: Context) {
 async function publicSettings(ctx: Context) {
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const config = getPluginConfig();
+  const config = getPluginConfig(strapi);
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
