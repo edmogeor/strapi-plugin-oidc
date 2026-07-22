@@ -11,6 +11,22 @@ export const COOKIE_NAMES = {
   adminRefresh: 'strapi_admin_refresh',
 } as const;
 
+export function reconcileCookieName(name: string, secure: boolean): string {
+  if (!secure && name.startsWith('__Host-')) {
+    return name.slice(7);
+  }
+  return name;
+}
+
+export function readCookie(ctx: StrapiContext, name: string): string | undefined {
+  const value = ctx.cookies.get(name);
+  if (value !== undefined) return value;
+  if (name.startsWith('__Host-')) {
+    return ctx.cookies.get(name.slice(7));
+  }
+  return undefined;
+}
+
 export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
   const config = getPluginConfig(strapi);
   if (config.OIDC_FORCE_SECURE_COOKIES === true) return true;
@@ -42,7 +58,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   const secureFlag = shouldMarkSecure(strapi, ctx);
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
-  ctx.cookies.set(COOKIE_NAMES.idToken, '', {
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
     path: '/',
@@ -50,7 +66,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
     maxAge: 0,
     expires: new Date(0),
   });
-  ctx.cookies.set(COOKIE_NAMES.userEmail, '', {
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
     path: '/',

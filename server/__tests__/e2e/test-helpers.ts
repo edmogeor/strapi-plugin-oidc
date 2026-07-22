@@ -15,7 +15,7 @@ export async function streamToString(stream: Readable): Promise<string> {
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
   OIDC_ISSUER: 'https://mock-oidc.com',
-  OIDC_PUBLIC_URL: 'http://localhost:1337',
+  OIDC_PUBLIC_URL: '',
   OIDC_CLIENT_ID: 'mock-client-id',
   OIDC_CLIENT_SECRET: 'mock-client-secret',
   OIDC_SCOPE: 'openid profile email',

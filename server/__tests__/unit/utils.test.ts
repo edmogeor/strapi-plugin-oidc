@@ -9,7 +9,12 @@ import {
   resolveSkipLoginPage,
 } from '../../utils/configFlag';
 import { getClientIp } from '../../utils/ip';
-import { shouldMarkSecure, clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
+import {
+  shouldMarkSecure,
+  clearAuthCookies,
+  COOKIE_NAMES,
+  reconcileCookieName,
+} from '../../utils/cookies';
 
 /* ------------------------------------------------------------------ */
 /*  pluginConfig                                                       */
@@ -393,12 +398,14 @@ describe('cookies utils', () => {
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
-        (c: CookieCall) => c.name === COOKIE_NAMES.idToken && c.opts?.path === '/',
+        (c: CookieCall) =>
+          c.name === reconcileCookieName(COOKIE_NAMES.idToken, false) && c.opts?.path === '/',
       ),
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
-        (c: CookieCall) => c.name === COOKIE_NAMES.userEmail && c.opts?.path === '/',
+        (c: CookieCall) =>
+          c.name === reconcileCookieName(COOKIE_NAMES.userEmail, false) && c.opts?.path === '/',
       ),
     ).toBe(true);
   });

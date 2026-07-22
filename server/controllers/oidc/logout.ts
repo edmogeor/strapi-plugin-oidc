@@ -1,6 +1,6 @@
 import * as client from 'openid-client';
 import { getOidcConfig } from '../../utils/oidc-client';
-import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
+import { clearAuthCookies, COOKIE_NAMES, readCookie } from '../../utils/cookies';
 import { getAuditLogService, getWhitelistService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
 import { resolveSkipLoginPage } from '../../utils/configFlag';
@@ -17,8 +17,8 @@ export async function logout(ctx: StrapiContext) {
     oidcConfig = null;
   }
 
-  const idToken = ctx.cookies.get(COOKIE_NAMES.idToken);
-  const userEmail = ctx.cookies.get(COOKIE_NAMES.userEmail) ?? undefined;
+  const idToken = readCookie(ctx, COOKIE_NAMES.idToken);
+  const userEmail = readCookie(ctx, COOKIE_NAMES.userEmail) ?? undefined;
 
   const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
   const loginUrl = `${adminPanelUrl}/auth/login`;

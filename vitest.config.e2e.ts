@@ -9,7 +9,7 @@ export default defineConfig({
     hookTimeout: 120000,
     fileParallelism: true,
     pool: 'forks',
-    maxConcurrency: 6,
+    maxConcurrency: 8,
     alias: {
       'lodash/fp': 'lodash/fp.js',
     },

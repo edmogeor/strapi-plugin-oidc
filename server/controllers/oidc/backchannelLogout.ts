@@ -76,6 +76,16 @@ export async function pruneStoredJtis(): Promise<void> {
   }
 }
 
+export function clearJtiStore(): void {
+  seenJtis.clear();
+  try {
+    const store = getJtiStore();
+    store.delete({ key: JTI_STORE_KEY }).catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
 async function validateLogoutToken(
   jwksUri: string,
   issuer: string,
@@ -165,10 +175,17 @@ export async function backchannelLogout(ctx: StrapiContext) {
       await persistJti(jti);
     }
 
-    const user = await strapi.db.query('admin::user').findOne({
-      where: { oidc_sub: result.sub },
-      select: ['id'],
-    });
+    let user: { id: number } | null = null;
+    try {
+      const raw = await strapi.db.connection.raw(
+        'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
+        [result.sub],
+      );
+      const rows = raw?.rows ?? raw;
+      user = Array.isArray(rows) && rows.length > 0 ? { id: rows[0].id as number } : null;
+    } catch {
+      user = null;
+    }
 
     if (!user) {
       await auditLog.log({ action: 'logout', ip, detailsKey: 'backchannel_logout_unknown_sub' });

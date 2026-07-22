@@ -7,6 +7,7 @@ import type { Core } from './test-types';
 import { MOCK_OIDC_CONFIG, applyDefaultOidcConfig, queryAuditLog } from './test-helpers';
 import { resetOidcConfig } from '../../utils/oidc-client';
 import { clearRateLimitMap } from '../../routes';
+import { clearJtiStore } from '../../controllers/oidc/backchannelLogout';
 
 async function generateKeyPairAndJwk(): Promise<{
   privateKey: jose.CryptoKey;
@@ -74,6 +75,7 @@ describe('Backchannel Logout E2E', () => {
   beforeEach(async () => {
     resetOidcConfig();
     clearRateLimitMap();
+    clearJtiStore();
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
     await applyDefaultOidcConfig(strapi);
     await strapi.db.query('admin::user').deleteMany({ where: { email: BC_TEST_EMAIL } });

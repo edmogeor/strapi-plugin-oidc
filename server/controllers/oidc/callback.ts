@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import * as client from 'openid-client';
 import { getOidcConfig } from '../../utils/oidc-client';
-import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
+import {
+  shouldMarkSecure,
+  COOKIE_NAMES,
+  readCookie,
+  reconcileCookieName,
+} from '../../utils/cookies';
 import { oidcUserInfoSchema, type OidcUserInfo } from '../../../shared/config';
 import { negotiateLocale, t } from '../../i18n';
 import {
@@ -22,9 +27,9 @@ function readAndClearPkceCookies(ctx: StrapiContext): {
   codeVerifier: string | undefined;
   oidcNonce: string | undefined;
 } {
-  const oidcState = ctx.cookies.get(COOKIE_NAMES.state);
-  const codeVerifier = ctx.cookies.get(COOKIE_NAMES.codeVerifier);
-  const oidcNonce = ctx.cookies.get(COOKIE_NAMES.nonce);
+  const oidcState = readCookie(ctx, COOKIE_NAMES.state);
+  const codeVerifier = readCookie(ctx, COOKIE_NAMES.codeVerifier);
+  const oidcNonce = readCookie(ctx, COOKIE_NAMES.nonce);
   ctx.cookies.set(COOKIE_NAMES.state, null, { maxAge: 0, expires: new Date(0) });
   ctx.cookies.set(COOKIE_NAMES.codeVerifier, null, { maxAge: 0, expires: new Date(0) });
   ctx.cookies.set(COOKIE_NAMES.nonce, null, { maxAge: 0, expires: new Date(0) });
@@ -105,7 +110,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     const secureFlag = shouldMarkSecure(strapi, ctx);
 
     if (idToken) {
-      ctx.cookies.set(COOKIE_NAMES.idToken, idToken, {
+      ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), idToken, {
         httpOnly: true,
         path: '/',
         secure: secureFlag,
@@ -137,7 +142,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       }
     }
 
-    ctx.cookies.set(COOKIE_NAMES.userEmail, activateUser.email, {
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), activateUser.email, {
       httpOnly: true,
       path: '/',
       secure: secureFlag,

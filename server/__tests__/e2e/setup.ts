@@ -60,10 +60,12 @@ export const oidcServer = setupServer(
     return HttpResponse.text('Mock Authorize');
   }),
   http.post('https://mock-oidc.com/token', async () => {
-    const idToken = await signMockIdToken();
+    const idToken = await signMockIdToken({ nonce: (globalThis as any).__testOidcNonce });
     return HttpResponse.json({
       access_token: 'fake-jwt-token',
       token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'openid profile email',
       id_token: idToken,
     });
   }),

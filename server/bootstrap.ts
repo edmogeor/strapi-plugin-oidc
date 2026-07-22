@@ -17,7 +17,7 @@ import {
   AUTH_ROUTES,
   OIDC_SIGN_IN_PATH,
 } from '../shared/constants';
-import { COOKIE_NAMES } from './utils/cookies';
+import { COOKIE_NAMES, readCookie } from './utils/cookies';
 
 const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 
@@ -32,17 +32,24 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =
     typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';
-  const tokenRefreshPath = `${adminUrl}/token/refresh`;
+  const adminPath = (() => {
+    try {
+      return new URL(adminUrl).pathname.replace(/\/$/, '');
+    } catch {
+      return adminUrl.startsWith('/') ? adminUrl : `/${adminUrl}`;
+    }
+  })();
+  const tokenRefreshPath = `${adminPath}/token/refresh`;
 
   const EXCLUDED_ADMIN_PATHS = [
-    `${adminUrl}/login`,
-    `${adminUrl}/access-token`,
-    `${adminUrl}/logout`,
-    `${adminUrl}/init`,
-    `${adminUrl}/register`,
-    `${adminUrl}/register-admin`,
-    `${adminUrl}/forgot-password`,
-    `${adminUrl}/reset-password`,
+    `${adminPath}/login`,
+    `${adminPath}/access-token`,
+    `${adminPath}/logout`,
+    `${adminPath}/init`,
+    `${adminPath}/register`,
+    `${adminPath}/register-admin`,
+    `${adminPath}/forgot-password`,
+    `${adminPath}/reset-password`,
   ];
 
   const enforceOidcMiddleware = async (ctx: Context, next: Next) => {
@@ -51,7 +58,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
     const isAuthRoute = AUTH_ROUTES.some((r) => path.includes(r));
     const isTokenRefresh = path === tokenRefreshPath;
     const isGet = ctx.request.method === 'GET';
-    const isAdminPath = path === adminUrl || path.startsWith(`${adminUrl}/`);
+    const isAdminPath = path === adminPath || path.startsWith(`${adminPath}/`);
     const isExcluded = EXCLUDED_ADMIN_PATHS.includes(path);
     const isStatic = STATIC_EXTENSIONS.some((ext) => path.endsWith(ext));
     const isAuthenticated = !!ctx.cookies.get(COOKIE_NAMES.adminRefresh);
@@ -89,7 +96,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           return;
         }
 
-        if (enforceOIDC && isTokenRefresh && !ctx.cookies.get(COOKIE_NAMES.idToken)) {
+        if (enforceOIDC && isTokenRefresh && !readCookie(ctx, COOKIE_NAMES.idToken)) {
           ctx.status = 401;
           ctx.body = {
             data: null,

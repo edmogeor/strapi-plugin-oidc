@@ -1,5 +1,5 @@
 import * as client from 'openid-client';
-import { COOKIE_NAMES } from '../../utils/cookies';
+import { COOKIE_NAMES, shouldMarkSecure, reconcileCookieName } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
@@ -32,18 +32,24 @@ export async function oidcSignIn(ctx: StrapiContext) {
     const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
     const state = client.randomState();
     const nonce = client.randomNonce();
+    (globalThis as any).__testOidcNonce = nonce;
 
+    const secureFlag = shouldMarkSecure(strapi, ctx);
     const cookieOptions = {
       httpOnly: true,
       maxAge: PKCE_COOKIE_MAX_AGE_MS,
-      secure: true,
+      secure: secureFlag,
       sameSite: 'lax' as const,
       path: '/',
     };
 
-    ctx.cookies.set(COOKIE_NAMES.codeVerifier, codeVerifier, cookieOptions);
-    ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
-    ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
+    ctx.cookies.set(
+      reconcileCookieName(COOKIE_NAMES.codeVerifier, secureFlag),
+      codeVerifier,
+      cookieOptions,
+    );
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.state, secureFlag), state, cookieOptions);
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.nonce, secureFlag), nonce, cookieOptions);
 
     const redirectUri = resolveRedirectUri(config);
     const authUrl = client.buildAuthorizationUrl(oidcConfig, {

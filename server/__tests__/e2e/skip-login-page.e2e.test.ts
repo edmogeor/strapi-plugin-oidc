@@ -129,7 +129,7 @@ describe('Skip Login Page E2E', () => {
         .redirects(0);
 
       expect(res.status).toBe(302);
-      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
+      expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
       expect(res.headers['set-cookie']).toEqual(
         expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
       );
@@ -138,14 +138,14 @@ describe('Skip Login Page E2E', () => {
     it('redirects OIDC sessions to end session URL', async () => {
       const res = await request(strapi.server.httpServer)
         .get('/strapi-plugin-oidc/logout')
-        .set('Cookie', '__Host-oidc_id_token=mock-id-token')
+        .set('Cookie', 'oidc_id_token=mock-id-token')
         .redirects(0);
 
       expect(res.status).toBe(302);
       expect(res.headers.location).toContain('https://mock-oidc.com/logout');
       expect(res.headers['set-cookie']).toEqual(
         expect.arrayContaining([
-          expect.stringMatching(/^__Host-oidc_id_token=;/),
+          expect.stringMatching(/^oidc_id_token=;/),
           expect.stringMatching(/^strapi_admin_refresh=;/),
         ]),
       );

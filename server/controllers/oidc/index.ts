@@ -1,7 +1,7 @@
 import { oidcSignIn } from './signIn';
 import { oidcSignInCallback } from './callback';
 import { logout } from './logout';
-import { backchannelLogout } from './backchannelLogout';
+import { backchannelLogout, clearJtiStore } from './backchannelLogout';
 
 export default {
   oidcSignIn,
