@@ -12,6 +12,20 @@ export async function streamToString(stream: Readable): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+export function storeNonceFromResponse(res: { headers: Record<string, unknown> }): void {
+  const raw = res.headers['set-cookie'];
+  if (!raw) return;
+
+  const headers: unknown[] = Array.isArray(raw) ? raw : [raw];
+  for (const h of headers) {
+    const match = String(h).match(/^(?:__Host-)?oidc_nonce=([^;]+)/);
+    if (match) {
+      globalThis.__testOidcNonce = match[1];
+      return;
+    }
+  }
+}
+
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
   OIDC_ISSUER: 'https://mock-oidc.com',
@@ -42,6 +56,7 @@ export const setSettings = (
 
 export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: string | null }> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   const state = new URL(loginRes.headers.location).searchParams.get('state');
   await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
   return { state };
@@ -57,6 +72,7 @@ export function performCallback(agent: Agent, state: string | null): ReturnType<
 
 export async function loginAndExpectSuccess(agent: Agent) {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   const state = new URL(loginRes.headers.location).searchParams.get('state');
   const callbackRes = await performCallback(agent, state);
   expect(callbackRes.status).toBe(200);
@@ -121,6 +137,7 @@ export async function assertGenericAuthError(
 
 export async function initiateLogin(agent: ReturnType<typeof request.agent>): Promise<string> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${new URL(loginRes.headers.location).searchParams.get('state')}`;
 }
 

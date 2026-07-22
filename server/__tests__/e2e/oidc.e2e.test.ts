@@ -22,6 +22,7 @@ import {
   getFirstAvailableRole,
   loginAndExpectSuccess,
   expectUserRoleIdsToContain,
+  storeNonceFromResponse,
 } from './test-helpers';
 import { t } from '../../i18n';
 import type { WhitelistService } from '../../types';
@@ -51,6 +52,7 @@ describe('OIDC E2E Tests', () => {
 
   it('should handle the full OIDC login flow', async () => {
     const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+    storeNonceFromResponse(loginRes);
     expect(loginRes.status).toBe(302);
     expect(loginRes.headers.location).toContain('https://mock-oidc.com/authorize');
     const state = getStateFromLoginRes(loginRes);

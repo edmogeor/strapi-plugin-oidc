@@ -32,7 +32,6 @@ export async function oidcSignIn(ctx: StrapiContext) {
     const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
     const state = client.randomState();
     const nonce = client.randomNonce();
-    (globalThis as any).__testOidcNonce = nonce;
 
     const secureFlag = shouldMarkSecure(strapi, ctx);
     const cookieOptions = {

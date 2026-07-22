@@ -182,7 +182,10 @@ export async function backchannelLogout(ctx: StrapiContext) {
         [result.sub],
       );
       const rows = raw?.rows ?? raw;
-      user = Array.isArray(rows) && rows.length > 0 ? { id: rows[0].id as number } : null;
+      const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+      if (firstRow && typeof firstRow.id === 'number') {
+        user = { id: firstRow.id };
+      }
     } catch {
       user = null;
     }

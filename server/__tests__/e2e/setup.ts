@@ -60,7 +60,7 @@ export const oidcServer = setupServer(
     return HttpResponse.text('Mock Authorize');
   }),
   http.post('https://mock-oidc.com/token', async () => {
-    const idToken = await signMockIdToken({ nonce: (globalThis as any).__testOidcNonce });
+    const idToken = await signMockIdToken({ nonce: globalThis.__testOidcNonce });
     return HttpResponse.json({
       access_token: 'fake-jwt-token',
       token_type: 'Bearer',

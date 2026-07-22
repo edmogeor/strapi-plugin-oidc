@@ -19,9 +19,10 @@ export type {
   AuditLogService,
 };
 
-// Typed global used by setup.ts and all test files.
+// Typed globals used by setup.ts and all test files.
 declare global {
   var strapiInstance: Core.Strapi;
+  var __testOidcNonce: string | undefined;
 }
 
 export type { Core };
