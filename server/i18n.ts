@@ -23,13 +23,13 @@ interface WeightedTag {
 function parseAcceptLanguage(header: string): WeightedTag[] {
   return header
     .split(',')
-    .map((part) => {
-      const [tag, ...params] = part.trim().split(';');
-      const qParam = params.find((p) => p.trim().startsWith('q='));
-      const q = qParam ? parseFloat(qParam.trim().slice(2)) : 1;
-      return { tag: tag.toLowerCase(), q: Number.isFinite(q) ? q : 1 };
-    })
-    .filter((entry) => entry.tag)
+    .reduce<WeightedTag[]>((acc, part) => {
+      const match = part.trim().match(/^([^;]+)(?:;q=([\d.]+))?/i);
+      if (!match) return acc;
+      const q = match[2] ? Number(match[2]) : 1;
+      acc.push({ tag: match[1].toLowerCase(), q: Number.isFinite(q) ? q : 1 });
+      return acc;
+    }, [])
     .sort((a, b) => b.q - a.q);
 }
 

@@ -256,6 +256,25 @@ export function createAuditLogSuite(uid: string) {
   return ref;
 }
 
+export function expectOidcSessionLogout(res: request.Response) {
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toContain('https://mock-oidc.com/logout');
+  expect(res.headers['set-cookie']).toEqual(
+    expect.arrayContaining([
+      expect.stringMatching(/^oidc_id_token=;/),
+      expect.stringMatching(/^strapi_admin_refresh=;/),
+    ]),
+  );
+}
+
+export function expectNonOidcLogoutRedirect(res: request.Response, expectedLocation: string) {
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toBe(expectedLocation);
+  expect(res.headers['set-cookie']).toEqual(
+    expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
+  );
+}
+
 export function expectNdjsonExportHeaders(headers: Record<string, string>) {
   expect(headers['Content-Type']).toMatch(/application\/x-ndjson/);
   expect(headers['Content-Disposition']).toMatch(/\.ndjson"$/);

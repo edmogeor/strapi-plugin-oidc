@@ -418,21 +418,21 @@ describe('cookies utils', () => {
       strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: false });
     });
 
-    it('clearAuthCookies uses secure cookie when request is secure', () => {
-      const ctx = makeCtx({ secure: true }) as never;
+    const assertSecureCookie = (secure: boolean) => {
+      const ctx = makeCtx({ secure }) as never;
       clearAuthCookies(strapi, ctx);
       const ctxCookies = (ctx as unknown as { cookies: { calls: CookieCallArray } }).cookies;
       const adminCall = ctxCookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-      expect(adminCall?.opts?.secure).toBe(true);
+      expect(adminCall?.opts?.secure).toBe(secure);
       expect(adminCall?.opts?.domain).toBe('example.com');
+    };
+
+    it('clearAuthCookies uses secure cookie when request is secure', () => {
+      assertSecureCookie(true);
     });
 
     it('clearAuthCookies does not set secure flag when request is not secure', () => {
-      const ctx = makeCtx({ secure: false }) as never;
-      clearAuthCookies(strapi, ctx);
-      const ctxCookies = (ctx as unknown as { cookies: { calls: CookieCallArray } }).cookies;
-      const adminCall = ctxCookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-      expect(adminCall?.opts?.secure).toBe(false);
+      assertSecureCookie(false);
     });
   });
 });

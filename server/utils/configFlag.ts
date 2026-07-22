@@ -1,9 +1,7 @@
 import type { Core } from '@strapi/types';
 
 function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null {
-  const config = strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>;
-  const val = config[key];
-  if (val === null || val === undefined) return null;
+  const val = (strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>)[key];
   if (typeof val === 'boolean') return val;
   if (val === 'true') return true;
   if (val === 'false') return false;
@@ -15,9 +13,7 @@ function resolveConfigFlag(
   key: string,
   dbValue: boolean | undefined,
 ): boolean {
-  const configValue = readConfigFlag(strapi, key);
-  if (configValue !== null) return configValue;
-  return dbValue ?? false;
+  return readConfigFlag(strapi, key) ?? dbValue ?? false;
 }
 
 export function getEnforceOIDCConfig(strapi: Core.Strapi): boolean | null {

@@ -12,7 +12,12 @@ import type {
   RegisterBody,
   ImportBody,
 } from './test-types';
-import { MOCK_OIDC_CONFIG } from './test-helpers';
+import {
+  MOCK_OIDC_CONFIG,
+  setSettings,
+  expectOidcSessionLogout,
+  expectNonOidcLogoutRedirect,
+} from './test-helpers';
 import { resetOidcConfig } from '../../utils/oidc-client';
 
 const whitelistFixture: { email: string }[] = JSON.parse(
@@ -329,50 +334,29 @@ describe('Controllers E2E', () => {
         .set('Cookie', 'oidc_id_token=mock-id-token')
         .redirects(0);
 
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toContain('https://mock-oidc.com/logout');
-      expect(res.headers['set-cookie']).toEqual(
-        expect.arrayContaining([
-          expect.stringMatching(/^oidc_id_token=;/),
-          expect.stringMatching(/^strapi_admin_refresh=;/),
-        ]),
-      );
+      expectOidcSessionLogout(res);
     });
 
     it('should redirect to Strapi login when no OIDC session (no id_token cookie)', async () => {
       strapi.config.set('admin.url', '/admin');
-      await strapi
-        .plugin('strapi-plugin-oidc')
-        .service('whitelist')
-        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: false });
+      await setSettings(strapi, false, true, false);
 
       const res = await request(strapi.server.httpServer)
         .get('/strapi-plugin-oidc/logout')
         .redirects(0);
 
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toBe('/admin/auth/login');
-      expect(res.headers['set-cookie']).toEqual(
-        expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
-      );
+      expectNonOidcLogoutRedirect(res, '/admin/auth/login');
     });
 
     it('should redirect to OIDC sign-in when skipLoginPage is enabled and no OIDC session', async () => {
       strapi.config.set('admin.url', '/admin');
-      await strapi
-        .plugin('strapi-plugin-oidc')
-        .service('whitelist')
-        .setSettings({ useWhitelist: false, enforceOIDC: true, skipLoginPage: true });
+      await setSettings(strapi, false, true, true);
 
       const res = await request(strapi.server.httpServer)
         .get('/strapi-plugin-oidc/logout')
         .redirects(0);
 
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
-      expect(res.headers['set-cookie']).toEqual(
-        expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
-      );
+      expectNonOidcLogoutRedirect(res, '/strapi-plugin-oidc/oidc');
     });
 
     it('should redirect OIDC session to end session URL with id_token_hint', async () => {
