@@ -33,18 +33,17 @@ function warnIfSecureCookiesForced(strapi: Core.Strapi): void {
 }
 
 async function addOidcColumns(strapi: Core.Strapi): Promise<void> {
-  const columns: Array<{ name: string; type: string }> = [
-    { name: 'oidc_sub', type: 'TEXT' },
-    { name: 'oidc_sid', type: 'TEXT' },
-  ];
-  for (const { name, type } of columns) {
+  const columns = ['oidc_sub', 'oidc_sid'];
+  for (const name of columns) {
     try {
-      await strapi.db.connection.raw(`ALTER TABLE admin_users ADD COLUMN ${name} ${type}`);
-    } catch (err) {
-      const msg = toMessage(err);
-      if (!msg.includes('Duplicate column') && !msg.includes('already exists')) {
-        strapi.log.warn(`[strapi-plugin-oidc] Failed to add ${name} column:`, msg);
+      const hasColumn = await strapi.db.connection.schema.hasColumn('admin_users', name);
+      if (!hasColumn) {
+        await strapi.db.connection.schema.alterTable('admin_users', (table) => {
+          table.text(name);
+        });
       }
+    } catch (err) {
+      strapi.log.warn(`[strapi-plugin-oidc] Failed to add ${name} column: ${toMessage(err)}`);
     }
   }
 }

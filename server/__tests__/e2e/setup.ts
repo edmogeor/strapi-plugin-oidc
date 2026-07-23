@@ -167,6 +167,18 @@ afterAll(async () => {
     } catch (err) {
       console.warn('[e2e teardown] failed to clean up fixture admin users:', err);
     }
+    try {
+      const whitelistService = globalThis.strapiInstance
+        .plugin('strapi-plugin-oidc')
+        .service('whitelist');
+      await whitelistService.setSettings({
+        useWhitelist: false,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
+    } catch (err) {
+      console.warn('[e2e teardown] failed to reset OIDC settings:', err);
+    }
   }
   if (globalThis.strapiInstance?.server?.httpServer) {
     globalThis.strapiInstance.server.httpServer.close();

@@ -29,9 +29,10 @@ export async function logout(ctx: StrapiContext) {
     : loginUrl;
 
   const publicUrl = getPluginConfig(strapi).OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
-  const fallbackUrl = publicUrl
-    ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
-    : relativeFallback;
+  const fallbackUrl =
+    publicUrl && !relativeFallback.startsWith('http')
+      ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
+      : relativeFallback;
 
   clearAuthCookies(strapi, ctx);
 
@@ -55,8 +56,8 @@ export async function logout(ctx: StrapiContext) {
         post_logout_redirect_uri: fallbackUrl,
       });
       return ctx.redirect(endSessionUrl.href);
-    } catch {
-      // End session URL construction failed; fall back to local redirect.
+    } catch (err) {
+      strapi.log.error('[strapi-plugin-oidc] Failed to build end session URL:', err);
     }
   }
 
