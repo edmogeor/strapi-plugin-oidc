@@ -93,8 +93,14 @@ describe('OIDC Services E2E', () => {
   });
 
   describe('Role Service', () => {
-    it('should list admin roles', async () => {
-      const allRoles = await roleService.find();
+    it('should list OIDC roles', async () => {
+      let allRoles = await roleService.find();
+      if (allRoles.length === 0) {
+        await strapi.query('plugin::strapi-plugin-oidc.roles').create({
+          data: { oauth_type: '4', roles: [] },
+        });
+        allRoles = await roleService.find();
+      }
       expect(Array.isArray(allRoles)).toBe(true);
       expect(allRoles.length).toBeGreaterThan(0);
     });

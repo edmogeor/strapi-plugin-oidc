@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - Unreleased
 
+### Breaking Changes
+
+- **OIDC protocol layer rewritten on `openid-client` v6.** Upgrading requires removing the five explicit endpoint config keys (`OIDC_AUTHORIZATION_ENDPOINT`, `OIDC_TOKEN_ENDPOINT`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`, `OIDC_JWKS_URI`) and relying on `OIDC_ISSUER` plus discovery.
+- **Legacy session cookies removed.** The `oidc_access_token` and `oidc_authenticated` cookies are gone; the plugin now uses `oidc_id_token` and `oidc_user_email` cookies. Existing sessions will not be recognised as OIDC sessions after upgrade.
+- **Audit action names changed.** `session_expired`, `nonce_mismatch`, `token_exchange_failed`, and `id_token_invalid` are no longer emitted. Monitoring or exports that depend on these action names must be updated.
+- **Session cookie storage changed.** The OIDC success page no longer writes `jwtToken` to `localStorage`; it sets it as a cookie with `SameSite=Strict`.
+
 ### Added
 
 - **Backchannel logout support** - New `POST /strapi-plugin-oidc/backchannel-logout` endpoint receives signed `logout_token` POSTs from the IdP, verifies the signature against the provider JWKS, and invalidates the matching Strapi admin session. Requires the token to contain the `http://schemas.openid.net/event/backchannel-logout` event claim and no `nonce` claim. The user's `oidc_sub` and `oidc_sid` claims are persisted on first login to enable matching.
