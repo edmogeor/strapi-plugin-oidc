@@ -5,9 +5,9 @@ import { sendErrorResponse } from './errors';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
 import { resolveSkipLoginPage } from '../../utils/configFlag';
-import { negotiateLocale, t } from '../../i18n';
+import { getLocaleFromContext, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
-import { PKCE_COOKIE_MAX_AGE_MS } from '../../../shared/constants';
+import { PKCE_COOKIE_MAX_AGE_MS, OIDC_COOKIE_PATH } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
 
 export async function oidcSignIn(ctx: StrapiContext) {
@@ -40,7 +40,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
       maxAge: PKCE_COOKIE_MAX_AGE_MS,
       secure: secureFlag,
       sameSite: 'lax' as const,
-      path: '/',
+      path: OIDC_COOKIE_PATH,
     };
 
     ctx.cookies.set(
@@ -67,7 +67,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
     return ctx.send({}, 302);
   } catch (e) {
     strapi.log.error({ phase: 'oidc_sign_in', message: toMessage(e) });
-    const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
+    const locale = getLocaleFromContext(ctx);
     return sendErrorResponse(ctx, getOauthService(), t(locale, 'user.signInError'), locale);
   }
 }

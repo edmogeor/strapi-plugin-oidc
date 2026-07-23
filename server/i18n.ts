@@ -1,16 +1,23 @@
 /// <reference types="vite/client" />
 // Build-time glob: every translations/locales/*.json is auto-registered.
 // Drop a new locale file in that directory and it becomes available here with no code changes.
-const modules = import.meta.glob('../translations/locales/*.json', { eager: true }) as Record<
-  string,
-  { default: Record<string, string> }
->;
+const modules = import.meta.glob('../translations/locales/*.json', { eager: true });
+
+function isLocaleModule(value: unknown): value is { default: Record<string, string> } {
+  if (typeof value !== 'object' || value === null) return false;
+  const defaultValue = Object.entries(value).find(([k]) => k === 'default')?.[1];
+  if (typeof defaultValue !== 'object' || defaultValue === null) return false;
+  return Object.values(defaultValue).every((v) => typeof v === 'string');
+}
 
 const locales: Record<string, Record<string, string>> = Object.fromEntries(
-  Object.entries(modules).map(([path, mod]) => {
-    const code = path.match(/\/([^/]+)\.json$/)?.[1];
-    return [code ?? '', mod.default];
-  }),
+  Object.entries(modules)
+    .map(([path, mod]) => {
+      const code = path.match(/\/([^/]+)\.json$/)?.[1];
+      if (!code || !isLocaleModule(mod)) return null;
+      return [code, mod.default];
+    })
+    .filter((entry): entry is [string, Record<string, string>] => entry !== null),
 );
 
 const DEFAULT_LOCALE = 'en';
@@ -41,6 +48,14 @@ export function negotiateLocale(acceptLanguage?: string | null): string {
     if (locales[base]) return base;
   }
   return DEFAULT_LOCALE;
+}
+
+export function getLocaleFromContext(ctx: {
+  request: { headers: { 'accept-language'?: string | string[] } };
+}): string {
+  const header = ctx.request.headers['accept-language'];
+  const acceptLanguage = Array.isArray(header) ? header[0] : header;
+  return negotiateLocale(acceptLanguage);
 }
 
 export function t(locale: string, key: string, fallback?: string): string {

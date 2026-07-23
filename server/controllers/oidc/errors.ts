@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { errorCodes, getErrorDetail } from '../../error-strings';
-import { negotiateLocale, t } from '../../i18n';
+import { getLocaleFromContext, t } from '../../i18n';
 import { OidcError, OIDC_ERROR_DISPATCH } from '../../oidc-errors';
 import { getClientIp } from '../../utils/ip';
 import { toMessage } from '../../../shared/utils';
@@ -86,6 +86,6 @@ export async function handleCallbackError(
     detail: errorInfo.key ? getErrorDetail(errorInfo.key, errorInfo.params) : undefined,
     email: userInfo?.email,
   });
-  const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
+  const locale = getLocaleFromContext(ctx);
   sendErrorResponse(ctx, oauthService, t(locale, 'user.signInError'), locale);
 }

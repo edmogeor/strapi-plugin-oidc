@@ -1,6 +1,6 @@
-import type { Core } from '@strapi/types';
 import { getPluginConfig } from './pluginConfig';
-import type { StrapiContext } from '../types';
+import { OIDC_COOKIE_PATH } from '../../shared/constants';
+import type { StrapiConfigLogger, StrapiContext, SecureContext, CookieContext } from '../types';
 
 export const COOKIE_NAMES = {
   state: '__Host-oidc_state',
@@ -27,7 +27,7 @@ export function readCookie(ctx: StrapiContext, name: string): string | undefined
   return undefined;
 }
 
-export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boolean {
+export function shouldMarkSecure(strapi: StrapiConfigLogger, ctx: SecureContext): boolean {
   const config = getPluginConfig(strapi);
   if (config.OIDC_FORCE_SECURE_COOKIES === true) return true;
 
@@ -41,20 +41,29 @@ export function shouldMarkSecure(strapi: Core.Strapi, ctx: StrapiContext): boole
   return false;
 }
 
-function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
+function parseSameSite(value: unknown): 'lax' | 'strict' | 'none' {
+  const str = String(value);
+  return str === 'lax' || str === 'strict' || str === 'none' ? str : 'lax';
+}
+
+function getExpiredCookieOptions(strapi: StrapiConfigLogger, ctx: SecureContext) {
   return {
     httpOnly: true,
     secure: shouldMarkSecure(strapi, ctx),
-    path: strapi.config.get('admin.auth.cookie.path', '/admin') as string,
-    domain: (strapi.config.get('admin.auth.cookie.domain') ||
-      strapi.config.get('admin.auth.domain')) as string | undefined,
-    sameSite: strapi.config.get('admin.auth.cookie.sameSite', 'lax') as 'lax' | 'strict' | 'none',
+    path: String(strapi.config.get('admin.auth.cookie.path', '/admin')),
+    domain:
+      String(
+        strapi.config.get('admin.auth.cookie.domain') ||
+          strapi.config.get('admin.auth.domain') ||
+          '',
+      ) || undefined,
+    sameSite: parseSameSite(strapi.config.get('admin.auth.cookie.sameSite', 'lax')),
     maxAge: 0,
     expires: new Date(0),
   };
 }
 
-export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
+export function clearAuthCookies(strapi: StrapiConfigLogger, ctx: CookieContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   const secureFlag = shouldMarkSecure(strapi, ctx);
 
@@ -62,7 +71,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
     httpOnly: true,
     secure: secureFlag,
     sameSite: 'lax' as const,
-    path: '/',
+    path: OIDC_COOKIE_PATH,
     maxAge: 0,
     expires: new Date(0),
   };
@@ -71,7 +80,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/',
+    path: OIDC_COOKIE_PATH,
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),
@@ -79,7 +88,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/',
+    path: OIDC_COOKIE_PATH,
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),

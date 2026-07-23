@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/types';
 import type { Context, Next } from 'koa';
 import { errorMessages } from './error-strings';
+import { toMessage } from '../shared/utils';
 import {
   getEnforceOIDCConfig,
   resolveEnforceOIDC,
@@ -33,7 +34,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   try {
     await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sub TEXT');
   } catch (err) {
-    const msg = (err as { message?: string })?.message ?? '';
+    const msg = toMessage(err);
     if (!msg.includes('Duplicate column') && !msg.includes('already exists')) {
       strapi.log.warn('[strapi-plugin-oidc] Failed to add oidc_sub column:', msg);
     }
@@ -42,7 +43,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   try {
     await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sid TEXT');
   } catch (err) {
-    const msg = (err as { message?: string })?.message ?? '';
+    const msg = toMessage(err);
     if (!msg.includes('Duplicate column') && !msg.includes('already exists')) {
       strapi.log.warn('[strapi-plugin-oidc] Failed to add oidc_sid column:', msg);
     }
@@ -209,7 +210,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
       }
     }
   } catch (err) {
-    strapi.log.warn(errorMessages.DEFAULT_ROLE_INIT_ERROR, (err as Error).message);
+    strapi.log.warn(errorMessages.DEFAULT_ROLE_INIT_ERROR, toMessage(err));
   }
 
   strapi.cron.add({
@@ -220,7 +221,7 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
           await getAuditLogService().cleanup(retentionDays);
           await pruneStoredJtis();
         } catch (err) {
-          strapi.log.warn(errorMessages.AUDIT_LOG_CLEANUP_ERROR, (err as Error).message);
+          strapi.log.warn(errorMessages.AUDIT_LOG_CLEANUP_ERROR, toMessage(err));
         }
       },
       options: { rule: '0 0 * * *' },

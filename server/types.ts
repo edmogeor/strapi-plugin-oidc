@@ -11,6 +11,40 @@ export interface StrapiContext extends Context {
   };
 }
 
+export interface StrapiConfig {
+  config: {
+    get(key: string, defaultValue?: unknown): unknown;
+    set(key: string, value: unknown): void;
+  };
+}
+
+export interface StrapiLogger {
+  log: {
+    error(...args: unknown[]): void;
+    warn(...args: unknown[]): void;
+    info(...args: unknown[]): void;
+    debug(...args: unknown[]): void;
+  };
+}
+
+export interface StrapiConfigLogger extends StrapiConfig, StrapiLogger {}
+
+export interface ClientIpContext {
+  ip: string;
+  app: { proxy: boolean };
+  request: { ips: string[] };
+  get(name: string): string;
+}
+
+export interface SecureContext {
+  request: { secure: boolean };
+  get(name: string): string;
+}
+
+export interface CookieContext extends SecureContext {
+  cookies: { set(name: string, value: string | null, opts?: unknown): void };
+}
+
 export interface WhitelistSettings {
   useWhitelist: boolean;
   enforceOIDC: boolean;

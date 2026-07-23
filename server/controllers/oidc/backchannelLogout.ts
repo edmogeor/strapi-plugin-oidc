@@ -13,6 +13,11 @@ function getJtiStore() {
   return strapi.store({ environment: '', type: 'plugin', name: 'strapi-plugin-oidc' });
 }
 
+function isJtiMap(value: unknown): value is Record<string, number> {
+  if (typeof value !== 'object' || value === null) return false;
+  return Object.entries(value).every(([, v]) => typeof v === 'number');
+}
+
 function pruneJtis(): void {
   const cutoff = Date.now() - JTI_TTL_MS;
   for (const [jti, timestamp] of seenJtis) {
@@ -22,12 +27,17 @@ function pruneJtis(): void {
   }
 }
 
+async function loadStoredJtis(): Promise<Record<string, number> | null> {
+  const store = getJtiStore();
+  const value = await store.get({ key: JTI_STORE_KEY });
+  return isJtiMap(value) ? value : null;
+}
+
 async function isJtiReplayed(jti: string): Promise<boolean> {
   pruneJtis();
   if (seenJtis.has(jti)) return true;
 
-  const store = getJtiStore();
-  const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+  const stored = await loadStoredJtis();
   const cutoff = Date.now() - JTI_TTL_MS;
   if (stored && stored[jti] && stored[jti] > cutoff) return true;
 
@@ -37,14 +47,14 @@ async function isJtiReplayed(jti: string): Promise<boolean> {
 async function persistJti(jti: string): Promise<void> {
   seenJtis.set(jti, Date.now());
 
-  const store = getJtiStore();
-  let stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+  let stored = await loadStoredJtis();
   if (!stored) stored = {};
   const cutoff = Date.now() - JTI_TTL_MS;
   for (const key of Object.keys(stored)) {
     if (stored[key] < cutoff) delete stored[key];
   }
   stored[jti] = Date.now();
+  const store = getJtiStore();
   await store.set({ key: JTI_STORE_KEY, value: stored });
 }
 
@@ -52,13 +62,13 @@ export async function pruneStoredJtis(): Promise<void> {
   pruneJtis();
 
   try {
-    const store = getJtiStore();
-    const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+    let stored = await loadStoredJtis();
     if (!stored) return;
     const cutoff = Date.now() - JTI_TTL_MS;
     for (const key of Object.keys(stored)) {
       if (stored[key] < cutoff) delete stored[key];
     }
+    const store = getJtiStore();
     if (Object.keys(stored).length === 0) {
       await store.delete({ key: JTI_STORE_KEY });
     } else {
@@ -156,19 +166,29 @@ export async function backchannelLogout(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   const ip = getClientIp(strapi, ctx);
 
-  const body = ctx.request.body as { logout_token?: string };
-  const logoutToken = body?.logout_token;
-  if (!logoutToken || typeof logoutToken !== 'string') {
+  function hasLogoutToken(value: unknown): value is { logout_token: string } {
+    if (typeof value !== 'object' || value === null) return false;
+    return Object.entries(value).some(([k, v]) => k === 'logout_token' && typeof v === 'string');
+  }
+
+  const body = ctx.request.body;
+  if (!hasLogoutToken(body)) {
     ctx.status = 200;
     return;
+  }
+  const logoutToken = body.logout_token;
+
+  function hasJti(value: unknown): value is { jti: string } {
+    if (typeof value !== 'object' || value === null) return false;
+    return Object.entries(value).some(([k, v]) => k === 'jti' && typeof v === 'string');
   }
 
   const jti = (() => {
     try {
       const parts = logoutToken.split('.');
-      return parts.length === 3
-        ? (JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as { jti?: string }).jti
-        : undefined;
+      if (parts.length !== 3) return undefined;
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+      return hasJti(payload) ? payload.jti : undefined;
     } catch {
       return undefined;
     }

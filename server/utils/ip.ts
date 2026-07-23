@@ -1,6 +1,5 @@
-import type { Core } from '@strapi/types';
-import type { StrapiContext } from '../types';
-import type { PluginConfig } from '../../shared/config';
+import type { StrapiConfig, ClientIpContext } from '../types';
+import { getPluginConfig } from './pluginConfig';
 
 // Headers that CDN/proxy vendors guarantee to strip from client requests,
 // so only the infrastructure itself can set them.
@@ -18,15 +17,15 @@ const TRUSTED_IP_HEADERS = new Set([
   'x-nf-client-connection-ip',
 ]);
 
-function getTrustedHeaderName(strapi: Core.Strapi): string | undefined {
-  const config = (strapi.config.get('plugin::strapi-plugin-oidc') ?? {}) as Partial<PluginConfig>;
+function getTrustedHeaderName(strapi: StrapiConfig): string | undefined {
+  const config = getPluginConfig(strapi);
   const raw = config.OIDC_TRUSTED_IP_HEADER;
   if (typeof raw !== 'string' || !raw) return undefined;
   const normalized = raw.trim().toLowerCase();
   return TRUSTED_IP_HEADERS.has(normalized) ? normalized : undefined;
 }
 
-export function getClientIp(strapi: Core.Strapi, ctx: StrapiContext): string {
+export function getClientIp(strapi: StrapiConfig, ctx: ClientIpContext): string {
   const proxyTrusted = ctx.app?.proxy === true;
 
   if (proxyTrusted) {

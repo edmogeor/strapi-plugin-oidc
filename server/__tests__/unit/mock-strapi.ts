@@ -1,12 +1,12 @@
-import type { Core } from '@strapi/types';
+import type { StrapiConfigLogger } from '../../types';
 
 type ConfigMap = Record<string, unknown>;
 
-export function createMockStrapi(initialOidcConfig: ConfigMap = {}) {
+export function createMockStrapi(initialOidcConfig: ConfigMap = {}): StrapiConfigLogger {
   const configStore = new Map<string, unknown>();
   configStore.set('plugin::strapi-plugin-oidc', initialOidcConfig);
 
-  const strapi = {
+  return {
     config: {
       get(key: string, defaultValue?: unknown): unknown {
         if (configStore.has(key)) {
@@ -25,6 +25,4 @@ export function createMockStrapi(initialOidcConfig: ConfigMap = {}) {
       debug: () => {},
     },
   };
-
-  return strapi as unknown as Core.Strapi;
 }

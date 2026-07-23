@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { Core } from '@strapi/types';
 import { createMockStrapi } from './mock-strapi';
 import { getRetentionDays, isAuditLogEnabled, getPluginConfig } from '../../utils/pluginConfig';
 import {
@@ -15,13 +14,20 @@ import {
   COOKIE_NAMES,
   reconcileCookieName,
 } from '../../utils/cookies';
+import { OIDC_COOKIE_PATH } from '../../../shared/constants';
+import type {
+  StrapiConfigLogger,
+  ClientIpContext,
+  SecureContext,
+  CookieContext,
+} from '../../types';
 
 /* ------------------------------------------------------------------ */
 /*  pluginConfig                                                       */
 /* ------------------------------------------------------------------ */
 
 describe('pluginConfig', () => {
-  let strapi: Core.Strapi;
+  let strapi: StrapiConfigLogger;
 
   beforeEach(() => {
     strapi = createMockStrapi();
@@ -86,7 +92,7 @@ describe('pluginConfig', () => {
 /* ------------------------------------------------------------------ */
 
 describe('configFlag', () => {
-  let strapi: Core.Strapi;
+  let strapi: StrapiConfigLogger;
 
   beforeEach(() => {
     strapi = createMockStrapi();
@@ -192,7 +198,7 @@ describe('configFlag', () => {
 /* ------------------------------------------------------------------ */
 
 describe('getClientIp', () => {
-  let strapi: Core.Strapi;
+  let strapi: StrapiConfigLogger;
 
   beforeEach(() => {
     strapi = createMockStrapi();
@@ -205,7 +211,7 @@ describe('getClientIp', () => {
       ips?: string[];
       headers?: Record<string, string>;
     } = {},
-  ) => {
+  ): ClientIpContext => {
     const headers = Object.fromEntries(
       Object.entries(opts.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
     );
@@ -226,7 +232,7 @@ describe('getClientIp', () => {
       ips: ['1.2.3.4'],
       headers: { 'X-Forwarded-For': '1.2.3.4', 'CF-Connecting-IP': '5.6.7.8' },
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('10.0.0.1');
+    expect(getClientIp(strapi, ctx)).toBe('10.0.0.1');
   });
 
   it('returns ctx.request.ips[0] when app.proxy is true and XFF is set', () => {
@@ -235,12 +241,12 @@ describe('getClientIp', () => {
       proxy: true,
       ips: ['1.2.3.4', '5.6.7.8'],
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('1.2.3.4');
+    expect(getClientIp(strapi, ctx)).toBe('1.2.3.4');
   });
 
   it('falls back to ctx.ip when app.proxy is true but no forwarded IPs are present', () => {
     const ctx = makeCtx({ ip: '10.0.0.1', proxy: true, ips: [] });
-    expect(getClientIp(strapi, ctx as never)).toBe('10.0.0.1');
+    expect(getClientIp(strapi, ctx)).toBe('10.0.0.1');
   });
 
   it('ignores CF-Connecting-IP when OIDC_TRUSTED_IP_HEADER is unset', () => {
@@ -250,7 +256,7 @@ describe('getClientIp', () => {
       ips: ['1.2.3.4'],
       headers: { 'CF-Connecting-IP': '9.9.9.9' },
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('1.2.3.4');
+    expect(getClientIp(strapi, ctx)).toBe('1.2.3.4');
   });
 
   it.each([
@@ -266,7 +272,7 @@ describe('getClientIp', () => {
       ips: ['1.2.3.4'],
       headers: { [headerName]: '9.9.9.9' },
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('9.9.9.9');
+    expect(getClientIp(strapi, ctx)).toBe('9.9.9.9');
   });
 
   it('ignores trusted header when app.proxy is false', () => {
@@ -276,7 +282,7 @@ describe('getClientIp', () => {
       proxy: false,
       headers: { 'CF-Connecting-IP': '9.9.9.9' },
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('10.0.0.1');
+    expect(getClientIp(strapi, ctx)).toBe('10.0.0.1');
   });
 
   it('rejects unknown header names in OIDC_TRUSTED_IP_HEADER', () => {
@@ -287,7 +293,7 @@ describe('getClientIp', () => {
       ips: ['1.2.3.4'],
       headers: { 'X-Forwarded-For': '1.2.3.4' },
     });
-    expect(getClientIp(strapi, ctx as never)).toBe('1.2.3.4');
+    expect(getClientIp(strapi, ctx)).toBe('1.2.3.4');
   });
 });
 
@@ -296,13 +302,15 @@ describe('getClientIp', () => {
 /* ------------------------------------------------------------------ */
 
 describe('shouldMarkSecure', () => {
-  let strapi: Core.Strapi;
+  let strapi: StrapiConfigLogger;
 
   beforeEach(() => {
     strapi = createMockStrapi();
   });
 
-  const makeCtx = (opts: { secure?: boolean; proxy?: boolean; xfp?: string } = {}) => ({
+  const makeCtx = (
+    opts: { secure?: boolean; proxy?: boolean; xfp?: string } = {},
+  ): SecureContext => ({
     request: { secure: opts.secure ?? false },
     app: { proxy: opts.proxy ?? false },
     get(name: string) {
@@ -313,37 +321,37 @@ describe('shouldMarkSecure', () => {
 
   it('returns false in development regardless', () => {
     strapi.config.set('environment', 'development');
-    expect(shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(false);
+    expect(shouldMarkSecure(strapi, makeCtx({ secure: true }))).toBe(false);
   });
 
   it('returns true in production when request is secure', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ secure: true }) as never)).toBe(true);
+    expect(shouldMarkSecure(strapi, makeCtx({ secure: true }))).toBe(true);
   });
 
   it('returns false in production when request is not secure and proxy is off', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ secure: false }) as never)).toBe(false);
+    expect(shouldMarkSecure(strapi, makeCtx({ secure: false }))).toBe(false);
   });
 
   it('returns true when proxy is trusted and x-forwarded-proto is https', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'https' }) as never)).toBe(true);
+    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'https' }))).toBe(true);
   });
 
   it('returns false when proxy is trusted but x-forwarded-proto is http', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'http' }) as never)).toBe(false);
+    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'http' }))).toBe(false);
   });
 
   it('returns true when OIDC_FORCE_SECURE_COOKIES is set', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', { OIDC_FORCE_SECURE_COOKIES: true });
-    expect(shouldMarkSecure(strapi, makeCtx() as never)).toBe(true);
+    expect(shouldMarkSecure(strapi, makeCtx())).toBe(true);
   });
 });
 
@@ -352,7 +360,7 @@ describe('shouldMarkSecure', () => {
 /* ------------------------------------------------------------------ */
 
 describe('cookies utils', () => {
-  let strapi: Core.Strapi;
+  let strapi: StrapiConfigLogger;
 
   beforeEach(() => {
     strapi = createMockStrapi();
@@ -369,14 +377,18 @@ describe('cookies utils', () => {
   }
   type CookieCallArray = Array<CookieCall>;
 
-  const makeCtx = (opts: { secure?: boolean; xfp?: string } = {}) => {
+  interface TestCookieContext extends CookieContext {
+    cookies: CookieContext['cookies'] & { calls: CookieCallArray };
+  }
+
+  const makeCtx = (opts: { secure?: boolean; xfp?: string } = {}): TestCookieContext => {
     const calls: CookieCallArray = [];
     return {
       request: { secure: opts.secure ?? false },
       app: { proxy: false },
       cookies: {
-        set(name: string, value: string, cookieOpts: Record<string, unknown>) {
-          calls.push({ name, value, opts: cookieOpts });
+        set(name: string, value: string | null, cookieOpts: Record<string, unknown>) {
+          calls.push({ name, value: value ?? '', opts: cookieOpts });
         },
         calls,
       },
@@ -388,9 +400,9 @@ describe('cookies utils', () => {
   };
 
   it('clearAuthCookies clears admin and OIDC cookies', () => {
-    const ctx = makeCtx() as never;
+    const ctx = makeCtx();
     clearAuthCookies(strapi, ctx);
-    const ctxCookies = (ctx as unknown as { cookies: { calls: CookieCallArray } }).cookies;
+    const ctxCookies = ctx.cookies;
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) => c.name === 'strapi_admin_refresh' && c.opts?.maxAge === 0,
@@ -399,20 +411,22 @@ describe('cookies utils', () => {
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
-          c.name === reconcileCookieName(COOKIE_NAMES.idToken, false) && c.opts?.path === '/',
+          c.name === reconcileCookieName(COOKIE_NAMES.idToken, false) &&
+          c.opts?.path === OIDC_COOKIE_PATH,
       ),
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
-          c.name === reconcileCookieName(COOKIE_NAMES.userEmail, false) && c.opts?.path === '/',
+          c.name === reconcileCookieName(COOKIE_NAMES.userEmail, false) &&
+          c.opts?.path === OIDC_COOKIE_PATH,
       ),
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.state, false) &&
-          c.opts?.path === '/' &&
+          c.opts?.path === OIDC_COOKIE_PATH &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);
@@ -420,7 +434,7 @@ describe('cookies utils', () => {
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.codeVerifier, false) &&
-          c.opts?.path === '/' &&
+          c.opts?.path === OIDC_COOKIE_PATH &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);
@@ -428,7 +442,7 @@ describe('cookies utils', () => {
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.nonce, false) &&
-          c.opts?.path === '/' &&
+          c.opts?.path === OIDC_COOKIE_PATH &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);
@@ -443,9 +457,9 @@ describe('cookies utils', () => {
     });
 
     const assertSecureCookie = (secure: boolean) => {
-      const ctx = makeCtx({ secure }) as never;
+      const ctx = makeCtx({ secure });
       clearAuthCookies(strapi, ctx);
-      const ctxCookies = (ctx as unknown as { cookies: { calls: CookieCallArray } }).cookies;
+      const ctxCookies = ctx.cookies;
       const adminCall = ctxCookies.calls.find((c) => c.name === 'strapi_admin_refresh');
       expect(adminCall?.opts?.secure).toBe(secure);
       expect(adminCall?.opts?.domain).toBe('example.com');

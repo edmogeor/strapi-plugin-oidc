@@ -8,7 +8,8 @@ import {
   reconcileCookieName,
 } from '../../utils/cookies';
 import { oidcUserInfoSchema, type OidcUserInfo } from '../../../shared/config';
-import { negotiateLocale, t } from '../../i18n';
+import { OIDC_COOKIE_PATH } from '../../../shared/constants';
+import { getLocaleFromContext, t } from '../../i18n';
 import {
   getOauthService,
   getRoleService,
@@ -74,7 +75,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
   const oidcConfig = await getOidcConfig();
   const oauthService = getOauthService();
   const auditLog = getAuditLogService();
-  const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
+  const locale = getLocaleFromContext(ctx);
 
   if (!ctx.query.code) {
     await auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
@@ -113,7 +114,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     if (idToken) {
       ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), idToken, {
         httpOnly: true,
-        path: '/',
+        path: OIDC_COOKIE_PATH,
         secure: secureFlag,
         sameSite: 'lax' as const,
       });
@@ -149,7 +150,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
     ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), activateUser.email, {
       httpOnly: true,
-      path: '/',
+      path: OIDC_COOKIE_PATH,
       secure: secureFlag,
       sameSite: 'lax' as const,
     });

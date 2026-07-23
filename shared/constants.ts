@@ -17,6 +17,8 @@ export const PERMISSIONS = {
 
 export const PKCE_COOKIE_MAX_AGE_MS = 600_000; // 10 minutes
 
+export const OIDC_COOKIE_PATH = '/' as const;
+
 export const AUDIT_LOG_DEFAULTS = {
   PAGE_SIZE: 25,
   MAX_PAGE_SIZE: 100,
