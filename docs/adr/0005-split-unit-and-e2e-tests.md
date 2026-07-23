@@ -32,6 +32,8 @@ Split the test suite into two lanes and parallelize the slow lane:
 3. **Scripts** — `npm test` runs typecheck, then unit, then E2E. Dedicated
    `test:unit` and `test:e2e` scripts are provided.
 4. **Typecheck** — Add `tsconfig.test.json` so test files are typechecked on CI.
+   `npm run typecheck` runs both production and test typechecks;
+   `typecheck:production` and `typecheck:test` allow checking each scope independently.
 
 ## Consequences
 
