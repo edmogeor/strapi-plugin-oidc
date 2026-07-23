@@ -14,6 +14,7 @@ import {
   assertNdjsonFormat,
   expectNdjsonExportHeaders,
   createAuditLogSuite,
+  getPluginController,
 } from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
@@ -215,10 +216,11 @@ describe('AuditLog Controller', () => {
   });
 
   it('find() returns paginated logs in ctx.body', async () => {
-    const auditLogController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('auditLog') as unknown as AuditLogController;
-    const ctx = { query: { page: '1', pageSize: '10' }, body: null as unknown };
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
+    const ctx = {
+      query: { page: '1', pageSize: '10' },
+      body: null as { results: unknown[]; pagination: unknown },
+    };
     await auditLogController.find(ctx);
     expect(ctx.body).toHaveProperty('results');
     expect(ctx.body).toHaveProperty('pagination');
@@ -226,9 +228,7 @@ describe('AuditLog Controller', () => {
   });
 
   it('export() sets NDJSON content-type and streams rows as newline-delimited JSON', async () => {
-    const auditLogController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('auditLog') as unknown as AuditLogController;
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
 
@@ -253,9 +253,7 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < N; i++) {
       await auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('auditLog') as unknown as AuditLogController;
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -263,9 +261,7 @@ describe('AuditLog Controller', () => {
   });
 
   it('NDJSON body has no wrapping array, no trailing commas, one object per line', async () => {
-    const auditLogController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('auditLog') as unknown as AuditLogController;
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { text } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -279,12 +275,10 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < 501; i++) {
       await auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('auditLog') as unknown as AuditLogController;
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const realFind = auditLogService.find;
     let call = 0;
-    (auditLogService as { find: typeof realFind }).find = async (opts) => {
+    auditLogService.find = async (opts) => {
       call++;
       if (call === 2) throw new Error('synthetic DB failure');
       return realFind(opts);
@@ -301,7 +295,7 @@ describe('AuditLog Controller', () => {
       });
       expect(err).toBeInstanceOf(Error);
     } finally {
-      (auditLogService as { find: typeof realFind }).find = realFind;
+      auditLogService.find = realFind;
     }
   });
 });

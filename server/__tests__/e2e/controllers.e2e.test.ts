@@ -17,6 +17,8 @@ import {
   setSettings,
   expectOidcSessionLogout,
   expectNonOidcLogoutRedirect,
+  getPluginController,
+  getPluginConfig,
 } from './test-helpers';
 import { resetOidcConfig } from '../../utils/oidc-client';
 
@@ -31,19 +33,15 @@ describe('Controllers E2E', () => {
 
   beforeAll(() => {
     strapi = globalThis.strapiInstance;
-    whitelistController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('whitelist') as unknown as WhitelistController;
-    roleController = strapi
-      .plugin('strapi-plugin-oidc')
-      .controller('role') as unknown as RoleController;
+    whitelistController = getPluginController<WhitelistController>(strapi, 'whitelist');
+    roleController = getPluginController<RoleController>(strapi, 'role');
   });
 
   describe('Whitelist Controller', () => {
     beforeAll(() => {
       // Ensure OIDC_ENFORCE config override is absent so DB values are used
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...(strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>),
+        ...getPluginConfig(strapi),
         OIDC_ENFORCE: null,
       });
     });
@@ -105,7 +103,7 @@ describe('Controllers E2E', () => {
 
     it('should return skipLoginPage in public settings', async () => {
       strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...(strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>),
+        ...getPluginConfig(strapi),
         OIDC_ENFORCE: null,
         OIDC_SKIP_LOGIN_PAGE: null,
       });

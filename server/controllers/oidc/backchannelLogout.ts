@@ -103,14 +103,14 @@ async function validateLogoutToken(
       return null;
     }
 
-    const events = payload.events as unknown;
-    const eventsObj = events;
+    const eventsObj = payload.events;
     if (
       typeof eventsObj !== 'object' ||
       eventsObj === null ||
-      typeof (eventsObj as Record<string, unknown>)[
-        'http://schemas.openid.net/event/backchannel-logout'
-      ] !== 'object'
+      !Object.prototype.hasOwnProperty.call(
+        eventsObj,
+        'http://schemas.openid.net/event/backchannel-logout',
+      )
     ) {
       return null;
     }

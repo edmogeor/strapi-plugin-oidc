@@ -63,10 +63,10 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         {
           schema: modelDef,
           getModel: (uid2: string) => strapi.getModel(uid2 as UID.Schema),
-        } as unknown as Parameters<typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput>[0],
-        user as unknown as Parameters<
-          typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput
-        >[1],
+        },
+        // @ts-expect-error — Strapi's sanitize types use opaque generics; user matches runtime contract
+        user as Parameters<typeof strapiUtils.sanitize.sanitizers.defaultSanitizeOutput>[1],
+        // Strapi's sanitize return type is opaque; runtime value is a sanitized admin user.
       )) as unknown as StrapiAdminUser;
       eventHub?.emit(ENTRY_CREATE ?? 'entry.create', {
         model: modelDef.modelName,

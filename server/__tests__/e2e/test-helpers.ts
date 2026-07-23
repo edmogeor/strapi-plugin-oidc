@@ -4,7 +4,24 @@ import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import { expect, beforeAll, beforeEach } from 'vitest';
 import type { Readable } from 'node:stream';
+import type { PluginConfig } from '../../../shared/config';
 export { clearRateLimitMap, getRateLimitMapSize } from '../../routes';
+
+export function getPluginController<T>(
+  strapi: Core.Strapi,
+  name: string,
+  // Strapi's plugin API returns untyped controllers — this is the boundary adapter.
+): T {
+  return strapi.plugin('strapi-plugin-oidc').controller(name) as T;
+}
+
+export function getPluginConfig(strapi: Core.Strapi): PluginConfig {
+  const cfg = strapi.config.get('plugin::strapi-plugin-oidc');
+  if (cfg !== null && typeof cfg === 'object' && !Array.isArray(cfg)) {
+    return cfg as PluginConfig;
+  }
+  return {} as PluginConfig;
+}
 
 export async function streamToString(stream: Readable): Promise<string> {
   const chunks: Buffer[] = [];
@@ -203,24 +220,35 @@ export async function getFirstAvailableRole(strapi: Core.Strapi) {
   return availableRoles[0];
 }
 
-export function createAuditLogExportCtx(strapi: Core.Strapi) {
+export function createAuditLogExportCtx(strapi: Core.Strapi): {
+  query: Record<string, unknown>;
+  set: (k: string, v: string) => void;
+  body: unknown;
+  strapi: Core.Strapi;
+  headers: Record<string, string>;
+} {
   const headers: Record<string, string> = {};
   return {
     query: {},
     set: (k: string, v: string) => {
       headers[k] = v;
     },
-    body: null as unknown,
+    body: null,
     strapi,
     headers,
   };
 }
 
-export function createSilentExportCtx(strapi: Core.Strapi) {
+export function createSilentExportCtx(strapi: Core.Strapi): {
+  query: Record<string, unknown>;
+  set: () => void;
+  body: unknown;
+  strapi: Core.Strapi;
+} {
   return {
     query: {},
     set: () => {},
-    body: null as unknown,
+    body: null,
     strapi,
   };
 }

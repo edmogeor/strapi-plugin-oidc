@@ -75,36 +75,31 @@ export const pluginConfigSchema = z.object({
 
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;
 
-export type ClientAssertionConfig = {
-  privateKey: string;
-  keyId?: string;
-  algorithm: string;
-};
+export type ClientAssertionConfig = z.infer<typeof clientAssertionSchema>;
+
+const clientAssertionSchema = z.object({
+  privateKey: z.string().min(1),
+  keyId: z.string().optional(),
+  algorithm: z.string().default('RS256'),
+});
 
 export function parseClientAssertion(raw: unknown): ClientAssertionConfig | null {
   if (typeof raw === 'string') {
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as ClientAssertionConfig;
+      return clientAssertionSchema.parse(JSON.parse(raw));
     } catch {
       return null;
     }
   }
   if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-    const obj = raw as Record<string, unknown>;
-    if (typeof obj.privateKey !== 'string' || !obj.privateKey) return null;
-    return {
-      privateKey: obj.privateKey as string,
-      keyId: typeof obj.keyId === 'string' ? obj.keyId : undefined,
-      algorithm: typeof obj.algorithm === 'string' ? obj.algorithm : 'RS256',
-    };
+    const result = clientAssertionSchema.safeParse(raw);
+    return result.success ? result.data : null;
   }
   return null;
 }
 
 export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
-  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-    return raw as GroupRoleMap;
-  }
-  return {};
+  const result = groupRoleMapSchema.safeParse(raw);
+  return result.success ? result.data : {};
 }

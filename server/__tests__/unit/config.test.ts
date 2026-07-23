@@ -75,9 +75,9 @@ describe('pluginConfigSchema', () => {
 });
 
 describe('parseGroupRoleMap', () => {
-  it('returns the object as-is if already an object', () => {
+  it('returns the object if already an object', () => {
     const obj = { admin: ['1'] };
-    expect(parseGroupRoleMap(obj)).toBe(obj);
+    expect(parseGroupRoleMap(obj)).toEqual(obj);
   });
 
   it('returns empty object for non-object values', () => {
