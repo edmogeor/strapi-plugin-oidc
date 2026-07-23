@@ -62,8 +62,9 @@ export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: s
   return { state };
 }
 
-export function getStateFromLoginRes(loginRes: { headers: { location: string } }): string | null {
-  return new URL(loginRes.headers.location).searchParams.get('state');
+export function getStateFromLoginRes(loginRes: { headers: Record<string, string> }): string | null {
+  const location = loginRes.headers.location;
+  return location ? new URL(location).searchParams.get('state') : null;
 }
 
 export function performCallback(agent: Agent, state: string | null): ReturnType<Agent['get']> {

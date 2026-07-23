@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import * as jose from 'jose';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
@@ -165,7 +165,7 @@ describe('Backchannel Logout E2E', () => {
     it('returns 200 when configured — logs backchannel_logout and rejects replayed JTI', async () => {
       await createUserWithOidcSub();
 
-      const res = await assertLogoutAudited(
+      await assertLogoutAudited(
         { aud: 'mock-client-id', sub: BC_TEST_SUB, jti: 'jti-valid' },
         'backchannel_logout',
       );

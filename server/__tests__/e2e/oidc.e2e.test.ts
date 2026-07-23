@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core } from './test-types';
@@ -214,7 +214,33 @@ describe('OIDC E2E Tests', () => {
 
     it('rejects a malformed ID token and logs login_failure', async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      await assertInvalidTokenRejected('not.a.valid.jwt.at.all');
+
+      // A structurally well-formed JWS (3 base64url segments, valid JSON header
+      // and payload) with a bogus signature. Establishing the token is
+      // structurally decodable up front means the rejection cannot stem from
+      // JWT parsing — it must come from signature/claims verification. So a
+      // future refactor that silently accepts well-formed-but-unsigned tokens
+      // still fails this assertion.
+      const b64url = (obj: unknown) =>
+        Buffer.from(JSON.stringify(obj))
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+      const malformedIdToken = `${b64url({ alg: 'RS256', typ: 'JWT' })}.${b64url({
+        sub: 'test',
+      })}.${'invalid-signature'}`;
+
+      const segments = malformedIdToken.split('.');
+      expect(segments).toHaveLength(3);
+      expect(() =>
+        JSON.parse(Buffer.from(segments[0], 'base64url').toString('utf8')),
+      ).not.toThrow();
+      expect(() =>
+        JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8')),
+      ).not.toThrow();
+
+      await assertInvalidTokenRejected(malformedIdToken);
       const rows = await queryAuditLog(strapi, 'login_failure');
       expect(rows.length).toBeGreaterThan(0);
       const detailParams = rows[0]?.detailsParams as Record<string, string> | undefined;
@@ -318,8 +344,10 @@ describe('OIDC E2E Tests', () => {
 
   describe('EnforceOIDC Security', () => {
     // Helper to get cookies from a Set-Cookie header array
-    const parseCookies = (res: Response): string[] => {
-      const raw = res.headers['set-cookie'] as string | string[] | undefined;
+    const parseCookies = (res: {
+      headers: Record<string, string | string[] | undefined>;
+    }): string[] => {
+      const raw = res.headers['set-cookie'];
       if (!raw) return [];
       return Array.isArray(raw) ? raw : [raw];
     };
@@ -504,7 +532,7 @@ describe('OIDC E2E Tests', () => {
   // Group-to-role mapping
   // ---------------------------------------------------------------------------
   // Run serially to avoid MSW handler stacking from parallel execution
-  describe('Group-to-role mapping', { serial: true }, () => {
+  describe('Group-to-role mapping', { sequential: true }, () => {
     beforeAll(async () => {
       // Ensure the default OIDC role record exists with at least one valid role,
       // so tests that rely on it are not dependent on pre-seeded database state.

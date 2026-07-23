@@ -26,10 +26,14 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should set and get settings from store', async () => {
-      await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: true });
+      await whitelistService.setSettings({
+        useWhitelist: true,
+        enforceOIDC: true,
+        skipLoginPage: false,
+      });
       const settings = await whitelistService.getSettings();
 
-      expect(settings).toEqual({ useWhitelist: true, enforceOIDC: true });
+      expect(settings).toEqual({ useWhitelist: true, enforceOIDC: true, skipLoginPage: false });
     });
 
     it('should register a new user in whitelist', async () => {
@@ -41,7 +45,11 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should throw when user not in whitelist and whitelist is active', async () => {
-      await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: false });
+      await whitelistService.setSettings({
+        useWhitelist: true,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
 
       await expect(
         whitelistService.checkWhitelistForEmail('unknown@whitelist.com'),
@@ -49,7 +57,11 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should allow any user if whitelist is disabled', async () => {
-      await whitelistService.setSettings({ useWhitelist: false, enforceOIDC: false });
+      await whitelistService.setSettings({
+        useWhitelist: false,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
 
       const result = await whitelistService.checkWhitelistForEmail('unknown@whitelist.com');
       expect(result).toBeNull();

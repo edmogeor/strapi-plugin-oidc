@@ -60,18 +60,26 @@ export interface MockCtx {
   request?: {
     body?: unknown;
     secure?: boolean;
+    query?: Record<string, unknown>;
   };
   params?: Record<string, unknown>;
+  query?: Record<string, unknown>;
   status?: number;
   body?: unknown;
+  headers?: Record<string, unknown>;
   redirectedTo?: string;
-  send?: (data: unknown, status?: number) => void;
+  send?(data: unknown, status?: number): void;
+  set?(name: string, value: string | string[]): void;
+  res?: {
+    setHeader: (name: string, value: string | string[]) => void;
+    getHeader: (name: string) => string | string[] | undefined;
+  };
   cookies?: {
     get: (name: string) => string | undefined;
     set: (name: string, value: string | null, opts?: Record<string, unknown>) => void;
     calls: Array<{ name: string; value: string; opts?: Record<string, unknown> }>;
   };
-  redirect?: (url: string) => void;
+  redirect?(url: string): void;
 }
 
 export interface WhitelistController {
@@ -92,4 +100,10 @@ export interface RoleController {
 
 export interface OidcController {
   logout(ctx: MockCtx): Promise<void>;
+}
+
+export interface AuditLogController {
+  find(ctx: MockCtx): Promise<void>;
+  export(ctx: MockCtx): Promise<void>;
+  clearAll(ctx: MockCtx): Promise<void>;
 }

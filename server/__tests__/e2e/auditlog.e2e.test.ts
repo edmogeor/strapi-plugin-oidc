@@ -2,7 +2,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
-import type { Core, AuditLogService } from './test-types';
+import type { Core, AuditLogService, AuditLogController } from './test-types';
 import {
   setSettings,
   applyDefaultOidcConfig,
@@ -31,7 +31,9 @@ describe('AuditLog Service', () => {
 
   it('log() emits an event on the eventHub', async () => {
     const received: unknown[] = [];
-    const listener = (p: unknown) => received.push(p);
+    const listener = async (p: unknown): Promise<void> => {
+      received.push(p);
+    };
     s.strapi.eventHub.on('strapi-plugin-oidc::auth.login_success', listener);
 
     await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
@@ -213,7 +215,9 @@ describe('AuditLog Controller', () => {
   });
 
   it('find() returns paginated logs in ctx.body', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = strapi
+      .plugin('strapi-plugin-oidc')
+      .controller('auditLog') as unknown as AuditLogController;
     const ctx = { query: { page: '1', pageSize: '10' }, body: null as unknown };
     await auditLogController.find(ctx);
     expect(ctx.body).toHaveProperty('results');
@@ -222,7 +226,9 @@ describe('AuditLog Controller', () => {
   });
 
   it('export() sets NDJSON content-type and streams rows as newline-delimited JSON', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = strapi
+      .plugin('strapi-plugin-oidc')
+      .controller('auditLog') as unknown as AuditLogController;
     const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
 
@@ -247,7 +253,9 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < N; i++) {
       await auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = strapi
+      .plugin('strapi-plugin-oidc')
+      .controller('auditLog') as unknown as AuditLogController;
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -255,7 +263,9 @@ describe('AuditLog Controller', () => {
   });
 
   it('NDJSON body has no wrapping array, no trailing commas, one object per line', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = strapi
+      .plugin('strapi-plugin-oidc')
+      .controller('auditLog') as unknown as AuditLogController;
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { text } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -269,7 +279,9 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < 501; i++) {
       await auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = strapi
+      .plugin('strapi-plugin-oidc')
+      .controller('auditLog') as unknown as AuditLogController;
     const realFind = auditLogService.find;
     let call = 0;
     (auditLogService as { find: typeof realFind }).find = async (opts) => {

@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.server.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "esModuleInterop": true
   },
   "include": ["server", "shared"],
   "exclude": ["node_modules/", "build/", "dist/", ".yalc", "admin"]

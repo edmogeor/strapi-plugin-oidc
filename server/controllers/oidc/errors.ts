@@ -15,7 +15,10 @@ type OidcErrorInfo = {
   action: AuditAction;
   code: (typeof errorCodes)[keyof typeof errorCodes];
   key?: string;
-  params?: Record<string, string | number>;
+  // String-only to stay aligned with AuditEntry.detailsParams. getErrorDetail
+  // accepts string | number, but OidcErrorInfo only ever carries strings, so
+  // narrowing here keeps the log path from drifting into the audit contract.
+  params?: Record<string, string>;
 };
 
 function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
@@ -23,7 +26,7 @@ function classifyOidcError(e: unknown, userInfo?: OidcUserInfo): OidcErrorInfo {
   const dispatch = OIDC_ERROR_DISPATCH[kind];
   const msg = toMessage(e);
 
-  let params: Record<string, string | number> | undefined;
+  let params: Record<string, string> | undefined;
   if (kind === 'unknown') {
     params = { error: msg };
   } else if (kind === 'user_creation_failed' && userInfo?.email) {
