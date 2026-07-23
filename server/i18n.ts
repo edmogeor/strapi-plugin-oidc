@@ -1,6 +1,4 @@
 /// <reference types="vite/client" />
-// Build-time glob: every translations/locales/*.json is auto-registered.
-// Drop a new locale file in that directory and it becomes available here with no code changes.
 const modules = import.meta.glob('../translations/locales/*.json', { eager: true });
 
 function isLocaleModule(value: unknown): value is { default: Record<string, string> } {

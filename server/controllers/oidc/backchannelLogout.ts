@@ -85,7 +85,7 @@ export function clearJtiStore(): void {
     const store = getJtiStore();
     store.delete({ key: JTI_STORE_KEY }).catch(() => {});
   } catch {
-    // ignore
+    // Store may be unavailable during teardown.
   }
 }
 

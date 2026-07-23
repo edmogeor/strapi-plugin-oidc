@@ -1,6 +1,6 @@
-import type { Core } from '@strapi/types';
+import type { StrapiConfig } from '../types';
 
-function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null {
+function readConfigFlag(strapi: StrapiConfig, key: string): boolean | null {
   const val = (strapi.config.get('plugin::strapi-plugin-oidc') as Record<string, unknown>)[key];
   if (typeof val === 'boolean') return val;
   if (val === 'true') return true;
@@ -9,25 +9,25 @@ function readConfigFlag(strapi: Core.Strapi, key: string): boolean | null {
 }
 
 function resolveConfigFlag(
-  strapi: Core.Strapi,
+  strapi: StrapiConfig,
   key: string,
   dbValue: boolean | undefined,
 ): boolean {
   return readConfigFlag(strapi, key) ?? dbValue ?? false;
 }
 
-export function getEnforceOIDCConfig(strapi: Core.Strapi): boolean | null {
+export function getEnforceOIDCConfig(strapi: StrapiConfig): boolean | null {
   return readConfigFlag(strapi, 'OIDC_ENFORCE');
 }
 
-export function resolveEnforceOIDC(strapi: Core.Strapi, dbValue: boolean | undefined): boolean {
+export function resolveEnforceOIDC(strapi: StrapiConfig, dbValue: boolean | undefined): boolean {
   return resolveConfigFlag(strapi, 'OIDC_ENFORCE', dbValue);
 }
 
-export function getSkipLoginPageConfig(strapi: Core.Strapi): boolean | null {
+export function getSkipLoginPageConfig(strapi: StrapiConfig): boolean | null {
   return readConfigFlag(strapi, 'OIDC_SKIP_LOGIN_PAGE');
 }
 
-export function resolveSkipLoginPage(strapi: Core.Strapi, dbValue: boolean | undefined): boolean {
+export function resolveSkipLoginPage(strapi: StrapiConfig, dbValue: boolean | undefined): boolean {
   return resolveConfigFlag(strapi, 'OIDC_SKIP_LOGIN_PAGE', dbValue);
 }

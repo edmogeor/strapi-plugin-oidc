@@ -56,7 +56,7 @@ export async function logout(ctx: StrapiContext) {
       });
       return ctx.redirect(endSessionUrl.href);
     } catch {
-      // Fall through to fallback
+      // End session URL construction failed; fall back to local redirect.
     }
   }
 

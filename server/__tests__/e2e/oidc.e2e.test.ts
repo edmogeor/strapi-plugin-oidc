@@ -75,44 +75,35 @@ describe('OIDC E2E Tests', () => {
     });
     await setSettings(strapi, false, false, false);
 
-    // 1. Initial state (should be false)
     let res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(false);
 
-    // Ensure normal local login is allowed
     const localLoginAllowed = await agent.post('/admin/login').send({
       email: 'test@test.com',
       password: 'password',
     });
-    // It should not be a 403 Forbidden Error from our middleware
     expect(localLoginAllowed.status).not.toBe(403);
 
-    // Ensure GET to /admin/auth/login doesn't redirect
     const getLoginAllowed = await agent
       .get('/admin/auth/login')
       .set('Accept', 'text/html')
       .redirects(0);
     expect(getLoginAllowed.status).not.toBe(302);
 
-    // 2. Enable enforceOIDC in settings
     await setSettings(strapi, true, true, false);
 
-    // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(true);
 
-    // Ensure normal local login is blocked
     const localLoginBlocked = await agent.post('/admin/login').send({
       email: 'test@test.com',
       password: 'password',
     });
-    // It should be blocked by our middleware
     expect(localLoginBlocked.status).toBe(403);
     expect(localLoginBlocked.body.error.message).toContain('Local login is disabled');
 
-    // Ensure other POST auth routes are blocked
     const registerBlocked = await agent.post('/admin/register').send({});
     expect(registerBlocked.status).toBe(403);
 
@@ -122,7 +113,7 @@ describe('OIDC E2E Tests', () => {
     const resetPasswordBlocked = await agent.post('/admin/reset-password').send({});
     expect(resetPasswordBlocked.status).toBe(403);
 
-    // GET HTML routes should NOT redirect — enforcement is handled client-side via DOM removal
+    // GET HTML routes should NOT redirect — enforcement is handled client-side via DOM removal.
     const unauthAgent = request.agent(strapi.server.httpServer);
 
     const getLoginAllowedEnforced = await unauthAgent
@@ -131,7 +122,6 @@ describe('OIDC E2E Tests', () => {
       .redirects(0);
     expect(getLoginAllowedEnforced.status).not.toBe(302);
 
-    // Restore skipLoginPage for subsequent tests.
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
     await setSettings(strapi, false, false, false);
   });
@@ -169,9 +159,6 @@ describe('OIDC E2E Tests', () => {
     );
   });
 
-  // ---------------------------------------------------------------------------
-  // OIDC callback error handling
-  // ---------------------------------------------------------------------------
   describe('OIDC callback error handling', () => {
     const assertInvalidTokenRejected = async (idToken: string) => {
       oidcServer.use(
@@ -266,9 +253,6 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // OIDC sign-in error handling
-  // ---------------------------------------------------------------------------
   describe('OIDC sign-in error handling', () => {
     it('renders sign-in error page when required config is missing', async () => {
       const savedConfig = strapi.config.get('plugin::strapi-plugin-oidc');
@@ -287,9 +271,6 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // email_verified enforcement (Task 1)
-  // ---------------------------------------------------------------------------
   describe('email_verified enforcement', () => {
     const assertEmailVerifiedRejected = async (overrides: Record<string, unknown>) => {
       oidcServer.use(userinfoWith(overrides));
@@ -351,7 +332,6 @@ describe('OIDC E2E Tests', () => {
   });
 
   describe('EnforceOIDC Security', () => {
-    // Helper to get cookies from a Set-Cookie header array
     const parseCookies = (res: {
       headers: Record<string, string | string[] | undefined>;
     }): string[] => {
@@ -388,7 +368,7 @@ describe('OIDC E2E Tests', () => {
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // No server-side redirect — DOM removal happens in the browser
+        // No server-side redirect — DOM removal happens in the browser.
         expect(res.status).not.toBe(302);
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
@@ -400,7 +380,6 @@ describe('OIDC E2E Tests', () => {
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // Middleware passes through — should not redirect to our OIDC endpoint
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
 
@@ -413,7 +392,6 @@ describe('OIDC E2E Tests', () => {
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // Middleware should not redirect to OIDC
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
     });
@@ -433,7 +411,6 @@ describe('OIDC E2E Tests', () => {
       });
     });
 
-    // -------------------------------------------------------------------------
     describe('Token refresh bypass prevention', () => {
       it.each([
         [
@@ -455,7 +432,7 @@ describe('OIDC E2E Tests', () => {
           .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_id_token=1');
 
         // Our middleware passes it through — Strapi may return 401 for the invalid
-        // token itself, but the error must NOT be our OIDC enforcement message
+        // token itself, but the error must NOT be our OIDC enforcement message.
         expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
 
@@ -466,14 +443,10 @@ describe('OIDC E2E Tests', () => {
           .post('/admin/token/refresh')
           .set('Cookie', 'strapi_admin_refresh=some-local-token');
 
-        // Our middleware must not return our specific 401 message
         expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
     });
 
-    // -------------------------------------------------------------------------
-    // Cookie lifecycle: oidc_id_token is set and cleared correctly
-    // -------------------------------------------------------------------------
     describe('oidc_id_token cookie lifecycle', () => {
       it('sets oidc_id_token cookie after a successful OIDC callback', async () => {
         await setSettings(strapi, false, false);
@@ -495,9 +468,6 @@ describe('OIDC E2E Tests', () => {
       });
     });
 
-    // -------------------------------------------------------------------------
-    // Selective OIDC logout redirect
-    // -------------------------------------------------------------------------
     describe('Selective OIDC logout redirect', () => {
       it('redirects to OIDC end session URL when oidc_id_token cookie is present', async () => {
         const res = await logoutWithOidcSession();
@@ -512,7 +482,7 @@ describe('OIDC E2E Tests', () => {
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')
-          .redirects(0); // no oidc_id_token cookie
+          .redirects(0);
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
@@ -536,10 +506,7 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Group-to-role mapping
-  // ---------------------------------------------------------------------------
-  // Run serially to avoid MSW handler stacking from parallel execution
+  // Run serially to avoid MSW handler stacking from parallel execution.
   describe('Group-to-role mapping', { sequential: true }, () => {
     beforeAll(async () => {
       // Ensure the default OIDC role record exists with at least one valid role,
@@ -570,7 +537,7 @@ describe('OIDC E2E Tests', () => {
 
     beforeEach(async () => {
       // Reset MSW handlers and restore default config before each test
-      // to prevent handler stacking from parallel test execution
+      // to prevent handler stacking from parallel test execution.
       oidcServer.resetHandlers();
       clearRateLimitMap();
       strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
@@ -578,7 +545,6 @@ describe('OIDC E2E Tests', () => {
     });
 
     afterEach(async () => {
-      // Clean up any test users created in this describe block
       const emails = [
         'group-match@test.com',
         'no-match@test.com',

@@ -19,7 +19,6 @@ export type {
   AuditLogService,
 };
 
-// Typed globals used by setup.ts and all test files.
 declare global {
   var strapiInstance: Core.Strapi;
   var __testOidcNonce: string | undefined;
@@ -27,7 +26,6 @@ declare global {
 
 export type { Core };
 
-// Controller response body shapes used in controller tests.
 export interface WhitelistInfoBody {
   useWhitelist: boolean;
   enforceOIDC: boolean;
@@ -48,14 +46,12 @@ export interface ImportBody {
   importedCount: number;
 }
 
-// A role record as stored by the plugin's roles content-type.
 export interface OidcRole {
   id: number;
   oauth_type: string;
   role: number[];
 }
 
-// Minimal mock context used in controller unit-style tests.
 export interface MockCtx {
   request?: {
     body?: unknown;

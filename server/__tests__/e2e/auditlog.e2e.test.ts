@@ -52,7 +52,6 @@ describe('AuditLog Service', () => {
     expect(result.results).toHaveLength(2);
     expect(result.pagination.total).toBe(3);
     expect(result.pagination.pageCount).toBe(2);
-    // page 2 should exist and contain the remaining record
     const page2 = await s.service.find({ page: 2, pageSize: 2 });
     expect(page2.results).toHaveLength(1);
   });
@@ -204,7 +203,6 @@ describe('AuditLog Controller', () => {
 
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
-    // seed one record so export has content
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('auditLog')

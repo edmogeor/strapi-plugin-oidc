@@ -9,7 +9,6 @@ describe('Whitelist Content-API Routes', () => {
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
 
-    // Create a full-access API token for programmatic access tests
     const result = await strapi.service('admin::api-token').create({
       name: 'whitelist-api-test-token',
       description: 'Token used by whitelist API e2e tests',
@@ -21,7 +20,6 @@ describe('Whitelist Content-API Routes', () => {
   });
 
   afterAll(async () => {
-    // Remove the test token and any leftover whitelist entries
     await strapi.db
       .query('admin::api-token')
       .deleteMany({ where: { name: 'whitelist-api-test-token' } });
@@ -69,7 +67,6 @@ describe('Whitelist Content-API Routes', () => {
     expect(res.body.acceptedCount).toBeGreaterThanOrEqual(0);
     expect(Array.isArray(res.body.rejectedEmails)).toBe(true);
 
-    // Confirm it appears in the list
     const listRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);
@@ -97,7 +94,6 @@ describe('Whitelist Content-API Routes', () => {
       .set('Authorization', `Bearer ${apiToken}`);
     expect(delRes.status).toBe(200);
 
-    // Confirm removal
     const afterRes = await request(strapi.server.httpServer)
       .get('/api/strapi-plugin-oidc/whitelist')
       .set('Authorization', `Bearer ${apiToken}`);

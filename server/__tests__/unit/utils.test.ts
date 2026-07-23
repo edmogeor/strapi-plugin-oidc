@@ -22,10 +22,6 @@ import type {
   CookieContext,
 } from '../../types';
 
-/* ------------------------------------------------------------------ */
-/*  pluginConfig                                                       */
-/* ------------------------------------------------------------------ */
-
 describe('pluginConfig', () => {
   let strapi: StrapiConfigLogger;
 
@@ -86,10 +82,6 @@ describe('pluginConfig', () => {
     });
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  configFlag (enforceOIDC + skipLoginPage)                           */
-/* ------------------------------------------------------------------ */
 
 describe('configFlag', () => {
   let strapi: StrapiConfigLogger;
@@ -193,10 +185,6 @@ describe('configFlag', () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  getClientIp                                                        */
-/* ------------------------------------------------------------------ */
-
 describe('getClientIp', () => {
   let strapi: StrapiConfigLogger;
 
@@ -297,10 +285,6 @@ describe('getClientIp', () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/*  shouldMarkSecure                                                   */
-/* ------------------------------------------------------------------ */
-
 describe('shouldMarkSecure', () => {
   let strapi: StrapiConfigLogger;
 
@@ -308,11 +292,8 @@ describe('shouldMarkSecure', () => {
     strapi = createMockStrapi();
   });
 
-  const makeCtx = (
-    opts: { secure?: boolean; proxy?: boolean; xfp?: string } = {},
-  ): SecureContext => ({
+  const makeCtx = (opts: { secure?: boolean; xfp?: string } = {}): SecureContext => ({
     request: { secure: opts.secure ?? false },
-    app: { proxy: opts.proxy ?? false },
     get(name: string) {
       if (name === 'x-forwarded-proto' && opts.xfp) return opts.xfp;
       return '';
@@ -336,16 +317,16 @@ describe('shouldMarkSecure', () => {
     expect(shouldMarkSecure(strapi, makeCtx({ secure: false }))).toBe(false);
   });
 
-  it('returns true when proxy is trusted and x-forwarded-proto is https', () => {
+  it('returns true when x-forwarded-proto is https', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'https' }))).toBe(true);
+    expect(shouldMarkSecure(strapi, makeCtx({ xfp: 'https' }))).toBe(true);
   });
 
-  it('returns false when proxy is trusted but x-forwarded-proto is http', () => {
+  it('returns false when x-forwarded-proto is http', () => {
     strapi.config.set('environment', 'production');
     strapi.config.set('plugin::strapi-plugin-oidc', {});
-    expect(shouldMarkSecure(strapi, makeCtx({ proxy: true, xfp: 'http' }))).toBe(false);
+    expect(shouldMarkSecure(strapi, makeCtx({ xfp: 'http' }))).toBe(false);
   });
 
   it('returns true when OIDC_FORCE_SECURE_COOKIES is set', () => {
@@ -354,10 +335,6 @@ describe('shouldMarkSecure', () => {
     expect(shouldMarkSecure(strapi, makeCtx())).toBe(true);
   });
 });
-
-/* ------------------------------------------------------------------ */
-/*  cookies utils                                                      */
-/* ------------------------------------------------------------------ */
 
 describe('cookies utils', () => {
   let strapi: StrapiConfigLogger;
@@ -385,7 +362,6 @@ describe('cookies utils', () => {
     const calls: CookieCallArray = [];
     return {
       request: { secure: opts.secure ?? false },
-      app: { proxy: false },
       cookies: {
         set(name: string, value: string | null, cookieOpts: Record<string, unknown>) {
           calls.push({ name, value: value ?? '', opts: cookieOpts });
