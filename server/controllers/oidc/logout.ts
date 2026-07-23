@@ -1,4 +1,5 @@
 import * as client from 'openid-client';
+import { resolveAdminPath } from '../../bootstrap';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { clearAuthCookies, COOKIE_NAMES, readCookie } from '../../utils/cookies';
 import { getAuditLogService, getWhitelistService } from '../../utils/services';
@@ -20,8 +21,8 @@ export async function logout(ctx: StrapiContext) {
   const idToken = readCookie(ctx, COOKIE_NAMES.idToken);
   const userEmail = readCookie(ctx, COOKIE_NAMES.userEmail) ?? undefined;
 
-  const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
-  const loginUrl = `${adminPanelUrl}/auth/login`;
+  const adminPath = resolveAdminPath(strapi);
+  const loginUrl = `${adminPath}/auth/login`;
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
   const relativeFallback = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
@@ -29,10 +30,9 @@ export async function logout(ctx: StrapiContext) {
     : loginUrl;
 
   const publicUrl = getPluginConfig(strapi).OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
-  const fallbackUrl =
-    publicUrl && !relativeFallback.startsWith('http')
-      ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
-      : relativeFallback;
+  const fallbackUrl = publicUrl
+    ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
+    : relativeFallback;
 
   clearAuthCookies(strapi, ctx);
 
