@@ -60,6 +60,8 @@ async function updateSettings(ctx: Context) {
 }
 
 async function publicSettings(ctx: Context) {
+  // Intentionally unauthenticated: the admin login page needs these values
+  // before the user is authenticated so it can render the correct UX.
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
   const config = getPluginConfig(strapi);

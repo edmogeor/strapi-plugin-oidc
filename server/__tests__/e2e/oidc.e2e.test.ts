@@ -62,6 +62,9 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('jwtToken');
     expect(callbackRes.text).toContain('localStorage.setItem');
+    expect(callbackRes.headers['content-security-policy']).toMatch(
+      /^script-src 'nonce-[a-f0-9-]+'$/,
+    );
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
@@ -139,6 +142,9 @@ describe('OIDC E2E Tests', () => {
     const callbackRes = await loginAndExpectSuccess(agent);
     expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('Authentication failed. Please try again.');
+    expect(callbackRes.headers['content-security-policy']).toMatch(
+      /^script-src 'nonce-[a-f0-9-]+'$/,
+    );
   });
 
   const assertCallbackError = async (url: string, expectedMsg: string) => {
@@ -146,6 +152,7 @@ describe('OIDC E2E Tests', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('Authentication Failed');
     expect(res.text).toContain(expectedMsg);
+    expect(res.headers['content-security-policy']).toMatch(/^script-src 'nonce-[a-f0-9-]+'$/);
   };
 
   it('should fail if callback is missing code', async () => {
@@ -177,6 +184,7 @@ describe('OIDC E2E Tests', () => {
       expect(res.status).toBe(200);
       expect(res.text).toContain('Authentication Failed');
       expect(res.text).toContain('Authentication failed. Please try again.');
+      expect(res.headers['content-security-policy']).toMatch(/^script-src 'nonce-[a-f0-9-]+'$/);
     };
 
     it.each([

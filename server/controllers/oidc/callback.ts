@@ -19,7 +19,7 @@ import {
 import { getClientIp } from '../../utils/ip';
 import { configValidation } from './shared';
 import { handleUserAuthentication } from './userAuth';
-import { handleCallbackError } from './errors';
+import { handleCallbackError, sendErrorResponse } from './errors';
 import type { StrapiContext, AuditLogService, StrapiAdminUser } from '../../types';
 
 function readAndClearPkceCookies(ctx: StrapiContext): {
@@ -78,14 +78,14 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
   if (!ctx.query.code) {
     await auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
-    return ctx.send(oauthService.renderSignUpError(t(locale, 'user.missing_code'), locale));
+    return sendErrorResponse(ctx, oauthService, t(locale, 'user.missing_code'), locale);
   }
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
   if (!ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: getClientIp(strapi, ctx) });
-    return ctx.send(oauthService.renderSignUpError(t(locale, 'user.invalid_state'), locale));
+    return sendErrorResponse(ctx, oauthService, t(locale, 'user.invalid_state'), locale);
   }
 
   let userInfo: OidcUserInfo | undefined;
@@ -164,7 +164,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     );
 
     const nonce = randomUUID();
-    ctx.set('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
+    ctx.state.oidcCsp = `script-src 'nonce-${nonce}'`;
     ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce, secureFlag, locale));
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);

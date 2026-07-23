@@ -53,7 +53,7 @@ module.exports = ({ env }) => ({
       OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
       OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
       OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when Koa proxy mode is enabled (see below)
-      OIDC_FORCE_SECURE_COOKIES: false, // Set true when behind a trusted HTTPS proxy that Strapi can't auto-detect
+      OIDC_FORCE_SECURE_COOKIES: false, // Set true ONLY when behind a trusted HTTPS proxy/origin that Strapi can't auto-detect; HTTP origins will reject __Host- cookies
     },
   },
 });
@@ -69,7 +69,7 @@ module.exports = ({ env }) => ({
 - **Email verification** — `OIDC_REQUIRE_EMAIL_VERIFIED: true` (default) rejects unverified emails
 - **CSRF protection** — OIDC state/nonce and POST-only logout endpoint
 - **Rate limiting** — 1 000 req/min per IP+UA (in-process; use a reverse-proxy-level limiter for multi-node)
-- **Secure cookies** — `OIDC_FORCE_SECURE_COOKIES` ensures cookies are marked Secure
+- **Secure cookies** — `OIDC_FORCE_SECURE_COOKIES` ensures cookies are marked `Secure`. Only enable this on HTTPS origins; on HTTP origins the browser rejects `__Host-` prefixed cookies and OIDC login will fail silently.
 
 ### Client IP attribution and reverse proxies
 

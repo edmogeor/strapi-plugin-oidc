@@ -1,6 +1,7 @@
 import * as client from 'openid-client';
 import { COOKIE_NAMES, shouldMarkSecure, reconcileCookieName } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
+import { sendErrorResponse } from './errors';
 import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
 import { resolveSkipLoginPage } from '../../utils/configFlag';
@@ -67,6 +68,6 @@ export async function oidcSignIn(ctx: StrapiContext) {
   } catch (e) {
     strapi.log.error({ phase: 'oidc_sign_in', message: toMessage(e) });
     const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
-    return ctx.send(getOauthService().renderSignUpError(t(locale, 'user.signInError'), locale));
+    return sendErrorResponse(ctx, getOauthService(), t(locale, 'user.signInError'), locale);
   }
 }

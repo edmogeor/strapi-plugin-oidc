@@ -6,6 +6,9 @@ export type OidcUserInfo = OidcUserInfoType;
 
 export interface StrapiContext extends Context {
   send(body: unknown, status?: number): void;
+  state: Context['state'] & {
+    oidcCsp?: string;
+  };
 }
 
 export interface WhitelistSettings {

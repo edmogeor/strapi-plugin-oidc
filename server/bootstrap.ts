@@ -7,7 +7,7 @@ import {
   getSkipLoginPageConfig,
   resolveSkipLoginPage,
 } from './utils/configFlag';
-import { getRetentionDays } from './utils/pluginConfig';
+import { getRetentionDays, getPluginConfig } from './utils/pluginConfig';
 import { getWhitelistService, getAuditLogService } from './utils/services';
 import { resetOidcConfig } from './utils/oidc-client';
 import { pruneStoredJtis } from './controllers/oidc/backchannelLogout';
@@ -23,6 +23,12 @@ const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.js
 
 export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   resetOidcConfig();
+
+  if (getPluginConfig(strapi).OIDC_FORCE_SECURE_COOKIES === true) {
+    strapi.log.warn(
+      '[strapi-plugin-oidc] OIDC_FORCE_SECURE_COOKIES is enabled. Cookies will be marked Secure; ensure Strapi is served over HTTPS or __Host- cookies will be rejected by browsers.',
+    );
+  }
 
   try {
     await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sub TEXT');
@@ -134,6 +140,14 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
   } else {
     strapi.server.use(enforceOidcMiddleware);
   }
+
+  const applyOidcCsp = async (ctx: Context, next: Next) => {
+    await next();
+    if (ctx.state.oidcCsp) {
+      ctx.set('Content-Security-Policy', ctx.state.oidcCsp);
+    }
+  };
+  strapi.server.use(applyOidcCsp);
 
   const actions = [
     { section: 'plugins', displayName: 'Read', uid: 'read', pluginName: 'strapi-plugin-oidc' },

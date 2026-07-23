@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { errorCodes, getErrorDetail } from '../../error-strings';
 import { negotiateLocale, t } from '../../i18n';
 import { OidcError, OIDC_ERROR_DISPATCH } from '../../oidc-errors';
@@ -10,6 +11,17 @@ import type {
   AuditAction,
   AuditLogService,
 } from '../../types';
+
+export function sendErrorResponse(
+  ctx: StrapiContext,
+  oauthService: OAuthService,
+  message: string,
+  locale: string,
+): void {
+  const nonce = randomUUID();
+  ctx.state.oidcCsp = `script-src 'nonce-${nonce}'`;
+  ctx.send(oauthService.renderSignUpError(message, locale));
+}
 
 type OidcErrorInfo = {
   action: AuditAction;
@@ -75,5 +87,5 @@ export async function handleCallbackError(
     email: userInfo?.email,
   });
   const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
-  ctx.send(oauthService.renderSignUpError(t(locale, 'user.signInError'), locale));
+  sendErrorResponse(ctx, oauthService, t(locale, 'user.signInError'), locale);
 }
