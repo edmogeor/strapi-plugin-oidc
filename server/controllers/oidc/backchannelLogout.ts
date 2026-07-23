@@ -130,29 +130,16 @@ async function validateLogoutToken(
   }
 }
 
-async function lookupUserByOidcSub(
-  strapi: StrapiContext['strapi'],
-  oidcSub: string,
-): Promise<{ id: number } | null> {
-  const raw = await strapi.db.connection.raw(
-    'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
-    [oidcSub],
-  );
-  const rows = raw?.rows ?? raw;
-  const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-  if (firstRow && typeof firstRow.id === 'number') {
-    return { id: firstRow.id };
-  }
-  return null;
-}
+type OidcClaimColumn = 'oidc_sub' | 'oidc_sid';
 
-async function lookupUserByOidcSid(
+async function lookupUserByOidcClaim(
   strapi: StrapiContext['strapi'],
-  oidcSid: string,
+  column: OidcClaimColumn,
+  value: string,
 ): Promise<{ id: number } | null> {
   const raw = await strapi.db.connection.raw(
-    'SELECT id FROM admin_users WHERE oidc_sid = ? LIMIT 1',
-    [oidcSid],
+    `SELECT id FROM admin_users WHERE ${column} = ? LIMIT 1`,
+    [value],
   );
   const rows = raw?.rows ?? raw;
   const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
@@ -231,10 +218,10 @@ export async function backchannelLogout(ctx: StrapiContext) {
     let user: { id: number } | null = null;
     try {
       if (result.sub) {
-        user = await lookupUserByOidcSub(strapi, result.sub);
+        user = await lookupUserByOidcClaim(strapi, 'oidc_sub', result.sub);
       }
       if (!user && result.sid) {
-        user = await lookupUserByOidcSid(strapi, result.sid);
+        user = await lookupUserByOidcClaim(strapi, 'oidc_sid', result.sid);
       }
     } catch {
       user = null;

@@ -167,10 +167,7 @@ describe('OIDC E2E Tests', () => {
         ),
       );
       const callbackUrl = await initiateLogin(agent);
-      const res = await agent.get(callbackUrl).redirects(0);
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      const res = await assertGenericAuthError(agent, callbackUrl);
       expect(res.headers['content-security-policy']).toMatch(/^script-src 'nonce-[a-f0-9-]+'$/);
     };
 
