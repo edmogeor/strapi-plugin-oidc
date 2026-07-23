@@ -127,6 +127,22 @@ async function validateLogoutToken(
   }
 }
 
+async function lookupUserByOidcSub(
+  strapi: StrapiContext['strapi'],
+  oidcSub: string,
+): Promise<{ id: number } | null> {
+  const raw = await strapi.db.connection.raw(
+    'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
+    [oidcSub],
+  );
+  const rows = raw?.rows ?? raw;
+  const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (firstRow && typeof firstRow.id === 'number') {
+    return { id: firstRow.id };
+  }
+  return null;
+}
+
 export async function backchannelLogout(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   const ip = getClientIp(strapi, ctx);
@@ -185,26 +201,9 @@ export async function backchannelLogout(ctx: StrapiContext) {
 
     let user: { id: number } | null = null;
     try {
-      if (result.sub) {
-        const raw = await strapi.db.connection.raw(
-          'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
-          [result.sub],
-        );
-        const rows = raw?.rows ?? raw;
-        const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-        if (firstRow && typeof firstRow.id === 'number') {
-          user = { id: firstRow.id };
-        }
-      } else if (result.sid) {
-        const raw = await strapi.db.connection.raw(
-          'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
-          [result.sid],
-        );
-        const rows = raw?.rows ?? raw;
-        const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-        if (firstRow && typeof firstRow.id === 'number') {
-          user = { id: firstRow.id };
-        }
+      const lookupValue = result.sub ?? result.sid;
+      if (lookupValue) {
+        user = await lookupUserByOidcSub(strapi, lookupValue);
       }
     } catch {
       user = null;
