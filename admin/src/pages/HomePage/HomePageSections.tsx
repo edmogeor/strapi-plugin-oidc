@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo, type ReactNode, type ChangeEvent } from 'react';
 import { Box, Flex, Typography, Button, Dialog } from '@strapi/design-system';
 import { WarningCircle, Information } from '@strapi/icons';
 import { useIntl } from 'react-intl';
@@ -60,7 +60,7 @@ interface WhitelistSectionProps {
   loading: boolean;
   users: WhitelistUser[];
   useWhitelist: boolean;
-  onToggleWhitelist: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleWhitelist: (e: ChangeEvent<HTMLInputElement>) => void;
   onSave: (email: string) => void;
   onDelete: (email: string) => void;
   onDeleteAll: () => void;
@@ -145,7 +145,7 @@ const UnsavedWarning = memo(function UnsavedWarning({ messageId }: UnsavedWarnin
 interface SettingsSwitchProps {
   titleId: string;
   checked: boolean;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   enabledLabelId: string;
   disabledLabelId: string;
@@ -190,8 +190,8 @@ interface LoginSettingsSectionProps {
   skipLoginPage: boolean;
   skipLoginPageConfig: boolean | null;
   initialSkipLoginPage: boolean;
-  onToggleEnforce: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onToggleSkipLoginPage: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleEnforce: (e: ChangeEvent<HTMLInputElement>) => void;
+  onToggleSkipLoginPage: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const LoginSettingsSection = memo(function LoginSettingsSection({
@@ -264,7 +264,7 @@ export const SaveBar = memo(function SaveBar({ isDirty, loading, onSave }: SaveB
 });
 
 interface AuditLogSectionProps {
-  title: React.ReactNode;
+  title: ReactNode;
 }
 
 export const AuditLogSection = memo(function AuditLogSection({ title }: AuditLogSectionProps) {

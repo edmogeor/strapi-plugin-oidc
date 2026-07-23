@@ -13,7 +13,7 @@ import {
   SaveBar,
   UnsavedChangesDialog,
   WhitelistSection,
-} from './sections';
+} from './HomePageSections';
 
 function HomePage() {
   const { formatMessage } = useIntl();

@@ -21,9 +21,8 @@ export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: stri
     `${adminPath}/reset-password`,
   ];
 
-  return async function enforceOidcMiddleware(ctx: Context, next: Next) {
+  return async function enforceOidcMiddleware(ctx: Context, next: Next): Promise<void> {
     const path = ctx.request.path;
-    const isPost = ctx.request.method === 'POST';
     const isAuthRoute = AUTH_ROUTES.some((r: string) => path.includes(r));
     const isTokenRefresh = path === tokenRefreshPath;
     const isGet = ctx.request.method === 'GET';
@@ -45,13 +44,13 @@ export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: stri
       }
     }
 
-    if ((isAuthRoute && isPost) || isTokenRefresh) {
+    if ((isAuthRoute && ctx.request.method === 'POST') || isTokenRefresh) {
       try {
         const whitelistService = getWhitelistService();
         const settings = await whitelistService.getSettings();
         const enforceOIDC = resolveEnforceOIDC(strapi, settings?.enforceOIDC);
 
-        if (enforceOIDC && isAuthRoute && isPost) {
+        if (enforceOIDC && isAuthRoute && ctx.request.method === 'POST') {
           ctx.status = 403;
           ctx.body = {
             data: null,

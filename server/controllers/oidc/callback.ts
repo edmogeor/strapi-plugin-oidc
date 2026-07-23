@@ -72,7 +72,7 @@ async function logSuccessfulAuth(
   await Promise.all(entries);
 }
 
-function validateCallbackQuery(
+function requireCallbackCode(
   ctx: StrapiContext,
   oauthService: OAuthService,
   auditLog: AuditLogService,
@@ -139,30 +139,29 @@ async function persistOidcIdentifiers(
   }
 }
 
+function createOidcCookieOptions(secure: boolean) {
+  return {
+    httpOnly: true,
+    path: OIDC_COOKIE_PATH,
+    secure,
+    sameSite: 'lax' as const,
+  };
+}
+
 function setOidcSessionCookies(
   ctx: StrapiContext,
   idToken: string | undefined,
   userEmail: string,
   secure: boolean,
 ): void {
+  const options = createOidcCookieOptions(secure);
   if (idToken) {
-    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secure), idToken, {
-      httpOnly: true,
-      path: OIDC_COOKIE_PATH,
-      secure,
-      sameSite: 'lax' as const,
-    });
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secure), idToken, options);
   }
-
-  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secure), userEmail, {
-    httpOnly: true,
-    path: OIDC_COOKIE_PATH,
-    secure,
-    sameSite: 'lax' as const,
-  });
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secure), userEmail, options);
 }
 
-function renderAuthSuccess(
+function renderSignInSuccess(
   ctx: StrapiContext,
   oauthService: OAuthService,
   jwtToken: string,
@@ -182,7 +181,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   const locale = getLocaleFromContext(ctx);
 
-  if (!validateCallbackQuery(ctx, oauthService, auditLog, locale)) return;
+  if (!requireCallbackCode(ctx, oauthService, auditLog, locale)) return;
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
@@ -224,7 +223,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       rolesUpdated,
       resolvedRoleNames,
     );
-    renderAuthSuccess(ctx, oauthService, jwtToken, activateUser, secure, locale);
+    renderSignInSuccess(ctx, oauthService, jwtToken, activateUser, secure, locale);
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);
   }
