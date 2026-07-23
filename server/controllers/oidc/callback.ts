@@ -21,7 +21,9 @@ import { getClientIp } from '../../utils/ip';
 import { configValidation } from './shared';
 import { handleUserAuthentication } from './userAuth';
 import { handleCallbackError, sendErrorResponse } from './errors';
-import type { StrapiContext, AuditLogService, StrapiAdminUser } from '../../types';
+import type { StrapiContext, AuditLogService, StrapiAdminUser, OAuthService } from '../../types';
+
+type TokenSet = Awaited<ReturnType<typeof client.authorizationCodeGrant>>;
 
 function readAndClearPkceCookies(ctx: StrapiContext): {
   oidcState: string | undefined;
@@ -70,6 +72,109 @@ async function logSuccessfulAuth(
   await Promise.all(entries);
 }
 
+function validateCallbackQuery(
+  ctx: StrapiContext,
+  oauthService: OAuthService,
+  auditLog: AuditLogService,
+  locale: string,
+): boolean {
+  if (!ctx.query.code) {
+    sendErrorResponse(ctx, oauthService, t(locale, 'user.missing_code'), locale);
+    void auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
+    return false;
+  }
+  return true;
+}
+
+async function exchangeCodeForTokens(
+  oidcConfig: client.Configuration,
+  ctx: StrapiContext,
+  codeVerifier: string | undefined,
+  oidcState: string | undefined,
+  oidcNonce: string | undefined,
+): Promise<TokenSet> {
+  const currentUrl = new URL(ctx.request.href);
+  return client.authorizationCodeGrant(oidcConfig, currentUrl, {
+    pkceCodeVerifier: codeVerifier,
+    expectedState: oidcState,
+    expectedNonce: oidcNonce,
+    idTokenExpected: true,
+  });
+}
+
+async function fetchAndValidateUserInfo(
+  oidcConfig: client.Configuration,
+  tokens: TokenSet,
+): Promise<{ userInfo: OidcUserInfo; sub: string; sid: string | undefined }> {
+  const claims = tokens.claims();
+  const sub = claims?.sub;
+  if (!sub || typeof sub !== 'string') {
+    throw new Error('ID token missing required "sub" claim');
+  }
+  const sid = typeof claims?.sid === 'string' ? claims.sid : undefined;
+  const userInfoData = await client.fetchUserInfo(oidcConfig, tokens.access_token, sub);
+  const userInfo = oidcUserInfoSchema.parse(userInfoData);
+  return { userInfo, sub, sid };
+}
+
+async function persistOidcIdentifiers(
+  strapi: StrapiContext['strapi'],
+  user: StrapiAdminUser,
+  sub: string,
+  sid: string | undefined,
+): Promise<void> {
+  try {
+    await strapi.db.connection.raw('UPDATE admin_users SET oidc_sub = ? WHERE id = ?', [
+      sub,
+      user.id,
+    ]);
+    if (sid) {
+      await strapi.db.connection.raw('UPDATE admin_users SET oidc_sid = ? WHERE id = ?', [
+        sid,
+        user.id,
+      ]);
+    }
+  } catch (err: unknown) {
+    strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub/oidc_sid:', err);
+  }
+}
+
+function setOidcSessionCookies(
+  ctx: StrapiContext,
+  idToken: string | undefined,
+  userEmail: string,
+  secure: boolean,
+): void {
+  if (idToken) {
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secure), idToken, {
+      httpOnly: true,
+      path: OIDC_COOKIE_PATH,
+      secure,
+      sameSite: 'lax' as const,
+    });
+  }
+
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secure), userEmail, {
+    httpOnly: true,
+    path: OIDC_COOKIE_PATH,
+    secure,
+    sameSite: 'lax' as const,
+  });
+}
+
+function renderAuthSuccess(
+  ctx: StrapiContext,
+  oauthService: OAuthService,
+  jwtToken: string,
+  user: StrapiAdminUser,
+  secure: boolean,
+  locale: string,
+): void {
+  const nonce = randomUUID();
+  ctx.state.oidcCsp = `script-src 'nonce-${nonce}'`;
+  ctx.send(oauthService.renderSignUpSuccess(jwtToken, user, nonce, secure, locale));
+}
+
 export async function oidcSignInCallback(ctx: StrapiContext) {
   const config = configValidation();
   const oidcConfig = await getOidcConfig();
@@ -77,10 +182,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   const locale = getLocaleFromContext(ctx);
 
-  if (!ctx.query.code) {
-    await auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
-    return sendErrorResponse(ctx, oauthService, t(locale, 'user.missing_code'), locale);
-  }
+  if (!validateCallbackQuery(ctx, oauthService, auditLog, locale)) return;
 
   const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
 
@@ -91,37 +193,16 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
   let userInfo: OidcUserInfo | undefined;
   try {
-    const currentUrl = new URL(ctx.request.href);
-    const tokens = await client.authorizationCodeGrant(oidcConfig, currentUrl, {
-      pkceCodeVerifier: codeVerifier,
-      expectedState: oidcState,
-      expectedNonce: oidcNonce,
-      idTokenExpected: true,
-    });
-
-    const claims = tokens.claims();
-    const sub = claims?.sub;
-    if (!sub || typeof sub !== 'string') {
-      throw new Error('ID token missing required "sub" claim');
-    }
-    const sid = typeof claims?.sid === 'string' ? claims.sid : undefined;
+    const tokens = await exchangeCodeForTokens(oidcConfig, ctx, codeVerifier, oidcState, oidcNonce);
     const idToken = tokens.id_token;
+    const {
+      userInfo: parsedUserInfo,
+      sub,
+      sid,
+    } = await fetchAndValidateUserInfo(oidcConfig, tokens);
+    userInfo = parsedUserInfo;
 
-    const userInfoData = await client.fetchUserInfo(oidcConfig, tokens.access_token, sub);
-
-    const secureFlag = shouldMarkSecure(strapi, ctx);
-
-    if (idToken) {
-      ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), idToken, {
-        httpOnly: true,
-        path: OIDC_COOKIE_PATH,
-        secure: secureFlag,
-        sameSite: 'lax' as const,
-      });
-    }
-
-    userInfo = oidcUserInfoSchema.parse(userInfoData);
-
+    const secure = shouldMarkSecure(strapi, ctx);
     const { activateUser, jwtToken, userCreated, rolesUpdated, resolvedRoleNames } =
       await handleUserAuthentication(
         getAdminUserService(),
@@ -133,28 +214,8 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
         ctx,
       );
 
-    try {
-      await strapi.db.connection.raw('UPDATE admin_users SET oidc_sub = ? WHERE id = ?', [
-        sub,
-        activateUser.id,
-      ]);
-      if (sid) {
-        await strapi.db.connection.raw('UPDATE admin_users SET oidc_sid = ? WHERE id = ?', [
-          sid,
-          activateUser.id,
-        ]);
-      }
-    } catch (err: unknown) {
-      strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub/oidc_sid:', err);
-    }
-
-    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), activateUser.email, {
-      httpOnly: true,
-      path: OIDC_COOKIE_PATH,
-      secure: secureFlag,
-      sameSite: 'lax' as const,
-    });
-
+    await persistOidcIdentifiers(strapi, activateUser, sub, sid);
+    setOidcSessionCookies(ctx, idToken, activateUser.email, secure);
     await logSuccessfulAuth(
       auditLog,
       ctx,
@@ -163,10 +224,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       rolesUpdated,
       resolvedRoleNames,
     );
-
-    const nonce = randomUUID();
-    ctx.state.oidcCsp = `script-src 'nonce-${nonce}'`;
-    ctx.send(oauthService.renderSignUpSuccess(jwtToken, activateUser, nonce, secureFlag, locale));
+    renderAuthSuccess(ctx, oauthService, jwtToken, activateUser, secure, locale);
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);
   }
