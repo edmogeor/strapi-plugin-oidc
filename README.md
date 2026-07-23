@@ -17,7 +17,68 @@
   </p>
 </div>
 
-A Strapi plugin that provides OpenID Connect (OIDC) authentication for the Strapi Admin Panel. Supports Keycloak, Auth0, Okta, Azure AD, Authentik, Authelia, and any other OpenID Connect provider.
+OIDC authentication for the Strapi Admin Panel. Works with Keycloak, Auth0, Okta, Azure AD, Authentik, Authelia, and any other OpenID Connect provider.
+
+<!-- toc -->
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Configuration](#configuration)
+  - [Client assertion](#client-assertion)
+  - [Security features](#security-features)
+  - [Client IP attribution and reverse proxies](#client-ip-attribution-and-reverse-proxies)
+- [Usage](#usage)
+  - [Login](#login)
+  - [Logout](#logout)
+- [Admin Settings](#admin-settings)
+- [Group-to-Role Mapping](#group-to-role-mapping)
+  - [Example configuration](#example-configuration)
+  - [Role assignment precedence](#role-assignment-precedence)
+  - [Role updates on subsequent logins](#role-updates-on-subsequent-logins)
+- [REST API](#rest-api)
+- [Credits](#credits)
+- [Donations](#donations)
+- [License](#license)
+
+<!-- tocstop -->
+
+## Features
+
+- OIDC sign-in for the Strapi Admin Panel using Authorization Code flow with PKCE
+- Works with any OIDC provider, including Keycloak, Auth0, Okta, Azure AD, Authentik, and Authelia
+- Configurable **Login via SSO** button with custom text
+- **Enforce OIDC** mode to remove email/password login and block local-login API calls
+- **Skip Login Page** to redirect unauthenticated users straight to the IdP
+- **Default OIDC roles** assigned to new users on first login
+- Email **whitelist** with optional per-entry role overrides, JSON import/export, and a REST API
+- **Group-to-role mapping** based on a configurable OIDC claim
+- **Audit log** of authentication events with admin UI filtering, NDJSON export, and a REST API
+- Configurable audit-log retention and **Remember Me** sessions
+- **RP-initiated logout** and **backchannel logout** support
+- Optional private-key JWT **client assertion** for token-endpoint authentication
+- Optional **email verification** requirement before login is allowed
+- Secure, httpOnly, `__Host-` prefixed cookies with PKCE state and nonce
+
+## Quick Start
+
+Add the plugin to `config/plugins.js` (or `.ts`) with the four required values:
+
+```javascript
+module.exports = ({ env }) => ({
+  'strapi-plugin-oidc': {
+    enabled: true,
+    config: {
+      OIDC_PUBLIC_URL: env('PUBLIC_URL', 'https://strapi.example.com'), // origin only -- we append /strapi-plugin-oidc/oidc/callback
+      OIDC_ISSUER: env('OIDC_ISSUER'),
+      OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
+      OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
+    },
+  },
+});
+```
+
+Then restart Strapi, go to **Settings → OIDC Plugin**, choose the default roles, and click **Save**.
 
 ## Installation
 
@@ -27,49 +88,71 @@ npm install strapi-plugin-oidc
 
 ## Configuration
 
-Add the plugin to `config/plugins.js` (or `.ts`):
+All options can be set in `config/plugins.js` or via environment variables. Optional values use the defaults shown below.
+
+| Option                        | Required                           | Default                | Description                                                                 |
+| ----------------------------- | ---------------------------------- | ---------------------- | --------------------------------------------------------------------------- |
+| `OIDC_PUBLIC_URL`             | Yes, if `PUBLIC_URL` is not set    | `''`                   | Strapi origin (scheme + host + port, no path or trailing slash)             |
+| `OIDC_ISSUER`                 | Yes                                | `''`                   | Provider issuer URL, e.g. `https://auth.example.com/realms/myrealm`         |
+| `OIDC_CLIENT_ID`              | Yes                                | `''`                   | Client ID registered with the provider                                      |
+| `OIDC_CLIENT_SECRET`          | Yes, unless using client assertion | `''`                   | Client secret                                                               |
+| `OIDC_CLIENT_ASSERTION`       | No                                 | `''`                   | Private-key JWT for token-endpoint auth (replaces `client_secret`)          |
+| `OIDC_SCOPE`                  | No                                 | `openid profile email` | Space-separated OIDC scopes                                                 |
+| `OIDC_FAMILY_NAME_FIELD`      | No                                 | `family_name`          | Claim field used for the user's family name                                 |
+| `OIDC_GIVEN_NAME_FIELD`       | No                                 | `given_name`           | Claim field used for the user's given name                                  |
+| `OIDC_SSO_BUTTON_TEXT`        | No                                 | `Login via SSO`        | Text shown on the SSO button                                                |
+| `OIDC_ENFORCE`                | No                                 | `null`                 | `null` = use Admin UI toggle; `true`/`false` = config override              |
+| `OIDC_SKIP_LOGIN_PAGE`        | No                                 | `null`                 | `null` = use Admin UI toggle; `true`/`false` = config override              |
+| `REMEMBER_ME`                 | No                                 | `false`                | Persist admin sessions across browser restarts                              |
+| `AUDIT_LOG_RETENTION_DAYS`    | No                                 | `90`                   | Days to keep audit logs; set `0` to disable                                 |
+| `OIDC_GROUP_FIELD`            | No                                 | `groups`               | Claim field containing group membership                                     |
+| `OIDC_GROUP_ROLE_MAP`         | No                                 | `{}`                   | JSON map of group names to arrays of Strapi role names                      |
+| `OIDC_REQUIRE_EMAIL_VERIFIED` | No                                 | `true`                 | Reject logins unless the provider reports `email_verified=true`             |
+| `OIDC_TRUSTED_IP_HEADER`      | No                                 | `''`                   | Trusted proxy header containing the real client IP (see reverse-proxy note) |
+| `OIDC_FORCE_SECURE_COOKIES`   | No                                 | `false`                | Force the `Secure` cookie flag (only use behind HTTPS)                      |
+| `OIDC_MAX_AGE`                | No                                 | `undefined`            | `max_age` sent to the IdP, in seconds                                       |
+| `OIDC_PROMPT`                 | No                                 | `''`                   | `prompt` sent to the IdP, e.g. `login` or `consent`                         |
+
+`OIDC_PUBLIC_URL` is your Strapi instance's origin, e.g. `https://myapp.com`. The plugin appends `/strapi-plugin-oidc/oidc/callback` to build the full redirect URI.
+
+`OIDC_ISSUER` is the provider's issuer URL. The plugin uses it for OIDC discovery via `openid-client`, which is the single source of truth for all endpoints, the JWKS URI, and the canonical issuer. Discovery is lazy; it runs on the first sign-in request and is cached for 15 minutes, so Strapi boots even if the IdP is temporarily unreachable.
+
+> **Note:** The explicit endpoint overrides (`OIDC_AUTHORIZATION_ENDPOINT`, `OIDC_TOKEN_ENDPOINT`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`, `OIDC_JWKS_URI`) were removed in this version. If you previously configured them, delete those keys and rely on `OIDC_ISSUER` plus discovery.
+
+### Client assertion
+
+Instead of a static `client_secret`, you can authenticate to the IdP token endpoint with a private-key JWT. Set **either** `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_ASSERTION`, not both.
 
 ```javascript
 module.exports = ({ env }) => ({
   'strapi-plugin-oidc': {
     enabled: true,
     config: {
-      // Required
-      OIDC_PUBLIC_URL: env('PUBLIC_URL', 'https://strapi.example.com'), // origin only — we append /strapi-plugin-oidc/oidc/callback
-      OIDC_ISSUER: env('OIDC_ISSUER'), // https://your-provider or https://your-provider/realms/your-realm
-      OIDC_CLIENT_ID: env('OIDC_CLIENT_ID'),
-      OIDC_CLIENT_SECRET: env('OIDC_CLIENT_SECRET'),
-
-      // Optional — defaults shown
-      OIDC_SCOPE: 'openid profile email', // space-separated scopes
-      OIDC_FAMILY_NAME_FIELD: 'family_name',
-      OIDC_GIVEN_NAME_FIELD: 'given_name',
-      OIDC_SSO_BUTTON_TEXT: 'Login via SSO',
-      OIDC_ENFORCE: null, // null = use Admin UI toggle; true/false = override in config
-      OIDC_SKIP_LOGIN_PAGE: null, // null = use Admin UI toggle; true/false = override in config
-      REMEMBER_ME: false, // Persist session across browser restarts
-      AUDIT_LOG_RETENTION_DAYS: 90, // Set to 0 to disable audit logging; otherwise entries older than this many days are purged daily at midnight
-      OIDC_GROUP_FIELD: 'groups', // OIDC claim field containing group membership
-      OIDC_GROUP_ROLE_MAP: '{}', // JSON map of group names to Strapi role names
-      OIDC_REQUIRE_EMAIL_VERIFIED: true, // Reject logins when provider does not report email_verified=true (set false to disable)
-      OIDC_TRUSTED_IP_HEADER: '', // Optional: header set by your CDN/proxy containing the real client IP (see note below); only honoured when Koa proxy mode is enabled (see below)
-      OIDC_FORCE_SECURE_COOKIES: false, // Set true ONLY when behind a trusted HTTPS proxy/origin that Strapi can't auto-detect; HTTP origins will reject __Host- cookies
+      // ... other required OIDC config ...
+      OIDC_CLIENT_SECRET: '', // leave empty when using an assertion
+      OIDC_CLIENT_ASSERTION: env('OIDC_CLIENT_ASSERTION'), // JSON string or object
     },
   },
 });
 ```
 
-`OIDC_PUBLIC_URL` is your Strapi instance's origin (e.g. `https://myapp.com`). The plugin appends `/strapi-plugin-oidc/oidc/callback` to form the full OIDC redirect URI. If unset, falls back to the `PUBLIC_URL` environment variable. Only provide the scheme + host + port — no trailing slash or path.
+`OIDC_CLIENT_ASSERTION` accepts either a JSON string or an object with the following shape:
 
-`OIDC_ISSUER` is your provider's issuer URL (e.g. `https://auth.example.com` or `https://auth.example.com/realms/myrealm`). The plugin appends `/.well-known/openid-configuration` automatically if not present, and fetches the discovery document at startup to configure all endpoints, JWKS URI, and canonical issuer.
+| Field        | Required | Default | Description                                                 |
+| ------------ | -------- | ------- | ----------------------------------------------------------- |
+| `privateKey` | Yes      | -       | PKCS#8 private key in PEM format                            |
+| `keyId`      | No       | -       | Key ID (`kid`) to include in the JWT header                 |
+| `algorithm`  | No       | `RS256` | Signing algorithm (must match the key type the IdP expects) |
 
 ### Security features
 
-- **ID token verification** — Enabled automatically when the discovery document includes a `jwks_uri`. Validates signature, issuer, audience, and expiry via [`jose`](https://github.com/panva/jose)
-- **Email verification** — `OIDC_REQUIRE_EMAIL_VERIFIED: true` (default) rejects unverified emails
-- **CSRF protection** — OIDC state/nonce and POST-only logout endpoint
-- **Rate limiting** — 1 000 req/min per IP+UA (in-process; use a reverse-proxy-level limiter for multi-node)
-- **Secure cookies** — `OIDC_FORCE_SECURE_COOKIES` ensures cookies are marked `Secure`. Only enable this on HTTPS origins; on HTTP origins the browser rejects `__Host-` prefixed cookies and OIDC login will fail silently.
+- **OIDC protocol layer**: Built on [`openid-client`](https://github.com/panva/openid-client) v6, which handles discovery, PKCE, token exchange, ID-token verification, userinfo, and RP-initiated logout
+- **ID token verification**: Enabled automatically when the discovery document includes a `jwks_uri`. Validates signature, issuer, audience, and expiry
+- **Email verification**: `OIDC_REQUIRE_EMAIL_VERIFIED: true` (default) rejects unverified emails
+- **CSRF protection**: OIDC state/nonce and POST-only logout endpoint
+- **Rate limiting**: 1 000 req/min per IP+UA on sign-in/callback/logout routes (in-process; add a reverse-proxy limiter for multi-node). Backchannel logout is limited to 30 req/min per IP
+- **Secure cookies**: `OIDC_FORCE_SECURE_COOKIES` forces the `Secure` flag. Only enable this on HTTPS origins; on HTTP origins the browser rejects `__Host-` prefixed cookies and OIDC login will fail silently
+- **Backchannel logout**: Receives signed `logout_token` POSTs from the IdP and invalidates the matching admin session
 
 ### Client IP attribution and reverse proxies
 
@@ -96,37 +179,49 @@ Set `OIDC_TRUSTED_IP_HEADER` to the header your CDN or proxy uses to forward the
 
 Only headers that CDN/proxy vendors guarantee to strip from inbound client requests are accepted, preventing IP spoofing via forged headers.
 
-## Login
+## Usage
+
+### Login
 
 Navigate to `/strapi-plugin-oidc/oidc` to start the OIDC flow, or click the **Login via SSO** button injected into the Strapi login page.
 
-## Logout
+### Logout
+
+#### RP-initiated logout
 
 When the discovery document includes an `end_session_endpoint`, clicking logout redirects to the provider's end-session URL (RP-initiated logout). If the provider session has already expired, Strapi skips the redirect and goes straight to the login page.
 
 The logout endpoint is `POST /strapi-plugin-oidc/logout`. Using POST instead of GET prevents CSRF-forced-logout attacks.
 
+#### Backchannel logout
+
+If your IdP supports OpenID Connect Back-Channel Logout, register `https://<your-strapi>/strapi-plugin-oidc/backchannel-logout` as the backchannel logout URL.
+
+The endpoint accepts `POST` requests carrying a signed `logout_token`. The plugin verifies the token against the IdP JWKS and requires:
+
+- a valid `events` claim containing `http://schemas.openid.net/event/backchannel-logout`
+- no `nonce` claim
+- a `sub` and/or `sid` claim that matches a Strapi admin user
+
+When a match is found, the user's refresh tokens are invalidated. Invalid or unmatched tokens still receive HTTP 200 to avoid leaking information. The endpoint is rate-limited to 30 requests per minute per IP.
+
 ## Admin Settings
 
 Manage the plugin under **Settings → OIDC Plugin**.
 
-**Default Roles** — Strapi admin role(s) assigned to new users on first login.
+**Default Roles**: Strapi admin role(s) assigned to new users on first login.
 
-**Whitelist** — Restrict access to specific email addresses. When empty, any authenticated OIDC user gets an account. Supports:
+**Whitelist**: Restrict access to specific email addresses. When empty, any authenticated OIDC user gets an account. Supports:
 
 - Individual emails with optional role overrides
 - JSON import / export
 - Bulk delete with confirmation
 
-**Audit Logs** — Authentication events recorded and visible in the settings page. Filter by action, email, IP, and date. **Download** exports the current view as NDJSON. Set `AUDIT_LOG_RETENTION_DAYS` to `0` to disable. Records older than the configured value (default: 90 days) are purged daily.
+**Audit Logs**: Authentication events recorded and visible in the settings page. Filter by action, email, IP, and date. **Download** exports the current view as NDJSON. Set `AUDIT_LOG_RETENTION_DAYS` to `0` to disable. Records older than the configured value (default: 90 days) are purged daily. Admin routes require the plugin's `read`/`update` permissions.
 
-**Enforce OIDC Login** — Removes email/password fields from the login page and blocks direct login API calls. Automatically disabled when the whitelist is empty to prevent lockout.
+**Enforce OIDC Login**: Removes email/password fields from the login page and blocks direct login API calls. Automatically disabled when the whitelist is empty to prevent lockout. The toggle is grayed out when `OIDC_ENFORCE` is set in config. **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi.
 
-The toggle is grayed out when `OIDC_ENFORCE` is set in config. **Lockout recovery**: set `OIDC_ENFORCE: false` in your plugin config and restart Strapi.
-
-**Skip Login Page** — Redirects unauthenticated users straight to the OIDC provider without showing the Strapi login page. Toggle under **Settings → Login Settings**.
-
-The toggle is grayed out when `OIDC_SKIP_LOGIN_PAGE` is set in config. Set `OIDC_SKIP_LOGIN_PAGE: false` in your plugin config to disable and restart Strapi.
+**Skip Login Page**: Redirects unauthenticated users straight to the OIDC provider without showing the Strapi login page. Toggle under **Settings → Login Settings**. The toggle is grayed out when `OIDC_SKIP_LOGIN_PAGE` is set in config. Set `OIDC_SKIP_LOGIN_PAGE: false` in your plugin config to disable and restart Strapi.
 
 ## Group-to-Role Mapping
 
@@ -135,7 +230,7 @@ When your OIDC provider includes group membership in the userinfo response (e.g.
 | Setting               | Default    | Description                                               |
 | --------------------- | ---------- | --------------------------------------------------------- |
 | `OIDC_GROUP_FIELD`    | `'groups'` | OIDC claim field that contains the group membership array |
-| `OIDC_GROUP_ROLE_MAP` | `'{}'`     | JSON map of group names → Strapi role names               |
+| `OIDC_GROUP_ROLE_MAP` | `'{}'`     | JSON map of group names to Strapi role names              |
 
 ### Example configuration
 
@@ -156,7 +251,7 @@ module.exports = ({ env }) => ({
 });
 ```
 
-Role names are the **display names** shown in **Settings → Roles** (e.g. `"Editor"`, `"Super Admin"`, `"Author"`). IDs are not supported — use names for clarity.
+Role names are the **display names** shown in **Settings → Roles** (e.g. `"Editor"`, `"Super Admin"`, `"Author"`). IDs are not supported, use names for clarity.
 
 ### Role assignment precedence
 
@@ -165,192 +260,23 @@ Role names are the **display names** shown in **Settings → Roles** (e.g. `"Edi
 
 ### Role updates on subsequent logins
 
-- **New users** — Roles assigned on first login (group-mapped or default).
-- **Existing users with group match** — Roles updated to reflect current mapping.
-- **Existing users without group match** — Roles left unchanged. Manually-assigned roles are never overwritten.
+- **New users**: Roles assigned on first login (group-mapped or default).
+- **Existing users with group match**: Roles updated to reflect current mapping.
+- **Existing users without group match**: Roles left unchanged. Manually-assigned roles are never overwritten.
 
-## Whitelist API
+## REST API
 
-The whitelist can be managed programmatically using a Strapi **API token**. All endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
+The whitelist and audit log can be managed programmatically with Strapi API tokens. See the [REST API reference](docs/api.md) for endpoint details, required scopes, query parameters, and examples.
 
-**Full-access tokens** can call all routes. **Custom tokens** must be granted one of the following scopes (Settings → API Tokens → Custom → plugin permissions):
+## Credits
 
-| Scope                                         | Routes                                          |
-| --------------------------------------------- | ----------------------------------------------- |
-| `plugin::strapi-plugin-oidc.whitelist.read`   | `GET /whitelist`, `GET /whitelist/export`       |
-| `plugin::strapi-plugin-oidc.whitelist.write`  | `POST /whitelist`, `POST /whitelist/import`     |
-| `plugin::strapi-plugin-oidc.whitelist.delete` | `DELETE /whitelist`, `DELETE /whitelist/:email` |
-
-| Method   | Path                                       | Description            |
-| -------- | ------------------------------------------ | ---------------------- |
-| `GET`    | `/api/strapi-plugin-oidc/whitelist`        | List all entries       |
-| `GET`    | `/api/strapi-plugin-oidc/whitelist/export` | Export as JSON         |
-| `POST`   | `/api/strapi-plugin-oidc/whitelist`        | Add one or more emails |
-| `POST`   | `/api/strapi-plugin-oidc/whitelist/import` | Bulk import            |
-| `DELETE` | `/api/strapi-plugin-oidc/whitelist/:email` | Remove by email        |
-| `DELETE` | `/api/strapi-plugin-oidc/whitelist`        | Remove all entries     |
-
-API calls write directly to the database — there is no unsaved state.
-
-### Import format
-
-Accepted by both the API import endpoint and the Admin UI import button. If the email already exists as a Strapi admin user, their current roles are used automatically.
-
-```json
-[{ "email": "alice@example.com" }, { "email": "bob@example.com" }]
-```
-
-Duplicate emails within the payload and emails already in the whitelist are silently skipped.
-
-### Examples
-
-```bash
-# List
-curl -H "Authorization: Bearer <token>" \
-  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
-
-# Export
-curl -H "Authorization: Bearer <token>" \
-  https://strapi.example.com/api/strapi-plugin-oidc/whitelist/export \
-  -o whitelist.json
-
-# Add
-curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com"}' \
-  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
-
-# Bulk import
-curl -X POST -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
-  -d '{"users": [{"email": "a@example.com"}, {"email": "b@example.com"}]}' \
-  https://strapi.example.com/api/strapi-plugin-oidc/whitelist/import
-
-# Delete one (by email)
-curl -X DELETE -H "Authorization: Bearer <token>" \
-  "https://strapi.example.com/api/strapi-plugin-oidc/whitelist/user%40example.com"
-
-# Delete all
-curl -X DELETE -H "Authorization: Bearer <token>" \
-  https://strapi.example.com/api/strapi-plugin-oidc/whitelist
-```
-
-## Audit Log API
-
-Audit log entries can be fetched programmatically using a Strapi **API token**. Endpoints are under `/api/strapi-plugin-oidc` and require `Authorization: Bearer <token>`.
-
-**Full-access tokens** can call all routes. **Custom tokens** must be granted one of the following scopes:
-
-| Scope                                     | Routes                                      |
-| ----------------------------------------- | ------------------------------------------- |
-| `plugin::strapi-plugin-oidc.audit.read`   | `GET /audit-logs`, `GET /audit-logs/export` |
-| `plugin::strapi-plugin-oidc.audit.delete` | `DELETE /audit-logs`                        |
-
-| Method   | Path                                        | Description                         |
-| -------- | ------------------------------------------- | ----------------------------------- |
-| `GET`    | `/api/strapi-plugin-oidc/audit-logs`        | Paginated list of log entries       |
-| `GET`    | `/api/strapi-plugin-oidc/audit-logs/export` | Matching records as NDJSON download |
-| `DELETE` | `/api/strapi-plugin-oidc/audit-logs`        | Delete all audit log entries (204)  |
-
-### Query parameters (`GET /audit-logs`, `GET /audit-logs/export`)
-
-| Parameter  | Default | Description                                    |
-| ---------- | ------- | ---------------------------------------------- |
-| `page`     | `1`     | Page number (list endpoint only)               |
-| `pageSize` | `25`    | Results per page, max `100` (list only)        |
-| `filters`  | —       | Field/operator filters, same on both endpoints |
-
-Results are sorted newest-first. The response shape is:
-
-```json
-{
-  "results": [
-    {
-      "id": 42,
-      "action": "login_success",
-      "email": "alice@example.com",
-      "ip": "203.0.113.42",
-      "details": null,
-      "createdAt": "2026-04-08T12:00:00.000Z",
-      "updatedAt": "2026-04-08T12:00:00.000Z"
-    }
-  ],
-  "pagination": { "page": 1, "pageSize": 25, "total": 1, "pageCount": 1 }
-}
-```
-
-The NDJSON export emits one row per line with `{ datetime, action, email, ip, details }` where `datetime` is the entry's `createdAt` timestamp.
-
-### Filtering
-
-Use `filters[<field>][<operator>]=<value>` to narrow results. Invalid filters return a `400`.
-
-| Field       | Operators                                            | Value                                                   |
-| ----------- | ---------------------------------------------------- | ------------------------------------------------------- |
-| `action`    | `$eq`, `$in`                                         | One of the [recorded actions](#recorded-actions)        |
-| `email`     | `$eq`, `$contains`, `$endsWith`, `$null`, `$notNull` | String (use `true`/`false` with `$null` / `$notNull`)   |
-| `ip`        | `$eq`, `$contains`, `$endsWith`, `$null`, `$notNull` | String (use `true`/`false` with `$null` / `$notNull`)   |
-| `createdAt` | `$gte`, `$lt`, `$lte`, `$between`, `$in`             | ISO-8601 UTC timestamp, e.g. `2026-04-08T00:00:00.000Z` |
-
-`$between` takes a `[start, end]` pair. `$in` on `createdAt` takes a list of day-start timestamps and matches anything within that UTC day.
-
-```bash
-# Failed logins on one day
-curl -H "Authorization: Bearer <token>" -G \
-  --data-urlencode 'filters[action][$eq]=login_failure' \
-  --data-urlencode 'filters[createdAt][$gte]=2026-04-08T00:00:00.000Z' \
-  --data-urlencode 'filters[createdAt][$lt]=2026-04-09T00:00:00.000Z' \
-  https://strapi.example.com/api/strapi-plugin-oidc/audit-logs
-```
-
-### Recorded actions
-
-| Action               | Trigger                                             |
-| -------------------- | --------------------------------------------------- |
-| `login_success`      | Successful OIDC authentication                      |
-| `user_created`       | New Strapi admin user created during login          |
-| `login_failure`      | Unexpected error during the OIDC login flow         |
-| `missing_code`       | Callback received without an authorisation code     |
-| `state_mismatch`     | CSRF state cookie does not match callback parameter |
-| `whitelist_rejected` | Email not present in the active whitelist           |
-| `email_not_verified` | Provider did not report `email_verified=true`       |
-| `logout`             | User logged out (RP-initiated or backchannel)       |
-
-Each event is also emitted on Strapi's internal eventHub as `strapi-plugin-oidc::auth.<action>`, which Enterprise audit log listeners pick up automatically.
-
-### Examples
-
-```bash
-# Paginated list
-curl -H "Authorization: Bearer <token>" \
-  "https://strapi.example.com/api/strapi-plugin-oidc/audit-logs?page=1&pageSize=50"
-
-# NDJSON export
-curl -H "Authorization: Bearer <token>" \
-  https://strapi.example.com/api/strapi-plugin-oidc/audit-logs/export \
-  -o oidc-audit-log.ndjson
-```
-
-## Credits & Changes
-
-This plugin is a hard fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Huge thanks to them for creating the foundation of this plugin!
-
-### Changes from the original:
-
-- OIDC-only (removed other SSO methods)
-- Redesigned whitelist and role management UI using native Strapi components
-- OIDC enforcement and skip-login-page via admin toggles, overridable via `OIDC_ENFORCE` / `OIDC_SKIP_LOGIN_PAGE` config
-- RP-initiated logout with smart session detection
-- Migrated to Vitest with e2e coverage
-- Config variable names aligned with OIDC discovery document field names
-- **Login via SSO** button always injected; text configurable via `OIDC_SSO_BUTTON_TEXT`
-- Whitelist REST API with JSON import/export, bulk delete, delete by email
-- Hardened OIDC flow: server-generated state and nonce, PKCE, Bearer token auth for userinfo, generic error messages on failure
-- Audit log: records all auth events to a queryable table with UI, JSON/NDJSON export, and REST API
+This plugin began as a fork of [`strapi-plugin-sso`](https://github.com/yasudacloud/strapi-plugin-sso) by **yasudacloud**. Since then, the OIDC implementation has been rewritten on top of [`openid-client`](https://github.com/panva/openid-client), and the codebase has diverged significantly from the original. Huge thanks to yasudacloud for creating the original foundation of this plugin!
 
 ## Donations
 
 Feel free to donate if you'd like to support the development of this plugin.
 
-<a href="https://www.buymeacoffee.com/edmogeor" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="https://www.buymeacoffee.com/edmogeor" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## License
 
