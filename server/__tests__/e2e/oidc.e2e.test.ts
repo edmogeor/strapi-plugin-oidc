@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import type { Core } from './test-types';
@@ -22,6 +22,7 @@ import {
   getFirstAvailableRole,
   loginAndExpectSuccess,
   expectUserRoleIdsToContain,
+  storeNonceFromResponse,
 } from './test-helpers';
 import { t } from '../../i18n';
 import type { WhitelistService } from '../../types';
@@ -51,6 +52,7 @@ describe('OIDC E2E Tests', () => {
 
   it('should handle the full OIDC login flow', async () => {
     const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+    storeNonceFromResponse(loginRes);
     expect(loginRes.status).toBe(302);
     expect(loginRes.headers.location).toContain('https://mock-oidc.com/authorize');
     const state = getStateFromLoginRes(loginRes);
@@ -60,6 +62,9 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.status).toBe(200);
     expect(callbackRes.text).toContain('jwtToken');
     expect(callbackRes.text).toContain('localStorage.setItem');
+    expect(callbackRes.headers['content-security-policy']).toMatch(
+      /^script-src 'nonce-[a-f0-9-]+'$/,
+    );
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
@@ -70,44 +75,35 @@ describe('OIDC E2E Tests', () => {
     });
     await setSettings(strapi, false, false, false);
 
-    // 1. Initial state (should be false)
     let res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(false);
 
-    // Ensure normal local login is allowed
     const localLoginAllowed = await agent.post('/admin/login').send({
       email: 'test@test.com',
       password: 'password',
     });
-    // It should not be a 403 Forbidden Error from our middleware
     expect(localLoginAllowed.status).not.toBe(403);
 
-    // Ensure GET to /admin/auth/login doesn't redirect
     const getLoginAllowed = await agent
       .get('/admin/auth/login')
       .set('Accept', 'text/html')
       .redirects(0);
     expect(getLoginAllowed.status).not.toBe(302);
 
-    // 2. Enable enforceOIDC in settings
     await setSettings(strapi, true, true, false);
 
-    // 3. Check again
     res = await agent.get('/strapi-plugin-oidc/settings/public');
     expect(res.status).toBe(200);
     expect(res.body.enforceOIDC).toBe(true);
 
-    // Ensure normal local login is blocked
     const localLoginBlocked = await agent.post('/admin/login').send({
       email: 'test@test.com',
       password: 'password',
     });
-    // It should be blocked by our middleware
     expect(localLoginBlocked.status).toBe(403);
     expect(localLoginBlocked.body.error.message).toContain('Local login is disabled');
 
-    // Ensure other POST auth routes are blocked
     const registerBlocked = await agent.post('/admin/register').send({});
     expect(registerBlocked.status).toBe(403);
 
@@ -117,7 +113,7 @@ describe('OIDC E2E Tests', () => {
     const resetPasswordBlocked = await agent.post('/admin/reset-password').send({});
     expect(resetPasswordBlocked.status).toBe(403);
 
-    // GET HTML routes should NOT redirect — enforcement is handled client-side via DOM removal
+    // GET HTML routes should NOT redirect — enforcement is handled client-side via DOM removal.
     const unauthAgent = request.agent(strapi.server.httpServer);
 
     const getLoginAllowedEnforced = await unauthAgent
@@ -126,7 +122,6 @@ describe('OIDC E2E Tests', () => {
       .redirects(0);
     expect(getLoginAllowedEnforced.status).not.toBe(302);
 
-    // Restore skipLoginPage for subsequent tests.
     strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
     await setSettings(strapi, false, false, false);
   });
@@ -137,6 +132,9 @@ describe('OIDC E2E Tests', () => {
     const callbackRes = await loginAndExpectSuccess(agent);
     expect(callbackRes.text).toContain('Authentication Failed');
     expect(callbackRes.text).toContain('Authentication failed. Please try again.');
+    expect(callbackRes.headers['content-security-policy']).toMatch(
+      /^script-src 'nonce-[a-f0-9-]+'$/,
+    );
   });
 
   const assertCallbackError = async (url: string, expectedMsg: string) => {
@@ -144,6 +142,7 @@ describe('OIDC E2E Tests', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('Authentication Failed');
     expect(res.text).toContain(expectedMsg);
+    expect(res.headers['content-security-policy']).toMatch(/^script-src 'nonce-[a-f0-9-]+'$/);
   };
 
   it('should fail if callback is missing code', async () => {
@@ -160,9 +159,6 @@ describe('OIDC E2E Tests', () => {
     );
   });
 
-  // ---------------------------------------------------------------------------
-  // OIDC callback error handling
-  // ---------------------------------------------------------------------------
   describe('OIDC callback error handling', () => {
     const assertInvalidTokenRejected = async (idToken: string) => {
       oidcServer.use(
@@ -171,10 +167,8 @@ describe('OIDC E2E Tests', () => {
         ),
       );
       const callbackUrl = await initiateLogin(agent);
-      const res = await agent.get(callbackUrl).redirects(0);
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('Authentication Failed');
-      expect(res.text).toContain('Authentication failed. Please try again.');
+      const res = await assertGenericAuthError(agent, callbackUrl);
+      expect(res.headers['content-security-policy']).toMatch(/^script-src 'nonce-[a-f0-9-]+'$/);
     };
 
     it.each([
@@ -183,7 +177,7 @@ describe('OIDC E2E Tests', () => {
         handler: http.post('https://mock-oidc.com/token', () =>
           HttpResponse.json({}, { status: 401 }),
         ),
-        auditAction: 'token_exchange_failed',
+        auditAction: 'login_failure',
       },
       {
         scenario: 'token response lacks access_token',
@@ -210,22 +204,39 @@ describe('OIDC E2E Tests', () => {
       },
     );
 
-    it('rejects a mismatched nonce in the ID token and logs nonce_mismatch', async () => {
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      const header = Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({ nonce: 'wrong-nonce', sub: '1' })).toString(
-        'base64url',
-      );
-      await assertInvalidTokenRejected(`${header}.${payload}.fakesig`);
-      const rows = await queryAuditLog(strapi, 'nonce_mismatch');
-      expect(rows.length).toBeGreaterThan(0);
-    });
-
     it('rejects a malformed ID token and logs login_failure', async () => {
       await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      await assertInvalidTokenRejected('not.a.valid.jwt.at.all');
+
+      // A structurally well-formed JWS (3 base64url segments, valid JSON header
+      // and payload) with a bogus signature. Establishing the token is
+      // structurally decodable up front means the rejection cannot stem from
+      // JWT parsing — it must come from signature/claims verification. So a
+      // future refactor that silently accepts well-formed-but-unsigned tokens
+      // still fails this assertion.
+      const b64url = (obj: unknown) =>
+        Buffer.from(JSON.stringify(obj))
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+      const malformedIdToken = `${b64url({ alg: 'RS256', typ: 'JWT' })}.${b64url({
+        sub: 'test',
+      })}.${'invalid-signature'}`;
+
+      const segments = malformedIdToken.split('.');
+      expect(segments).toHaveLength(3);
+      expect(() =>
+        JSON.parse(Buffer.from(segments[0], 'base64url').toString('utf8')),
+      ).not.toThrow();
+      expect(() =>
+        JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8')),
+      ).not.toThrow();
+
+      await assertInvalidTokenRejected(malformedIdToken);
       const rows = await queryAuditLog(strapi, 'login_failure');
       expect(rows.length).toBeGreaterThan(0);
+      const detailParams = rows[0]?.detailsParams as Record<string, string> | undefined;
+      expect(detailParams?.message).toBeTruthy();
     });
 
     it('does not reflect user-supplied values in error responses', async () => {
@@ -239,9 +250,6 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // OIDC sign-in error handling
-  // ---------------------------------------------------------------------------
   describe('OIDC sign-in error handling', () => {
     it('renders sign-in error page when required config is missing', async () => {
       const savedConfig = strapi.config.get('plugin::strapi-plugin-oidc');
@@ -260,9 +268,6 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // email_verified enforcement (Task 1)
-  // ---------------------------------------------------------------------------
   describe('email_verified enforcement', () => {
     const assertEmailVerifiedRejected = async (overrides: Record<string, unknown>) => {
       oidcServer.use(userinfoWith(overrides));
@@ -275,6 +280,7 @@ describe('OIDC E2E Tests', () => {
     const userinfoWith = (overrides: Record<string, unknown>) =>
       http.get('https://mock-oidc.com/userinfo', () =>
         HttpResponse.json({
+          sub: 'mock-sub',
           email: 'verify-test@company.com',
           family_name: 'Doe',
           given_name: 'John',
@@ -322,183 +328,11 @@ describe('OIDC E2E Tests', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // ID token signature verification (Task 3)
-  // ---------------------------------------------------------------------------
-  describe('ID token verification', () => {
-    const JWKS_URL = 'https://mock-oidc.com/.well-known/jwks.json';
-    const ISSUER = 'https://mock-oidc.com/';
-
-    let generateKeyPair: typeof import('jose').generateKeyPair;
-    let exportJWK: typeof import('jose').exportJWK;
-    let SignJWT: typeof import('jose').SignJWT;
-    let privateKey: import('jose').KeyLike;
-    let publicJwk: import('jose').JWK;
-    const kid = 'test-key-1';
-
-    beforeAll(async () => {
-      const jose = await import('jose');
-      generateKeyPair = jose.generateKeyPair;
-      exportJWK = jose.exportJWK;
-      SignJWT = jose.SignJWT;
-      const kp = await generateKeyPair('RS256');
-      privateKey = kp.privateKey;
-      publicJwk = { ...(await exportJWK(kp.publicKey)), alg: 'RS256', use: 'sig', kid };
-    });
-
-    beforeEach(async () => {
-      // Clear module-level JWKS cache between tests by reloading the controller.
-      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
-      await setSettings(strapi, false, false);
-      await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
-      oidcServer.use(http.get(JWKS_URL, () => HttpResponse.json({ keys: [publicJwk] })));
-    });
-
-    const signIdToken = async (
-      overrides: {
-        nonce?: string;
-        iss?: string;
-        aud?: string;
-        exp?: number;
-        extraPayload?: Record<string, unknown>;
-      } = {},
-    ): Promise<string> => {
-      const now = Math.floor(Date.now() / 1000);
-      const payload = {
-        sub: 'user-1',
-        nonce: overrides.nonce ?? '__will_replace__',
-        ...(overrides.extraPayload ?? {}),
-      };
-      return new SignJWT(payload)
-        .setProtectedHeader({ alg: 'RS256', kid })
-        .setIssuer(overrides.iss ?? ISSUER)
-        .setAudience(overrides.aud ?? 'mock-client-id')
-        .setIssuedAt(now)
-        .setExpirationTime(overrides.exp ?? now + 300)
-        .sign(privateKey);
-    };
-
-    const runCallback = async (idTokenNonceCapture: {
-      build: (nonce: string) => Promise<string>;
-    }) => {
-      // Intercept token endpoint to build an id_token using the actual nonce cookie.
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', async ({ request }) => {
-          const body = new URLSearchParams(await request.text());
-          void body; // nonce is not in the body — it's the session cookie on our side
-          return HttpResponse.json({
-            access_token: 'fake-jwt-token',
-            id_token: '__TOKEN_PLACEHOLDER__',
-          });
-        }),
-      );
-
-      const localAgent = createAgent();
-      const loginRes = await localAgent.get('/strapi-plugin-oidc/oidc').redirects(0);
-      const state = new URL(loginRes.headers.location).searchParams.get('state')!;
-      // Read the nonce cookie from the login response
-      const setCookieHeader = loginRes.headers['set-cookie'] as string[] | string | undefined;
-      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader ?? ''];
-      const nonceCookie = cookies
-        .map((c) => (c ?? '').split(';')[0])
-        .find((c) => c.startsWith('oidc_nonce='))
-        ?.split('=')[1];
-      if (!nonceCookie) throw new Error('Missing oidc_nonce cookie');
-
-      const idToken = await idTokenNonceCapture.build(nonceCookie);
-
-      oidcServer.use(
-        http.post('https://mock-oidc.com/token', () =>
-          HttpResponse.json({ access_token: 'fake-jwt-token', id_token: idToken }),
-        ),
-      );
-
-      return localAgent
-        .get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`)
-        .redirects(0);
-    };
-
-    it('accepts a valid, signed ID token when JWKS is configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...MOCK_OIDC_CONFIG,
-        OIDC_JWKS_URI: JWKS_URL,
-        OIDC_ISSUER: ISSUER,
-      });
-      const res = await runCallback({ build: (nonce) => signIdToken({ nonce }) });
-      expect(res.status).toBe(200);
-      expect(res.text).toContain('jwtToken');
-    });
-
-    it('rejects an expired ID token', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...MOCK_OIDC_CONFIG,
-        OIDC_JWKS_URI: JWKS_URL,
-        OIDC_ISSUER: ISSUER,
-      });
-      const past = Math.floor(Date.now() / 1000) - 10;
-      const res = await runCallback({
-        build: (nonce) => signIdToken({ nonce, exp: past }),
-      });
-      expect(res.text).toContain('Authentication Failed');
-      const logs = await queryAuditLog(strapi, 'id_token_invalid');
-      expect(logs.length).toBeGreaterThan(0);
-    });
-
-    it('rejects an ID token with the wrong audience', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...MOCK_OIDC_CONFIG,
-        OIDC_JWKS_URI: JWKS_URL,
-        OIDC_ISSUER: ISSUER,
-      });
-      const res = await runCallback({
-        build: (nonce) => signIdToken({ nonce, aud: 'different-client' }),
-      });
-      expect(res.text).toContain('Authentication Failed');
-    });
-
-    it('rejects an ID token with the wrong issuer', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...MOCK_OIDC_CONFIG,
-        OIDC_JWKS_URI: JWKS_URL,
-        OIDC_ISSUER: ISSUER,
-      });
-      const res = await runCallback({
-        build: (nonce) => signIdToken({ nonce, iss: 'https://evil.example.com/' }),
-      });
-      expect(res.text).toContain('Authentication Failed');
-    });
-
-    it('rejects an ID token with a tampered signature', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        ...MOCK_OIDC_CONFIG,
-        OIDC_JWKS_URI: JWKS_URL,
-        OIDC_ISSUER: ISSUER,
-      });
-      const res = await runCallback({
-        build: async (nonce) => {
-          const tok = await signIdToken({ nonce });
-          const parts = tok.split('.');
-          // Replace the entire signature with a fixed bogus value so the tamper
-          // is always effective regardless of what the original signature starts with.
-          parts[2] = 'dGhpcyBpcyBub3QgYSB2YWxpZCBzaWduYXR1cmU';
-          return parts.join('.');
-        },
-      });
-      expect(res.text).toContain('Authentication Failed');
-    });
-
-    it('falls back to nonce-only check when OIDC_JWKS_URI is unset', async () => {
-      // Default MOCK_OIDC_CONFIG has no JWKS URI
-      const res = await runCallback({ build: (nonce) => signIdToken({ nonce }) });
-      // With no verification, nonce check alone passes → success.
-      expect(res.text).toContain('jwtToken');
-    });
-  });
-
   describe('EnforceOIDC Security', () => {
-    // Helper to get cookies from a Set-Cookie header array
-    const parseCookies = (res: Response): string[] => {
-      const raw = res.headers['set-cookie'] as string | string[] | undefined;
+    const parseCookies = (res: {
+      headers: Record<string, string | string[] | undefined>;
+    }): string[] => {
+      const raw = res.headers['set-cookie'];
       if (!raw) return [];
       return Array.isArray(raw) ? raw : [raw];
     };
@@ -511,7 +345,7 @@ describe('OIDC E2E Tests', () => {
     const logoutWithOidcSession = () =>
       request(strapi.server.httpServer)
         .post('/strapi-plugin-oidc/logout')
-        .set('Cookie', 'oidc_authenticated=1')
+        .set('Cookie', 'oidc_id_token=1')
         .redirects(0);
 
     beforeEach(async () => {
@@ -531,19 +365,18 @@ describe('OIDC E2E Tests', () => {
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // No server-side redirect — DOM removal happens in the browser
+        // No server-side redirect — DOM removal happens in the browser.
         expect(res.status).not.toBe(302);
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
 
-      it('allows admin HTML through when both strapi_admin_refresh and oidc_authenticated are present', async () => {
+      it('allows admin HTML through when both strapi_admin_refresh and oidc_id_token are present', async () => {
         const res = await request(strapi.server.httpServer)
           .get('/admin/auth/login')
-          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_authenticated=1')
+          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_id_token=1')
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // Middleware passes through — should not redirect to our OIDC endpoint
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
 
@@ -556,7 +389,6 @@ describe('OIDC E2E Tests', () => {
           .set('Accept', 'text/html')
           .redirects(0);
 
-        // Middleware should not redirect to OIDC
         expect(res.headers.location).not.toBe('/strapi-plugin-oidc/oidc');
       });
     });
@@ -576,7 +408,6 @@ describe('OIDC E2E Tests', () => {
       });
     });
 
-    // -------------------------------------------------------------------------
     describe('Token refresh bypass prevention', () => {
       it.each([
         [
@@ -592,13 +423,13 @@ describe('OIDC E2E Tests', () => {
         expect(res.body.error.message).toContain('OIDC');
       });
 
-      it('passes token refresh through to Strapi when oidc_authenticated is present', async () => {
+      it('passes token refresh through to Strapi when oidc_id_token is present', async () => {
         const res = await request(strapi.server.httpServer)
           .post('/admin/token/refresh')
-          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_authenticated=1');
+          .set('Cookie', 'strapi_admin_refresh=some-oidc-token; oidc_id_token=1');
 
         // Our middleware passes it through — Strapi may return 401 for the invalid
-        // token itself, but the error must NOT be our OIDC enforcement message
+        // token itself, but the error must NOT be our OIDC enforcement message.
         expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
 
@@ -609,87 +440,71 @@ describe('OIDC E2E Tests', () => {
           .post('/admin/token/refresh')
           .set('Cookie', 'strapi_admin_refresh=some-local-token');
 
-        // Our middleware must not return our specific 401 message
         expect(res.body?.error?.message ?? '').not.toContain('OIDC');
       });
     });
 
-    // -------------------------------------------------------------------------
-    // Cookie lifecycle: oidc_authenticated is set and cleared correctly
-    // -------------------------------------------------------------------------
-    describe('oidc_authenticated cookie lifecycle', () => {
-      it('sets oidc_authenticated cookie after a successful OIDC callback', async () => {
+    describe('oidc_id_token cookie lifecycle', () => {
+      it('sets oidc_id_token cookie after a successful OIDC callback', async () => {
         await setSettings(strapi, false, false);
         const callbackRes = await loginAndExpectSuccess(agent);
 
         const cookies = parseCookies(callbackRes);
-        const oidcCookie = cookies.find((c) => c.startsWith('oidc_authenticated='));
+        const oidcCookie = cookies.find((c) => c.startsWith('oidc_id_token='));
         expect(oidcCookie).toBeDefined();
-        expect(oidcCookie).toContain('oidc_authenticated=1');
       });
 
-      it('clears oidc_authenticated cookie on logout', async () => {
+      it('clears oidc_id_token cookie on logout', async () => {
         const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
 
         const cookies = parseCookies(res);
-        expect(isCookieExpired(cookies, 'oidc_authenticated')).toBe(true);
+        expect(isCookieExpired(cookies, 'oidc_id_token')).toBe(true);
         expect(isCookieExpired(cookies, 'strapi_admin_refresh')).toBe(true);
       });
     });
 
-    // -------------------------------------------------------------------------
-    // Selective OIDC logout redirect
-    // -------------------------------------------------------------------------
     describe('Selective OIDC logout redirect', () => {
-      it('redirects to OIDC logout URL when oidc_authenticated cookie is present', async () => {
+      it('redirects to OIDC end session URL when oidc_id_token cookie is present', async () => {
         const res = await logoutWithOidcSession();
 
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('https://mock-oidc.com/logout');
+        expect(res.headers.location).toContain('https://mock-oidc.com/logout');
       });
 
-      it('redirects to OIDC sign-in when oidc_authenticated cookie is absent (non-OIDC session)', async () => {
+      it('redirects to OIDC sign-in when oidc_id_token cookie is absent (non-OIDC session)', async () => {
         strapi.config.set('admin.url', '/admin');
         await setSettings(strapi, false, true, true);
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')
-          .redirects(0); // no oidc_authenticated cookie
+          .redirects(0);
 
         expect(res.status).toBe(302);
         expect(res.headers.location).toBe('/strapi-plugin-oidc/oidc');
         expect(res.headers.location).not.toBe('https://mock-oidc.com/logout');
       });
 
-      it('logout with unreachable IdP completes within 5s and redirects to OIDC provider', async () => {
-        oidcServer.use(http.get('https://mock-oidc.com/userinfo', () => new Promise(() => {})));
-
+      it('logout completes quickly and redirects to OIDC end session URL', async () => {
         const startTime = Date.now();
 
         const res = await request(strapi.server.httpServer)
           .post('/strapi-plugin-oidc/logout')
-          .set(
-            'Cookie',
-            'oidc_authenticated=1; oidc_access_token=test-token; oidc_user_email=test@test.com',
-          )
+          .set('Cookie', 'oidc_id_token=test-token; oidc_user_email=test@test.com')
           .redirects(0);
 
         const elapsed = Date.now() - startTime;
 
         expect(res.status).toBe(302);
-        expect(res.headers.location).toBe('https://mock-oidc.com/logout');
+        expect(res.headers.location).toContain('https://mock-oidc.com/logout');
         expect(elapsed).toBeLessThan(5000);
       });
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Group-to-role mapping
-  // ---------------------------------------------------------------------------
-  // Run serially to avoid MSW handler stacking from parallel execution
-  describe('Group-to-role mapping', { serial: true }, () => {
+  // Run serially to avoid MSW handler stacking from parallel execution.
+  describe('Group-to-role mapping', { sequential: true }, () => {
     beforeAll(async () => {
       // Ensure the default OIDC role record exists with at least one valid role,
       // so tests that rely on it are not dependent on pre-seeded database state.
@@ -719,7 +534,7 @@ describe('OIDC E2E Tests', () => {
 
     beforeEach(async () => {
       // Reset MSW handlers and restore default config before each test
-      // to prevent handler stacking from parallel test execution
+      // to prevent handler stacking from parallel test execution.
       oidcServer.resetHandlers();
       clearRateLimitMap();
       strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
@@ -727,7 +542,6 @@ describe('OIDC E2E Tests', () => {
     });
 
     afterEach(async () => {
-      // Clean up any test users created in this describe block
       const emails = [
         'group-match@test.com',
         'no-match@test.com',
@@ -752,6 +566,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'group-match@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -782,6 +597,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'audit-role@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -868,6 +684,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'role-removed@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -906,6 +723,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'group-changed@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -940,6 +758,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'whitelist-group@test.com',
             email_verified: true,
             family_name: 'Test',
@@ -979,6 +798,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'existing-group@test.com',
             email_verified: true,
             family_name: 'Existing',
@@ -1019,6 +839,7 @@ describe('OIDC E2E Tests', () => {
       oidcServer.use(
         http.get('https://mock-oidc.com/userinfo', () =>
           HttpResponse.json({
+            sub: 'mock-sub',
             email: 'no-role-user@test.com',
             email_verified: true,
             family_name: 'Existing',

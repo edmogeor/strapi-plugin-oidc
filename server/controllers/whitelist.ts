@@ -1,8 +1,12 @@
 import type { Context } from 'koa';
-import { getEnforceOIDCConfig, resolveEnforceOIDC } from '../utils/enforceOIDC';
-import { getSkipLoginPageConfig, resolveSkipLoginPage } from '../utils/skipLoginPage';
+import {
+  getEnforceOIDCConfig,
+  resolveEnforceOIDC,
+  getSkipLoginPageConfig,
+  resolveSkipLoginPage,
+} from '../utils/configFlag';
 import { isAuditLogEnabled, getPluginConfig } from '../utils/pluginConfig';
-import { isValidEmail } from '../utils/email';
+import { isValidEmail, normalizeEmail } from '../utils/email';
 import { getWhitelistService } from '../utils/services';
 import { setJsonAttachmentHeaders } from '../utils/http';
 import { errorMessages } from '../error-strings';
@@ -25,7 +29,7 @@ async function info(ctx: Context) {
     skipLoginPage: resolveSkipLoginPage(strapi, settings.skipLoginPage),
     skipLoginPageConfig: getSkipLoginPageConfig(strapi),
     whitelistUsers,
-    auditLogEnabled: isAuditLogEnabled(),
+    auditLogEnabled: isAuditLogEnabled(strapi),
   };
 }
 
@@ -56,9 +60,11 @@ async function updateSettings(ctx: Context) {
 }
 
 async function publicSettings(ctx: Context) {
+  // Intentionally unauthenticated: the admin login page needs these values
+  // before the user is authenticated so it can render the correct UX.
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const config = getPluginConfig();
+  const config = getPluginConfig(strapi);
   ctx.body = {
     enforceOIDC: resolveEnforceOIDC(strapi, settings.enforceOIDC),
     ssoButtonText: config.OIDC_SSO_BUTTON_TEXT,
@@ -76,7 +82,7 @@ async function register(ctx: Context) {
   const { email } = parsed.data;
 
   const rawEmails = Array.isArray(email) ? email : email.split(',');
-  const normalized = rawEmails.map((e: string) => String(e).trim().toLowerCase()).filter(Boolean);
+  const normalized = rawEmails.map(normalizeEmail).filter(Boolean);
 
   const rejectedEmails: string[] = [];
   const validEmails: string[] = [];
@@ -140,7 +146,7 @@ async function importUsers(ctx: Context) {
   }
   const { users } = parsed.data;
 
-  const normalized = users.map((u) => (u.email ?? '').trim().toLowerCase()).filter(isValidEmail);
+  const normalized = users.map((u) => normalizeEmail(u.email)).filter(isValidEmail);
 
   const deduped = [...new Set(normalized)];
 
@@ -163,7 +169,7 @@ async function syncUsers(ctx: Context) {
   }
   const { users } = parsed.data;
 
-  const emails = users.map((u) => u.email.toLowerCase()).filter(isValidEmail);
+  const emails = users.map((u) => normalizeEmail(u.email)).filter(isValidEmail);
 
   const whitelistService = getWhitelistService();
   const currentUsers = await whitelistService.getUsers();

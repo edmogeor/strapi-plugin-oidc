@@ -84,8 +84,8 @@ describe('buildWhereClause', () => {
     });
 
     it('ignores unrecognised ops', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(buildWhereClause({ email: { $gt: 'x' } as any })).toEqual({});
+      // @ts-expect-error — intentionally passing an unrecognised op to verify it's ignored
+      expect(buildWhereClause({ email: { $gt: 'x' } })).toEqual({});
     });
   });
 

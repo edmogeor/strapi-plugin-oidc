@@ -2,16 +2,10 @@ import { errorCodes, type ErrorCode } from './error-strings';
 import type { AuditAction } from './types';
 
 type OidcErrorKind =
-  | 'nonce_mismatch'
-  | 'token_exchange_failed'
-  | 'id_token_parse_failed'
-  | 'userinfo_fetch_failed'
   | 'user_creation_failed'
   | 'whitelist_rejected'
   | 'invalid_email'
   | 'email_not_verified'
-  | 'id_token_invalid'
-  | 'provider_response_invalid'
   | 'unknown';
 
 export class OidcError extends Error {
@@ -29,21 +23,6 @@ export const OIDC_ERROR_DISPATCH: Record<
   OidcErrorKind,
   { action: AuditAction; code: ErrorCode; key?: string }
 > = {
-  nonce_mismatch: { action: 'nonce_mismatch', code: errorCodes.NONCE_MISMATCH },
-  token_exchange_failed: {
-    action: 'token_exchange_failed',
-    code: errorCodes.TOKEN_EXCHANGE_FAILED,
-  },
-  id_token_parse_failed: {
-    action: 'login_failure',
-    code: errorCodes.ID_TOKEN_PARSE_FAILED,
-    key: 'id_token_parse_failed',
-  },
-  userinfo_fetch_failed: {
-    action: 'login_failure',
-    code: errorCodes.USERINFO_FETCH_FAILED,
-    key: 'userinfo_fetch_failed',
-  },
   user_creation_failed: {
     action: 'login_failure',
     code: errorCodes.USER_CREATION_FAILED,
@@ -56,7 +35,7 @@ export const OIDC_ERROR_DISPATCH: Record<
   },
   invalid_email: {
     action: 'login_failure',
-    code: errorCodes.TOKEN_EXCHANGE_FAILED,
+    code: errorCodes.SIGN_IN_ERROR,
     key: 'sign_in_unknown',
   },
   email_not_verified: {
@@ -64,19 +43,9 @@ export const OIDC_ERROR_DISPATCH: Record<
     code: errorCodes.EMAIL_NOT_VERIFIED,
     key: 'email_not_verified',
   },
-  id_token_invalid: {
-    action: 'id_token_invalid',
-    code: errorCodes.ID_TOKEN_INVALID,
-    key: 'id_token_invalid',
-  },
-  provider_response_invalid: {
-    action: 'login_failure',
-    code: errorCodes.PROVIDER_RESPONSE_INVALID,
-    key: 'provider_response_invalid',
-  },
   unknown: {
     action: 'login_failure',
-    code: errorCodes.TOKEN_EXCHANGE_FAILED,
+    code: errorCodes.SIGN_IN_ERROR,
     key: 'sign_in_unknown',
   },
 };

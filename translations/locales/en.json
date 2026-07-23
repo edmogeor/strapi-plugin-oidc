@@ -57,7 +57,6 @@
   "unsaved.description": "You have unsaved changes that will be lost if you leave. Do you want to continue?",
   "unsaved.confirm": "Leave",
   "unsaved.cancel": "Stay",
-
   "auditlog.title": "Audit Logs",
   "auditlog.table.timestamp": "Timestamp",
   "auditlog.table.action": "Action",
@@ -87,15 +86,11 @@
   "auditlog.action.login_success": "User successfully authenticated via OIDC and was granted access.",
   "auditlog.action.user_created": "A new Strapi admin account was created for this user on their first OIDC login.",
   "auditlog.action.logout": "User logged out and their OIDC session was ended.",
-  "auditlog.action.session_expired": "The OIDC access token had expired by the time the user logged out, so the provider session could not be terminated remotely.",
   "auditlog.action.login_failure": "An unexpected error occurred during the OIDC login flow.",
   "auditlog.action.missing_code": "The OIDC callback was received without an authorisation code. This may indicate a misconfigured provider or a tampered request.",
   "auditlog.action.state_mismatch": "The state parameter in the callback did not match the one stored in the session. This may indicate a CSRF attempt or an expired login session.",
-  "auditlog.action.nonce_mismatch": "The nonce in the ID token did not match the one generated at login. This may indicate a token replay attack.",
-  "auditlog.action.token_exchange_failed": "The authorisation code could not be exchanged for tokens. The OIDC provider rejected the request.",
   "auditlog.action.whitelist_rejected": "The user's email address is not on the whitelist. Access was denied.",
   "auditlog.action.email_not_verified": "The OIDC provider did not confirm the user's email address as verified. Access was denied.",
-  "auditlog.action.id_token_invalid": "The ID token failed signature, issuer, audience, or expiry validation. Access was denied.",
   "auth.page.authenticating.title": "Authenticating...",
   "auth.page.authenticating.noscript.heading": "JavaScript Required",
   "auth.page.authenticating.noscript.body": "JavaScript must be enabled for authentication to complete.",
@@ -106,8 +101,16 @@
   "user.signInError": "Authentication failed. Please try again.",
   "settings.section": "OIDC",
   "settings.configuration": "Configuration",
-
   "audit.login_failure": "Error: {message}",
+  "audit.login_success": "User successfully authenticated.",
+  "audit.logout": "User logged out.",
+  "audit.missing_code": "No authorisation code received from provider.",
+  "audit.state_mismatch": "State parameter mismatch.",
+  "audit.whitelist_rejected": "Email {email} not in whitelist.",
+  "audit.email_not_verified": "Email {email} not verified by provider.",
   "audit.roles_updated": "Roles updated to: {roles}",
-  "audit.user_created": "Roles assigned: {roles}"
+  "audit.user_created": "Roles assigned: {roles}",
+  "audit.backchannel_logout": "User session invalidated via backchannel logout.",
+  "audit.backchannel_logout_config_error": "Backchannel logout failed — OIDC provider configuration is incomplete.",
+  "audit.backchannel_logout_unknown_sub": "Backchannel logout received an unknown subject identifier."
 }

@@ -2,7 +2,7 @@ import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useFetchClient } from '@strapi/strapi/admin';
 import { downloadJson } from '../../../utils/download';
 import { initialState, reducer } from './reducer';
-import type { WhitelistUser } from '../../../types';
+import type { OIDCRole, RoleDef, WhitelistUser } from '../../../types';
 
 function isDirtyPrimitive(a: boolean, b: boolean): boolean {
   return a !== b;
@@ -33,13 +33,13 @@ export function useOidcSettings() {
 
   useEffect(() => {
     get(`/strapi-plugin-oidc/oidc-roles`).then((response) => {
-      dispatch({ type: 'hydrate/oidcRoles', oidcRoles: response.data });
+      dispatch({ type: 'hydrate/oidcRoles', oidcRoles: response.data as OIDCRole[] });
     });
     get(`/admin/roles`).then((response) => {
-      dispatch({ type: 'hydrate/roles', roles: response.data.data });
+      dispatch({ type: 'hydrate/roles', roles: (response.data as { data: RoleDef[] }).data });
     });
     get('/strapi-plugin-oidc/whitelist').then((response) => {
-      hydrateWhitelist(response.data);
+      hydrateWhitelist(response.data as Record<string, unknown>);
     });
   }, [get, hydrateWhitelist]);
 
@@ -65,9 +65,12 @@ export function useOidcSettings() {
         users: emails.map((e) => ({ email: e })),
       });
       const refreshed = await get('/strapi-plugin-oidc/whitelist');
-      dispatch({ type: 'users/replace', users: refreshed.data.whitelistUsers });
+      dispatch({
+        type: 'users/replace',
+        users: (refreshed.data as { whitelistUsers: WhitelistUser[] }).whitelistUsers,
+      });
       dispatch({ type: 'commit' });
-      return response.data.importedCount as number;
+      return (response.data as { importedCount: number }).importedCount;
     },
     [post, get],
   );
@@ -123,7 +126,7 @@ export function useOidcSettings() {
       dispatch({ type: 'commit' });
 
       const getResponse = await get('/strapi-plugin-oidc/whitelist');
-      hydrateWhitelist(getResponse.data);
+      hydrateWhitelist(getResponse.data as Record<string, unknown>);
 
       dispatch({ type: 'flash/success' });
       setTimeout(() => dispatch({ type: 'flash/clear', kind: 'success' }), 3000);

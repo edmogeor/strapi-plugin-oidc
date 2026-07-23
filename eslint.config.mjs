@@ -17,6 +17,7 @@ export default [
       '.fallow/**/*',
       'coverage/**/*',
       '*.config.ts',
+      'references/**/*',
     ],
   },
   {

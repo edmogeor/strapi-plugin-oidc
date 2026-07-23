@@ -117,9 +117,8 @@ describe('i18n', () => {
     it('every locale file has the same number of keys as en.json', () => {
       for (const { code, keys } of localeData) {
         if (code === 'en') continue;
-        expect(keys.size).toBe(
+        expect(keys.size, `"${code}" has ${keys.size} keys, expected ${enKeys.size}`).toBe(
           enKeys.size,
-          `"${code}" has ${keys.size} keys, expected ${enKeys.size}`,
         );
       }
     });

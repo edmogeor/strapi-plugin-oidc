@@ -4,7 +4,24 @@ import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
 import { expect, beforeAll, beforeEach } from 'vitest';
 import type { Readable } from 'node:stream';
+import type { PluginConfig } from '../../../shared/config';
 export { clearRateLimitMap, getRateLimitMapSize } from '../../routes';
+
+export function getPluginController<T>(
+  strapi: Core.Strapi,
+  name: string,
+  // Strapi's plugin API returns untyped controllers — this is the boundary adapter.
+): T {
+  return strapi.plugin('strapi-plugin-oidc').controller(name) as T;
+}
+
+export function getPluginConfig(strapi: Core.Strapi): PluginConfig {
+  const cfg = strapi.config.get('plugin::strapi-plugin-oidc');
+  if (cfg !== null && typeof cfg === 'object' && !Array.isArray(cfg)) {
+    return cfg as PluginConfig;
+  }
+  return {} as PluginConfig;
+}
 
 export async function streamToString(stream: Readable): Promise<string> {
   const chunks: Buffer[] = [];
@@ -12,20 +29,31 @@ export async function streamToString(stream: Readable): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+export function storeNonceFromResponse(res: { headers: Record<string, unknown> }): void {
+  const raw = res.headers['set-cookie'];
+  if (!raw) return;
+
+  const headers: unknown[] = Array.isArray(raw) ? raw : [raw];
+  for (const h of headers) {
+    const match = String(h).match(/^(?:__Host-)?oidc_nonce=([^;]+)/);
+    if (match) {
+      globalThis.__testOidcNonce = match[1];
+      return;
+    }
+  }
+}
+
 export const MOCK_OIDC_CONFIG = {
   REMEMBER_ME: false,
   OIDC_ISSUER: 'https://mock-oidc.com',
-  OIDC_PUBLIC_URL: 'http://localhost:1337',
+  OIDC_PUBLIC_URL: '',
   OIDC_CLIENT_ID: 'mock-client-id',
   OIDC_CLIENT_SECRET: 'mock-client-secret',
   OIDC_SCOPE: 'openid profile email',
-  OIDC_AUTHORIZATION_ENDPOINT: 'https://mock-oidc.com/authorize',
-  OIDC_TOKEN_ENDPOINT: 'https://mock-oidc.com/token',
-  OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
   OIDC_FAMILY_NAME_FIELD: 'family_name',
   OIDC_GIVEN_NAME_FIELD: 'given_name',
-  OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
   OIDC_ENFORCE: null,
+  OIDC_FORCE_SECURE_COOKIES: false,
   AUDIT_LOG_RETENTION_DAYS: 90,
   OIDC_GROUP_FIELD: 'groups',
   OIDC_GROUP_ROLE_MAP: '{}',
@@ -45,13 +73,15 @@ export const setSettings = (
 
 export async function initiateLoginAndCallback(agent: Agent): Promise<{ state: string | null }> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   const state = new URL(loginRes.headers.location).searchParams.get('state');
   await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`).redirects(0);
   return { state };
 }
 
-export function getStateFromLoginRes(loginRes: { headers: { location: string } }): string | null {
-  return new URL(loginRes.headers.location).searchParams.get('state');
+export function getStateFromLoginRes(loginRes: { headers: Record<string, string> }): string | null {
+  const location = loginRes.headers.location;
+  return location ? new URL(location).searchParams.get('state') : null;
 }
 
 export function performCallback(agent: Agent, state: string | null): ReturnType<Agent['get']> {
@@ -60,6 +90,7 @@ export function performCallback(agent: Agent, state: string | null): ReturnType<
 
 export async function loginAndExpectSuccess(agent: Agent) {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   const state = new URL(loginRes.headers.location).searchParams.get('state');
   const callbackRes = await performCallback(agent, state);
   expect(callbackRes.status).toBe(200);
@@ -124,29 +155,9 @@ export async function assertGenericAuthError(
 
 export async function initiateLogin(agent: ReturnType<typeof request.agent>): Promise<string> {
   const loginRes = await agent.get('/strapi-plugin-oidc/oidc').redirects(0);
+  storeNonceFromResponse(loginRes);
   return `/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${new URL(loginRes.headers.location).searchParams.get('state')}`;
 }
-
-export async function loginWithGroups(
-  strapi: Core.Strapi,
-  _email: string,
-  _groups: string[],
-  groupRoleMap: Record<string, string[]>,
-): Promise<void> {
-  setGroupRoleMap(strapi, groupRoleMap);
-  const agent = request.agent(strapi.server.httpServer);
-  await initiateLoginAndCallback(agent);
-}
-
-async function applyRoleMapConfig(
-  strapi: Core.Strapi,
-  groupRoleMap: Record<string, string[]>,
-): Promise<ReturnType<typeof request.agent>> {
-  setGroupRoleMap(strapi, groupRoleMap);
-  return request.agent(strapi.server.httpServer);
-}
-
-export { applyRoleMapConfig as applyRoleMap };
 
 export function setGroupRoleMap(strapi: Core.Strapi, groupRoleMap: Record<string, string[]>) {
   const config = { ...MOCK_OIDC_CONFIG };
@@ -175,6 +186,7 @@ export function mswUserInfoHandler(
 ) {
   return http.get('https://mock-oidc.com/userinfo', () =>
     HttpResponse.json({
+      sub: 'mock-sub',
       email,
       email_verified: true,
       family_name: lastName,
@@ -182,57 +194,6 @@ export function mswUserInfoHandler(
       groups,
     }),
   );
-}
-
-export function makeLogoutCtx(initialCookies: Record<string, string> = {}) {
-  const cookieCalls: Array<{ name: string; value: string; opts?: Record<string, unknown> }> = [];
-  return {
-    request: { secure: false },
-    redirectedTo: undefined as string | undefined,
-    cookies: {
-      get(name: string) {
-        return initialCookies[name];
-      },
-      set(name: string, value: string, opts?: Record<string, unknown>) {
-        cookieCalls.push({ name, value, opts });
-      },
-      calls: cookieCalls,
-    },
-    redirect(url: string) {
-      (this as { redirectedTo: string | undefined }).redirectedTo = url;
-    },
-  };
-}
-
-export function makeCookieTestCtx(secure = false) {
-  const calls: Array<{ name: string; value: string; opts: Record<string, unknown> }> = [];
-  return {
-    request: { secure },
-    cookies: {
-      set(name: string, value: string, opts: Record<string, unknown>) {
-        calls.push({ name, value, opts });
-      },
-      calls,
-    },
-  };
-}
-
-export function expectCookieCleared(ctx: ReturnType<typeof makeLogoutCtx>, name: string) {
-  return expect(ctx.cookies.calls.some((c) => c.name === name && c.opts?.maxAge === 0)).toBe(true);
-}
-
-export function findAdminRefreshCookieCall(ctx: {
-  cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> };
-}) {
-  return ctx.cookies.calls.find((c) => c.name === 'strapi_admin_refresh');
-}
-
-export function expectAdminCookieSecure(
-  ctx: { cookies: { calls: Array<{ name: string; opts?: Record<string, unknown> }> } },
-  secure: boolean,
-) {
-  const adminCall = findAdminRefreshCookieCall(ctx);
-  expect(adminCall?.opts?.secure).toBe(secure);
 }
 
 export async function setupGroupRoleMapping(
@@ -259,24 +220,35 @@ export async function getFirstAvailableRole(strapi: Core.Strapi) {
   return availableRoles[0];
 }
 
-export function createAuditLogExportCtx(strapi: Core.Strapi) {
+export function createAuditLogExportCtx(strapi: Core.Strapi): {
+  query: Record<string, unknown>;
+  set: (k: string, v: string) => void;
+  body: unknown;
+  strapi: Core.Strapi;
+  headers: Record<string, string>;
+} {
   const headers: Record<string, string> = {};
   return {
     query: {},
     set: (k: string, v: string) => {
       headers[k] = v;
     },
-    body: null as unknown,
+    body: null,
     strapi,
     headers,
   };
 }
 
-export function createSilentExportCtx(strapi: Core.Strapi) {
+export function createSilentExportCtx(strapi: Core.Strapi): {
+  query: Record<string, unknown>;
+  set: () => void;
+  body: unknown;
+  strapi: Core.Strapi;
+} {
   return {
     query: {},
     set: () => {},
-    body: null as unknown,
+    body: null,
     strapi,
   };
 }
@@ -311,6 +283,25 @@ export function createAuditLogSuite(uid: string) {
     await ref.strapi.db.query(uid).deleteMany({});
   });
   return ref;
+}
+
+export function expectOidcSessionLogout(res: request.Response) {
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toContain('https://mock-oidc.com/logout');
+  expect(res.headers['set-cookie']).toEqual(
+    expect.arrayContaining([
+      expect.stringMatching(/^oidc_id_token=;/),
+      expect.stringMatching(/^strapi_admin_refresh=;/),
+    ]),
+  );
+}
+
+export function expectNonOidcLogoutRedirect(res: request.Response, expectedLocation: string) {
+  expect(res.status).toBe(302);
+  expect(res.headers.location).toBe(expectedLocation);
+  expect(res.headers['set-cookie']).toEqual(
+    expect.arrayContaining([expect.stringMatching(/^strapi_admin_refresh=;/)]),
+  );
 }
 
 export function expectNdjsonExportHeaders(headers: Record<string, string>) {

@@ -4,11 +4,12 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ['./server/__tests__/e2e/setup.ts'],
-    include: ['server/__tests__/unit/**/*.test.ts', 'server/__tests__/e2e/**/*.test.ts'],
+    include: ['server/__tests__/e2e/**/*.test.ts'],
     testTimeout: 30000,
     hookTimeout: 120000,
-    fileParallelism: false,
+    fileParallelism: true,
     pool: 'forks',
+    maxConcurrency: 8,
     alias: {
       'lodash/fp': 'lodash/fp.js',
     },

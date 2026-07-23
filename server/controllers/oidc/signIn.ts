@@ -1,12 +1,13 @@
-import { randomBytes } from 'node:crypto';
-import pkceChallenge from 'pkce-challenge';
-import { shouldMarkSecure, COOKIE_NAMES } from '../../utils/cookies';
+import * as client from 'openid-client';
+import { COOKIE_NAMES, shouldMarkSecure, reconcileCookieName } from '../../utils/cookies';
 import { configValidation, resolveRedirectUri } from './shared';
+import { sendErrorResponse } from './errors';
+import { getOidcConfig } from '../../utils/oidc-client';
 import { getOauthService, getWhitelistService } from '../../utils/services';
-import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
-import { negotiateLocale, t } from '../../i18n';
+import { resolveSkipLoginPage } from '../../utils/configFlag';
+import { getLocaleFromContext, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
-import { PKCE_COOKIE_MAX_AGE_MS } from '../../../shared/constants';
+import { PKCE_COOKIE_MAX_AGE_MS, OIDC_COOKIE_PATH } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
 
 export async function oidcSignIn(ctx: StrapiContext) {
@@ -26,45 +27,47 @@ export async function oidcSignIn(ctx: StrapiContext) {
       }
     }
 
-    const { OIDC_CLIENT_ID, OIDC_SCOPE, OIDC_AUTHORIZATION_ENDPOINT } = config;
+    const oidcConfig = await getOidcConfig();
 
-    const { code_verifier: codeVerifier, code_challenge: codeChallenge } = await pkceChallenge();
+    const codeVerifier = client.randomPKCECodeVerifier();
+    const codeChallenge = await client.calculatePKCECodeChallenge(codeVerifier);
+    const state = client.randomState();
+    const nonce = client.randomNonce();
 
-    // Generate state server-side to prevent CSRF attacks.
-    const state = randomBytes(32).toString('base64url');
-    // Generate nonce to prevent ID token replay attacks.
-    const nonce = randomBytes(32).toString('base64url');
-
+    const secureFlag = shouldMarkSecure(strapi, ctx);
     const cookieOptions = {
       httpOnly: true,
       maxAge: PKCE_COOKIE_MAX_AGE_MS,
-      secure: shouldMarkSecure(strapi, ctx),
+      secure: secureFlag,
       sameSite: 'lax' as const,
+      path: OIDC_COOKIE_PATH,
     };
 
-    ctx.cookies.set(COOKIE_NAMES.codeVerifier, codeVerifier, cookieOptions);
-    ctx.cookies.set(COOKIE_NAMES.state, state, cookieOptions);
-    ctx.cookies.set(COOKIE_NAMES.nonce, nonce, cookieOptions);
+    ctx.cookies.set(
+      reconcileCookieName(COOKIE_NAMES.codeVerifier, secureFlag),
+      codeVerifier,
+      cookieOptions,
+    );
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.state, secureFlag), state, cookieOptions);
+    ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.nonce, secureFlag), nonce, cookieOptions);
 
     const redirectUri = resolveRedirectUri(config);
-
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: OIDC_CLIENT_ID,
+    const authUrl = client.buildAuthorizationUrl(oidcConfig, {
       redirect_uri: redirectUri,
-      scope: OIDC_SCOPE,
+      scope: config.OIDC_SCOPE,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
       state,
       nonce,
+      ...(config.OIDC_MAX_AGE ? { max_age: String(config.OIDC_MAX_AGE) } : {}),
+      ...(config.OIDC_PROMPT ? { prompt: config.OIDC_PROMPT } : {}),
     });
 
-    const authorizationUrl = `${OIDC_AUTHORIZATION_ENDPOINT}?${params.toString()}`;
-    ctx.set('Location', authorizationUrl);
+    ctx.set('Location', authUrl.href);
     return ctx.send({}, 302);
   } catch (e) {
     strapi.log.error({ phase: 'oidc_sign_in', message: toMessage(e) });
-    const locale = negotiateLocale(ctx.request.headers['accept-language'] as string | undefined);
-    return ctx.send(getOauthService().renderSignUpError(t(locale, 'user.signInError'), locale));
+    const locale = getLocaleFromContext(ctx);
+    return sendErrorResponse(ctx, getOauthService(), t(locale, 'user.signInError'), locale);
   }
 }

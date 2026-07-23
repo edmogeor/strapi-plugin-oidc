@@ -1,4 +1,4 @@
-import { isValidEmail } from '../../utils/email';
+import { isValidEmail, normalizeEmail } from '../../utils/email';
 import { errorCodes, getErrorDetail, errorMessages } from '../../error-strings';
 import { OidcError } from '../../oidc-errors';
 import { toMessage } from '../../../shared/utils';
@@ -190,7 +190,7 @@ export async function handleUserAuthentication(
   rolesUpdated: boolean;
   resolvedRoleNames: string[];
 }> {
-  const email = String(userResponseData.email ?? '').toLowerCase();
+  const email = normalizeEmail(userResponseData.email);
   if (!email || !isValidEmail(email)) {
     throw new OidcError('invalid_email', errorMessages.INVALID_EMAIL);
   }

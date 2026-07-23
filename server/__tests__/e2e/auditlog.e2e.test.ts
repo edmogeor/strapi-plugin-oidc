@@ -2,7 +2,7 @@ import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { oidcServer } from './setup';
-import type { Core, AuditLogService } from './test-types';
+import type { Core, AuditLogService, AuditLogController } from './test-types';
 import {
   setSettings,
   applyDefaultOidcConfig,
@@ -14,6 +14,7 @@ import {
   assertNdjsonFormat,
   expectNdjsonExportHeaders,
   createAuditLogSuite,
+  getPluginController,
 } from './test-helpers';
 
 const AUDIT_LOG_UID = 'plugin::strapi-plugin-oidc.audit-log';
@@ -31,7 +32,9 @@ describe('AuditLog Service', () => {
 
   it('log() emits an event on the eventHub', async () => {
     const received: unknown[] = [];
-    const listener = (p: unknown) => received.push(p);
+    const listener = async (p: unknown): Promise<void> => {
+      received.push(p);
+    };
     s.strapi.eventHub.on('strapi-plugin-oidc::auth.login_success', listener);
 
     await s.service.log({ action: 'login_success', email: 'a@b.com', ip: '127.0.0.1' });
@@ -49,7 +52,6 @@ describe('AuditLog Service', () => {
     expect(result.results).toHaveLength(2);
     expect(result.pagination.total).toBe(3);
     expect(result.pagination.pageCount).toBe(2);
-    // page 2 should exist and contain the remaining record
     const page2 = await s.service.find({ page: 2, pageSize: 2 });
     expect(page2.results).toHaveLength(1);
   });
@@ -201,7 +203,6 @@ describe('AuditLog Controller', () => {
 
   beforeAll(async () => {
     strapi = globalThis.strapiInstance;
-    // seed one record so export has content
     await strapi
       .plugin('strapi-plugin-oidc')
       .service('auditLog')
@@ -213,8 +214,11 @@ describe('AuditLog Controller', () => {
   });
 
   it('find() returns paginated logs in ctx.body', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
-    const ctx = { query: { page: '1', pageSize: '10' }, body: null as unknown };
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
+    const ctx = {
+      query: { page: '1', pageSize: '10' },
+      body: null as { results: unknown[]; pagination: unknown },
+    };
     await auditLogController.find(ctx);
     expect(ctx.body).toHaveProperty('results');
     expect(ctx.body).toHaveProperty('pagination');
@@ -222,7 +226,7 @@ describe('AuditLog Controller', () => {
   });
 
   it('export() sets NDJSON content-type and streams rows as newline-delimited JSON', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createAuditLogExportCtx(strapi);
     await auditLogController.export(ctx);
 
@@ -247,7 +251,7 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < N; i++) {
       await auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { lines } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -255,7 +259,7 @@ describe('AuditLog Controller', () => {
   });
 
   it('NDJSON body has no wrapping array, no trailing commas, one object per line', async () => {
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
     const { text } = await parseNdjsonBody(ctx.body as import('node:stream').Readable);
@@ -269,10 +273,10 @@ describe('AuditLog Controller', () => {
     for (let i = 0; i < 501; i++) {
       await auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' });
     }
-    const auditLogController = strapi.plugin('strapi-plugin-oidc').controller('auditLog');
+    const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const realFind = auditLogService.find;
     let call = 0;
-    (auditLogService as { find: typeof realFind }).find = async (opts) => {
+    auditLogService.find = async (opts) => {
       call++;
       if (call === 2) throw new Error('synthetic DB failure');
       return realFind(opts);
@@ -289,7 +293,7 @@ describe('AuditLog Controller', () => {
       });
       expect(err).toBeInstanceOf(Error);
     } finally {
-      (auditLogService as { find: typeof realFind }).find = realFind;
+      auditLogService.find = realFind;
     }
   });
 });
@@ -329,7 +333,7 @@ describe('AuditLog E2E Integration', () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it('token exchange failure creates a token_exchange_failed audit log entry', async () => {
+  it('token exchange failure creates a login_failure audit log entry', async () => {
     oidcServer.use(
       http.post('https://mock-oidc.com/token', () => HttpResponse.json({}, { status: 401 })),
     );
@@ -339,7 +343,7 @@ describe('AuditLog E2E Integration', () => {
     const state = locationUrl.searchParams.get('state');
     await agent.get(`/strapi-plugin-oidc/oidc/callback?code=mock-code&state=${state}`);
 
-    const rows = await queryAuditLog(strapi, 'token_exchange_failed');
+    const rows = await queryAuditLog(strapi, 'login_failure');
     expect(rows.length).toBeGreaterThan(0);
   });
 

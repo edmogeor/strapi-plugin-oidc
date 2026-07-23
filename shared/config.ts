@@ -1,6 +1,18 @@
 import { z } from 'zod';
 import type { GroupRoleMap } from './constants';
 
+const groupRoleMapSchema = z.record(z.string(), z.array(z.string()));
+
+export const oidcUserInfoSchema = z
+  .object({
+    email: z.string().optional(),
+    email_verified: z.union([z.boolean(), z.string()]).optional(),
+    sub: z.string().optional(),
+  })
+  .passthrough();
+
+export type OidcUserInfo = z.infer<typeof oidcUserInfoSchema>;
+
 function toBoolCoerced(v: unknown): boolean | unknown {
   if (typeof v === 'boolean') return v;
   if (v === 'true' || v === '1') return true;
@@ -26,39 +38,68 @@ export const pluginConfigSchema = z.object({
   OIDC_CLIENT_ID: z.string().default(''),
   OIDC_CLIENT_SECRET: z.string().default(''),
   OIDC_SCOPE: z.string().default('openid profile email'),
-  OIDC_AUTHORIZATION_ENDPOINT: z.string().default(''),
-  OIDC_TOKEN_ENDPOINT: z.string().default(''),
-  OIDC_USERINFO_ENDPOINT: z.string().default(''),
   OIDC_FAMILY_NAME_FIELD: z.string().default('family_name'),
   OIDC_GIVEN_NAME_FIELD: z.string().default('given_name'),
-  OIDC_END_SESSION_ENDPOINT: z.string().default(''),
-  OIDC_SSO_BUTTON_TEXT: z.string().default('Sign in with OIDC'),
+  OIDC_SSO_BUTTON_TEXT: z.string().default('Login via SSO'),
   OIDC_ENFORCE: coerceBoolNullable,
   AUDIT_LOG_RETENTION_DAYS: z.number().default(90),
   OIDC_GROUP_FIELD: z.string().default('groups'),
-  OIDC_GROUP_ROLE_MAP: z
-    .union([z.string(), z.record(z.string(), z.array(z.string()))])
-    .default('{}'),
+  OIDC_GROUP_ROLE_MAP: z.preprocess((v) => {
+    if (typeof v === 'string') {
+      try {
+        return JSON.parse(v);
+      } catch {
+        return {};
+      }
+    }
+    return v;
+  }, groupRoleMapSchema.default({})),
   OIDC_REQUIRE_EMAIL_VERIFIED: coerceBool(true),
   OIDC_TRUSTED_IP_HEADER: z.string().default(''),
-  OIDC_JWKS_URI: z.string().default(''),
   OIDC_ISSUER: z.string().default(''),
   OIDC_FORCE_SECURE_COOKIES: coerceBool(false),
   OIDC_SKIP_LOGIN_PAGE: coerceBoolNullable,
+  OIDC_MAX_AGE: z.number().int().positive().optional(),
+  OIDC_PROMPT: z.string().default(''),
+  OIDC_CLIENT_ASSERTION: z
+    .union([
+      z.string(),
+      z.object({
+        privateKey: z.string(),
+        keyId: z.string().optional(),
+        algorithm: z.string().default('RS256'),
+      }),
+    ])
+    .default(''),
 });
 
 export type PluginConfig = z.infer<typeof pluginConfigSchema>;
 
-export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
-  if (typeof raw !== 'string') {
-    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-      return raw as GroupRoleMap;
+export type ClientAssertionConfig = z.infer<typeof clientAssertionSchema>;
+
+const clientAssertionSchema = z.object({
+  privateKey: z.string().min(1),
+  keyId: z.string().optional(),
+  algorithm: z.string().default('RS256'),
+});
+
+export function parseClientAssertion(raw: unknown): ClientAssertionConfig | null {
+  if (typeof raw === 'string') {
+    if (!raw) return null;
+    try {
+      return clientAssertionSchema.parse(JSON.parse(raw));
+    } catch {
+      return null;
     }
-    return {};
   }
-  try {
-    return JSON.parse(raw) as GroupRoleMap;
-  } catch {
-    return {};
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    const result = clientAssertionSchema.safeParse(raw);
+    return result.success ? result.data : null;
   }
+  return null;
+}
+
+export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
+  const result = groupRoleMapSchema.safeParse(raw);
+  return result.success ? result.data : {};
 }

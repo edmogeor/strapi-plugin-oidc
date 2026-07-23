@@ -1,9 +1,48 @@
 import type { Context } from 'koa';
 import type { AuditEntry, AuditLogRecord } from '../shared/audit-actions';
+import type { OidcUserInfo as OidcUserInfoType } from '../shared/config';
 export { AuditAction, AuditEntry, AuditLogRecord } from '../shared/audit-actions';
+export type OidcUserInfo = OidcUserInfoType;
 
 export interface StrapiContext extends Context {
   send(body: unknown, status?: number): void;
+  state: Context['state'] & {
+    oidcCsp?: string;
+  };
+}
+
+export interface StrapiConfig {
+  config: {
+    get(key: string, defaultValue?: unknown): unknown;
+    set(key: string, value: unknown): void;
+  };
+}
+
+export interface StrapiLogger {
+  log: {
+    error(...args: unknown[]): void;
+    warn(...args: unknown[]): void;
+    info(...args: unknown[]): void;
+    debug(...args: unknown[]): void;
+  };
+}
+
+export interface StrapiConfigLogger extends StrapiConfig, StrapiLogger {}
+
+export interface ClientIpContext {
+  ip: string;
+  app: { proxy: boolean };
+  request: { ips: string[] };
+  get(name: string): string;
+}
+
+export interface SecureContext {
+  request: { secure: boolean };
+  get(name: string): string;
+}
+
+export interface CookieContext extends SecureContext {
+  cookies: { set(name: string, value: string | null, opts?: unknown): void };
 }
 
 export interface WhitelistSettings {
@@ -26,11 +65,6 @@ export interface StrapiAdminUser {
   roles?: Array<{ id: number; name: string; code: string }>;
 }
 
-export interface OidcUserInfo {
-  email?: string;
-  [key: string]: unknown;
-}
-
 export interface OAuthService {
   createUser(
     email: string,
@@ -47,10 +81,10 @@ export interface OAuthService {
     jwtToken: string,
     user: StrapiAdminUser,
     nonce: string,
+    secure: boolean,
     locale?: string,
   ): string;
   renderSignUpError(message: string, locale?: string): string;
-  addGmailAlias(email: string, alias: string): string;
 }
 
 export interface AdminRole {
@@ -62,7 +96,6 @@ export interface AdminRole {
 
 export interface RoleService {
   oidcRoles(): Promise<{ roles: string[] } | null>;
-  getOidcRoles(): AdminRole[];
   find(): Promise<AdminRole[]>;
   update(roles: unknown): Promise<void>;
 }

@@ -4,11 +4,12 @@ import type { Core } from './test-types';
 import {
   MOCK_OIDC_CONFIG,
   applyDefaultOidcConfig,
-  makeLogoutCtx,
-  expectCookieCleared,
   setSettings,
+  expectOidcSessionLogout,
+  expectNonOidcLogoutRedirect,
 } from './test-helpers';
 import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
+import { resetOidcConfig } from '../../utils/oidc-client';
 
 describe('Skip Login Page E2E', () => {
   let strapi: Core.Strapi;
@@ -119,53 +120,30 @@ describe('Skip Login Page E2E', () => {
 
   describe('logout controller with skip-login-page', () => {
     beforeEach(async () => {
-      await enableSkipLoginPage();
+      resetOidcConfig();
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_SKIP_LOGIN_PAGE: null,
+      });
+      await setSettings(strapi, false, false, true);
       strapi.config.set('admin.url', '/admin');
     });
 
-    const getOidcController = () => strapi.plugin('strapi-plugin-oidc').controller('oidc');
-
-    const logoutAndExpectRedirect = async (
-      ctxLogout: ReturnType<typeof makeLogoutCtx>,
-      ...clearedCookies: string[]
-    ) => {
-      await getOidcController().logout(ctxLogout);
-      expect(ctxLogout.redirectedTo).toBe(OIDC_SIGN_IN_PATH);
-      for (const cookie of clearedCookies) {
-        expectCookieCleared(ctxLogout, cookie);
-      }
-    };
-
     it('redirects non-OIDC sessions to OIDC sign-in instead of admin login', async () => {
-      await logoutAndExpectRedirect(makeLogoutCtx(), 'strapi_admin_refresh');
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .redirects(0);
+
+      expectNonOidcLogoutRedirect(res, '/strapi-plugin-oidc/oidc');
     });
 
-    it('falls back to OIDC sign-in when OIDC logout not configured', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: null,
-        OIDC_END_SESSION_ENDPOINT: undefined,
-      });
-      await setSettings(strapi, false, false, true);
+    it('redirects OIDC sessions to end session URL', async () => {
+      const res = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/logout')
+        .set('Cookie', 'oidc_id_token=mock-id-token')
+        .redirects(0);
 
-      await logoutAndExpectRedirect(
-        makeLogoutCtx({ oidc_authenticated: '1' }),
-        'strapi_admin_refresh',
-        'oidc_authenticated',
-      );
-    });
-
-    it('falls back to OIDC sign-in when provider rejects expired token', async () => {
-      strapi.config.set('plugin::strapi-plugin-oidc', {
-        OIDC_SKIP_LOGIN_PAGE: null,
-        OIDC_END_SESSION_ENDPOINT: 'https://mock-oidc.com/logout',
-        OIDC_USERINFO_ENDPOINT: 'https://mock-oidc.com/userinfo',
-      });
-      await setSettings(strapi, false, false, true);
-
-      await logoutAndExpectRedirect(
-        makeLogoutCtx({ oidc_authenticated: '1', oidc_access_token: 'expired-token' }),
-        'strapi_admin_refresh',
-      );
+      expectOidcSessionLogout(res);
     });
   });
 });

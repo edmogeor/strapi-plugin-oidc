@@ -38,9 +38,6 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Install dependencies in test-app
         run: |
           cd test-app

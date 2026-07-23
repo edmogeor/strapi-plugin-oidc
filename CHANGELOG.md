@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - Unreleased
+
+### Added
+
+- **Backchannel logout support** - New `POST /strapi-plugin-oidc/backchannel-logout` endpoint receives signed `logout_token` POSTs from the IdP, verifies the signature against the provider JWKS, and invalidates the matching Strapi admin session. Requires the token to contain the `http://schemas.openid.net/event/backchannel-logout` event claim and no `nonce` claim. The user's `oidc_sub` and `oidc_sid` claims are persisted on first login to enable matching.
+- **Private-key JWT client assertion** - New `OIDC_CLIENT_ASSERTION` config option replaces the static `OIDC_CLIENT_SECRET` for token-endpoint authentication. Accepts a JSON string or object with `privateKey`, optional `keyId`, and optional `algorithm` (default `RS256`).
+- **`OIDC_MAX_AGE` config option** - Sends `max_age` to the IdP during the authorization request, useful for forcing re-authentication.
+- **`OIDC_PROMPT` config option** - Sends a `prompt` value such as `login` or `consent` to the IdP during the authorization request.
+- **REST API reference documentation** - Split the API docs out of the README into `docs/api.md` with full endpoint details, required scopes, query parameters, and examples.
+
+### Changed
+
+- **Migrated OIDC protocol layer to `openid-client` v6** - The plugin now relies on the well-maintained `openid-client` library for discovery, authorization URL construction, PKCE, token exchange, ID token verification, userinfo fetching, and RP-initiated logout. This replaces the previous hand-rolled `fetch()`/Zod implementation.
+- **Discovery is now lazy and cached** - The discovery document is fetched on the first sign-in request and cached for 15 minutes, so Strapi boots even if the IdP is temporarily unreachable. Discovery timeout increased from 5 seconds to 10 seconds.
+- **RP-initiated logout uses `id_token_hint`** - When the provider exposes an `end_session_endpoint`, logout now redirects via `openid-client` with `id_token_hint` and `post_logout_redirect_uri`, improving compatibility with providers that require a valid redirect URI.
+- **Rate limiter replaced with `rate-limiter-flexible`** - Sign-in, callback, and logout endpoints remain capped at 1 000 requests/minute per IP+UA. The new backchannel logout endpoint is separately capped at 30 requests/minute per IP.
+- **SSO button default text** - `OIDC_SSO_BUTTON_TEXT` now defaults to `Login via SSO` (was `Sign in with OIDC`).
+- **Session cookie handling** - The success page now sets the `jwtToken` cookie with `SameSite=Strict` and a `Secure` flag when served over HTTPS. The token is no longer written to `localStorage` based on `REMEMBER_ME`; it is always set as a cookie with a 14-day max-age when `REMEMBER_ME` is enabled.
+
+### Removed
+
+- **Explicit OIDC endpoint config keys** - Removed `OIDC_AUTHORIZATION_ENDPOINT`, `OIDC_TOKEN_ENDPOINT`, `OIDC_USERINFO_ENDPOINT`, `OIDC_END_SESSION_ENDPOINT`, and `OIDC_JWKS_URI`. All endpoints and the JWKS URI are now discovered from `OIDC_ISSUER` via `openid-client`. Upgrading users must delete these keys from their config and rely on discovery.
+- **Legacy session cookies** - Removed the `oidc_access_token` and `oidc_authenticated` cookies. The plugin now uses the ID token cookie (`oidc_id_token`) and the user email cookie to detect OIDC sessions and build RP-initiated logout requests.
+- **Protocol-level audit actions** - Removed `session_expired`, `nonce_mismatch`, `token_exchange_failed`, and `id_token_invalid` audit actions. All protocol failures are now recorded as `login_failure` with diagnostic details.
+
+### Security
+
+- **`__Host-` prefixed OIDC cookies** - PKCE and session cookies are now prefixed with `__Host-` when served over HTTPS and scoped to `/`, preventing cookie theft and accidental leakage to sub-paths. On HTTP origins the prefix is stripped automatically so local development still works.
+- **JWT no longer stored in `localStorage`** - The OIDC success page no longer writes `jwtToken` to `localStorage`; it is set as a cookie only, reducing XSS impact.
+- **Backchannel logout JTI replay protection** - Received logout tokens are deduplicated by `jti` for 5 minutes in memory and in the Strapi plugin store, preventing replayed logout attempts.
+- **Cookie name reconciliation** - The plugin reads both the `__Host-` and non-prefixed cookie names so that toggling HTTPS or `OIDC_FORCE_SECURE_COOKIES` does not strand in-flight login attempts.
+
+### Fixed
+
+- **Issuer slash mismatch** - `openid-client` discovery now automatically retries with/without a trailing slash on the issuer URL when the provider reports a canonical issuer mismatch (e.g. Authentik).
+- **Callback CSP header** - The OIDC success page now sets its Content-Security-Policy via `ctx.state` and a dedicated Koa middleware, avoiding the previous direct `ctx.set` pattern.
+
+---
+
 ## [1.10.9] - 2026-06-07
 
 ### Fixed

@@ -19,14 +19,13 @@ export type {
   AuditLogService,
 };
 
-// Typed global used by setup.ts and all test files.
 declare global {
   var strapiInstance: Core.Strapi;
+  var __testOidcNonce: string | undefined;
 }
 
 export type { Core };
 
-// Controller response body shapes used in controller tests.
 export interface WhitelistInfoBody {
   useWhitelist: boolean;
   enforceOIDC: boolean;
@@ -47,30 +46,36 @@ export interface ImportBody {
   importedCount: number;
 }
 
-// A role record as stored by the plugin's roles content-type.
 export interface OidcRole {
   id: number;
   oauth_type: string;
   role: number[];
 }
 
-// Minimal mock context used in controller unit-style tests.
 export interface MockCtx {
   request?: {
     body?: unknown;
     secure?: boolean;
+    query?: Record<string, unknown>;
   };
   params?: Record<string, unknown>;
+  query?: Record<string, unknown>;
   status?: number;
   body?: unknown;
+  headers?: Record<string, unknown>;
   redirectedTo?: string;
-  send?: (data: unknown, status?: number) => void;
+  send?(data: unknown, status?: number): void;
+  set?(name: string, value: string | string[]): void;
+  res?: {
+    setHeader: (name: string, value: string | string[]) => void;
+    getHeader: (name: string) => string | string[] | undefined;
+  };
   cookies?: {
     get: (name: string) => string | undefined;
     set: (name: string, value: string | null, opts?: Record<string, unknown>) => void;
     calls: Array<{ name: string; value: string; opts?: Record<string, unknown> }>;
   };
-  redirect?: (url: string) => void;
+  redirect?(url: string): void;
 }
 
 export interface WhitelistController {
@@ -91,4 +96,10 @@ export interface RoleController {
 
 export interface OidcController {
   logout(ctx: MockCtx): Promise<void>;
+}
+
+export interface AuditLogController {
+  find(ctx: MockCtx): Promise<void>;
+  export(ctx: MockCtx): Promise<void>;
+  clearAll(ctx: MockCtx): Promise<void>;
 }

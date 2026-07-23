@@ -1,72 +1,65 @@
-import { clearAuthCookies, COOKIE_NAMES } from '../../utils/cookies';
+import * as client from 'openid-client';
+import { resolveAdminPath } from '../../bootstrap';
+import { getOidcConfig } from '../../utils/oidc-client';
+import { clearAuthCookies, COOKIE_NAMES, readCookie } from '../../utils/cookies';
 import { getAuditLogService, getWhitelistService } from '../../utils/services';
 import { getClientIp } from '../../utils/ip';
+import { resolveSkipLoginPage } from '../../utils/configFlag';
 import { getPluginConfig } from '../../utils/pluginConfig';
-import { resolveSkipLoginPage } from '../../utils/skipLoginPage';
-import { LOGOUT_USERINFO_TIMEOUT_MS, OIDC_SIGN_IN_PATH } from '../../../shared/constants';
-import type { StrapiContext, AuditAction } from '../../types';
-
-// Returns true only when the provider explicitly rejects the token (4xx).
-// Timeouts and network errors return false so we still redirect to the provider.
-async function isProviderSessionExpired(
-  userinfoEndpoint: string,
-  accessToken: string,
-): Promise<boolean> {
-  try {
-    const response = await fetch(userinfoEndpoint, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(LOGOUT_USERINFO_TIMEOUT_MS),
-    });
-    return !response.ok;
-  } catch {
-    return false;
-  }
-}
+import { OIDC_SIGN_IN_PATH } from '../../../shared/constants';
+import type { StrapiContext } from '../../types';
 
 export async function logout(ctx: StrapiContext) {
-  const config = getPluginConfig();
-  const auditLog = getAuditLogService();
-  const logoutUrl = config.OIDC_END_SESSION_ENDPOINT;
-  const adminPanelUrl = strapi.config.get('admin.url', '/admin') as string;
-  const loginUrl = `${adminPanelUrl}/auth/login`;
+  let oidcConfig;
+  try {
+    oidcConfig = await getOidcConfig();
+  } catch (err) {
+    strapi.log.error('[strapi-plugin-oidc] Failed to fetch OIDC config for logout:', err);
+    oidcConfig = null;
+  }
+
+  const idToken = readCookie(ctx, COOKIE_NAMES.idToken);
+  const userEmail = readCookie(ctx, COOKIE_NAMES.userEmail) ?? undefined;
+
+  const adminPath = resolveAdminPath(strapi);
+  const loginUrl = `${adminPath}/auth/login`;
   const whitelistService = getWhitelistService();
   const settings = await whitelistService.getSettings();
-  const fallbackUrl = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
+  const relativeFallback = resolveSkipLoginPage(strapi, settings?.skipLoginPage)
     ? OIDC_SIGN_IN_PATH
     : loginUrl;
 
-  // Read before clearing (cookies are gone after clearAuthCookies).
-  const isOidcSession = !!ctx.cookies.get(COOKIE_NAMES.authenticated);
-  const accessToken = ctx.cookies.get(COOKIE_NAMES.accessToken);
-  const userEmail = ctx.cookies.get(COOKIE_NAMES.userEmail) ?? undefined;
+  const publicUrl = getPluginConfig(strapi).OIDC_PUBLIC_URL || process.env.PUBLIC_URL || '';
+  const fallbackUrl = publicUrl
+    ? `${publicUrl.replace(/\/+$/, '')}${relativeFallback}`
+    : relativeFallback;
 
   clearAuthCookies(strapi, ctx);
 
-  if (!isOidcSession) {
+  if (!idToken) {
     return ctx.redirect(fallbackUrl);
   }
 
-  const logAudit = (action: AuditAction) =>
-    userEmail
-      ? auditLog.log({ action, email: userEmail, ip: getClientIp(ctx) })
-      : Promise.resolve();
-
-  if (logoutUrl && accessToken) {
-    const expired = await isProviderSessionExpired(config.OIDC_USERINFO_ENDPOINT, accessToken);
-    if (expired) {
-      await logAudit('session_expired').catch((err) => {
-        strapi.log.error('[strapi-plugin-oidc] Audit log failed on session expiry:', err);
+  const auditLog = getAuditLogService();
+  if (userEmail) {
+    await auditLog
+      .log({ action: 'logout', email: userEmail, ip: getClientIp(strapi, ctx) })
+      .catch((err) => {
+        strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
       });
-      return ctx.redirect(fallbackUrl);
-    }
-    logAudit('logout').catch((err) => {
-      strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
-    });
-    return ctx.redirect(logoutUrl);
   }
 
-  await logAudit('logout').catch((err) => {
-    strapi.log.error('[strapi-plugin-oidc] Audit log failed on logout:', err);
-  });
-  ctx.redirect(logoutUrl || fallbackUrl);
+  if (oidcConfig) {
+    try {
+      const endSessionUrl = client.buildEndSessionUrl(oidcConfig, {
+        id_token_hint: idToken,
+        post_logout_redirect_uri: fallbackUrl,
+      });
+      return ctx.redirect(endSessionUrl.href);
+    } catch (err) {
+      strapi.log.error('[strapi-plugin-oidc] Failed to build end session URL:', err);
+    }
+  }
+
+  return ctx.redirect(fallbackUrl);
 }

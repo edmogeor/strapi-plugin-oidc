@@ -26,10 +26,14 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should set and get settings from store', async () => {
-      await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: true });
+      await whitelistService.setSettings({
+        useWhitelist: true,
+        enforceOIDC: true,
+        skipLoginPage: false,
+      });
       const settings = await whitelistService.getSettings();
 
-      expect(settings).toEqual({ useWhitelist: true, enforceOIDC: true });
+      expect(settings).toEqual({ useWhitelist: true, enforceOIDC: true, skipLoginPage: false });
     });
 
     it('should register a new user in whitelist', async () => {
@@ -41,7 +45,11 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should throw when user not in whitelist and whitelist is active', async () => {
-      await whitelistService.setSettings({ useWhitelist: true, enforceOIDC: false });
+      await whitelistService.setSettings({
+        useWhitelist: true,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
 
       await expect(
         whitelistService.checkWhitelistForEmail('unknown@whitelist.com'),
@@ -49,7 +57,11 @@ describe('OIDC Services E2E', () => {
     });
 
     it('should allow any user if whitelist is disabled', async () => {
-      await whitelistService.setSettings({ useWhitelist: false, enforceOIDC: false });
+      await whitelistService.setSettings({
+        useWhitelist: false,
+        enforceOIDC: false,
+        skipLoginPage: false,
+      });
 
       const result = await whitelistService.checkWhitelistForEmail('unknown@whitelist.com');
       expect(result).toBeNull();
@@ -81,13 +93,10 @@ describe('OIDC Services E2E', () => {
   });
 
   describe('Role Service', () => {
-    it('should list admin roles and default oidc roles', async () => {
-      const oidcRoles = roleService.getOidcRoles();
-      expect(oidcRoles).toHaveLength(1);
-      expect(oidcRoles[0].name).toBe('OIDC');
-
+    it('should list admin roles', async () => {
       const allRoles = await roleService.find();
       expect(Array.isArray(allRoles)).toBe(true);
+      expect(allRoles.length).toBeGreaterThan(0);
     });
   });
 
@@ -102,15 +111,12 @@ describe('OIDC Services E2E', () => {
       expect(defaultLocale).toBe('en');
     });
 
-    it('should properly format Gmail aliases', () => {
-      expect(oauthService.addGmailAlias('user@gmail.com', 'test')).toBe('user+test@gmail.com');
-    });
-
     it('renderSignUpSuccess should set isLoggedIn flag in localStorage', () => {
       const html = oauthService.renderSignUpSuccess(
         'mock-jwt',
         { id: 1, email: 'test@test.com' },
         'mock-nonce',
+        false,
       );
       expect(html).toContain("localStorage.setItem('isLoggedIn', 'true')");
     });
