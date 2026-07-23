@@ -137,6 +137,8 @@ describe('Backchannel Logout E2E', () => {
         sub: BC_TEST_SUB,
         jti: 'jti-wrong-issuer',
       });
+      const logs = await queryAuditLog(strapi, 'logout');
+      expect(logs).toHaveLength(0);
     });
 
     it('returns 200 when valid token has wrong audience', async () => {
@@ -145,6 +147,8 @@ describe('Backchannel Logout E2E', () => {
         sub: BC_TEST_SUB,
         jti: 'jti-wrong-aud',
       });
+      const logs = await queryAuditLog(strapi, 'logout');
+      expect(logs).toHaveLength(0);
     });
 
     it('returns 200 when token lacks the backchannel-logout event', async () => {
@@ -154,6 +158,8 @@ describe('Backchannel Logout E2E', () => {
         jti: 'jti-no-event',
         events: {},
       });
+      const logs = await queryAuditLog(strapi, 'logout');
+      expect(logs).toHaveLength(0);
     });
 
     it('returns 200 when configured — logs backchannel_logout and rejects replayed JTI', async () => {
@@ -180,6 +186,8 @@ describe('Backchannel Logout E2E', () => {
 
     it('returns 200 when configured — rejects tokens missing the sub claim', async () => {
       await assertLogoutAccepted({ aud: 'mock-client-id', jti: 'jti-no-sub' });
+      const logs = await queryAuditLog(strapi, 'logout');
+      expect(logs).toHaveLength(0);
     });
 
     it('returns 200 when the token has no jti (no replay protection applied)', async () => {

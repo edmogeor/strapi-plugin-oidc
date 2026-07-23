@@ -47,12 +47,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         },
       });
     },
-    addGmailAlias(baseEmail: string, baseAlias: string): string {
-      if (!baseAlias) return baseEmail;
-      const alias = baseAlias.replace(/\+/g, '');
-      const atIndex = baseEmail.indexOf('@');
-      return `${baseEmail.slice(0, atIndex)}+${alias}${baseEmail.slice(atIndex)}`;
-    },
+
     localeFindByHeader(headers: Record<string, string>): string {
       return headers['accept-language']?.includes('ja') ? 'ja' : 'en';
     },
@@ -95,8 +90,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       locale: string = 'en',
     ) {
       const config = strapi.config.get('plugin::strapi-plugin-oidc') as
-        | { REMEMBER_ME?: boolean }
-        | undefined;
+        { REMEMBER_ME?: boolean } | undefined;
       const isRememberMe = !!config?.REMEMBER_ME;
       const secureFlag = secure ? '; Secure' : '';
       const maxAgeSuffix = isRememberMe ? '; max-age=1209600' : '';
@@ -154,8 +148,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       const deviceId = randomUUID();
 
       const config = strapi.config.get('plugin::strapi-plugin-oidc') as
-        | { REMEMBER_ME?: boolean }
-        | undefined;
+        { REMEMBER_ME?: boolean } | undefined;
       const rememberMe = !!config?.REMEMBER_ME;
 
       const smAdmin = sessionManager('admin');
@@ -173,11 +166,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
         (strapi.config.get('admin.auth.domain') as string | undefined);
       const path = strapi.config.get('admin.auth.cookie.path', '/admin') as string;
       const sameSite = strapi.config.get('admin.auth.cookie.sameSite', 'lax') as
-        | 'lax'
-        | 'strict'
-        | 'none'
-        | boolean
-        | undefined;
+        'lax' | 'strict' | 'none' | boolean | undefined;
 
       const cookieOptions: Parameters<StrapiContext['cookies']['set']>[2] = {
         httpOnly: true,

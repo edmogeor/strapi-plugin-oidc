@@ -81,13 +81,10 @@ describe('OIDC Services E2E', () => {
   });
 
   describe('Role Service', () => {
-    it('should list admin roles and default oidc roles', async () => {
-      const oidcRoles = roleService.getOidcRoles();
-      expect(oidcRoles).toHaveLength(1);
-      expect(oidcRoles[0].name).toBe('OIDC');
-
+    it('should list admin roles', async () => {
       const allRoles = await roleService.find();
       expect(Array.isArray(allRoles)).toBe(true);
+      expect(allRoles.length).toBeGreaterThan(0);
     });
   });
 
@@ -100,10 +97,6 @@ describe('OIDC Services E2E', () => {
 
       const defaultLocale = oauthService.localeFindByHeader({});
       expect(defaultLocale).toBe('en');
-    });
-
-    it('should properly format Gmail aliases', () => {
-      expect(oauthService.addGmailAlias('user@gmail.com', 'test')).toBe('user+test@gmail.com');
     });
 
     it('renderSignUpSuccess should set isLoggedIn flag in localStorage', () => {

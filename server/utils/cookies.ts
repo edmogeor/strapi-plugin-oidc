@@ -57,11 +57,21 @@ function getExpiredCookieOptions(strapi: Core.Strapi, ctx: StrapiContext) {
 export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   const options = getExpiredCookieOptions(strapi, ctx);
   const secureFlag = shouldMarkSecure(strapi, ctx);
+
+  const pkceCookieOptions = {
+    httpOnly: true,
+    secure: secureFlag,
+    sameSite: 'lax' as const,
+    path: '/strapi-plugin-oidc',
+    maxAge: 0,
+    expires: new Date(0),
+  };
+
   ctx.cookies.set(COOKIE_NAMES.adminRefresh, '', options);
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/',
+    path: '/admin',
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),
@@ -69,9 +79,16 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/',
+    path: '/admin',
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),
   });
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.state, secureFlag), '', pkceCookieOptions);
+  ctx.cookies.set(
+    reconcileCookieName(COOKIE_NAMES.codeVerifier, secureFlag),
+    '',
+    pkceCookieOptions,
+  );
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.nonce, secureFlag), '', pkceCookieOptions);
 }

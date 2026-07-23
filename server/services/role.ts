@@ -9,14 +9,6 @@ interface OidcRoleInput {
 export default function roleService({ strapi }: { strapi: Core.Strapi }) {
   return {
     OIDC_TYPE: '4',
-    getOidcRoles() {
-      return [
-        {
-          oauth_type: this.OIDC_TYPE,
-          name: 'OIDC',
-        },
-      ];
-    },
     async oidcRoles() {
       return strapi.query(CONTENT_TYPES.ROLES).findOne({
         where: {

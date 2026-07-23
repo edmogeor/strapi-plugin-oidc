@@ -91,7 +91,7 @@ async function validateLogoutToken(
   issuer: string,
   clientId: string,
   token: string,
-): Promise<{ sub: string } | null> {
+): Promise<{ sub?: string; sid?: string } | null> {
   try {
     const jwks = jose.createRemoteJWKSet(new URL(jwksUri));
     const { payload } = await jose.jwtVerify(token, jwks, {
@@ -99,21 +99,29 @@ async function validateLogoutToken(
       audience: clientId,
     });
 
+    if (payload.nonce) {
+      return null;
+    }
+
     const events = payload.events as unknown;
+    const eventsObj = events;
     if (
-      !events ||
-      typeof events !== 'object' ||
-      !(events as Record<string, unknown>)['http://schemas.openid.net/event/backchannel-logout']
+      typeof eventsObj !== 'object' ||
+      eventsObj === null ||
+      typeof (eventsObj as Record<string, unknown>)[
+        'http://schemas.openid.net/event/backchannel-logout'
+      ] !== 'object'
     ) {
       return null;
     }
 
-    const sub = payload.sub;
-    if (!sub || typeof sub !== 'string') {
+    const sub = typeof payload.sub === 'string' ? payload.sub : undefined;
+    const sid = typeof payload.sid === 'string' ? payload.sid : undefined;
+    if (!sub && !sid) {
       return null;
     }
 
-    return { sub };
+    return { sub, sid };
   } catch {
     return null;
   }
@@ -177,14 +185,26 @@ export async function backchannelLogout(ctx: StrapiContext) {
 
     let user: { id: number } | null = null;
     try {
-      const raw = await strapi.db.connection.raw(
-        'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
-        [result.sub],
-      );
-      const rows = raw?.rows ?? raw;
-      const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-      if (firstRow && typeof firstRow.id === 'number') {
-        user = { id: firstRow.id };
+      if (result.sub) {
+        const raw = await strapi.db.connection.raw(
+          'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
+          [result.sub],
+        );
+        const rows = raw?.rows ?? raw;
+        const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+        if (firstRow && typeof firstRow.id === 'number') {
+          user = { id: firstRow.id };
+        }
+      } else if (result.sid) {
+        const raw = await strapi.db.connection.raw(
+          'SELECT id FROM admin_users WHERE oidc_sub = ? LIMIT 1',
+          [result.sid],
+        );
+        const rows = raw?.rows ?? raw;
+        const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+        if (firstRow && typeof firstRow.id === 'number') {
+          user = { id: firstRow.id };
+        }
       }
     } catch {
       user = null;

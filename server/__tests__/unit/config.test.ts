@@ -62,35 +62,27 @@ describe('pluginConfigSchema', () => {
         OIDC_ENFORCE: null,
         AUDIT_LOG_RETENTION_DAYS: 90,
         OIDC_GROUP_FIELD: 'groups',
-        OIDC_GROUP_ROLE_MAP: '{}',
+        OIDC_GROUP_ROLE_MAP: {},
         OIDC_REQUIRE_EMAIL_VERIFIED: true,
         OIDC_FORCE_SECURE_COOKIES: false,
         OIDC_SKIP_LOGIN_PAGE: null,
       };
       for (const [key, expected] of Object.entries(defaults)) {
-        expect((result as Record<string, unknown>)[key]).toBe(expected);
+        expect((result as Record<string, unknown>)[key]).toStrictEqual(expected);
       }
     });
   });
 });
 
 describe('parseGroupRoleMap', () => {
-  it('parses a valid JSON string', () => {
-    const result = parseGroupRoleMap('{"admin":["1","2"]}');
-    expect(result).toEqual({ admin: ['1', '2'] });
-  });
-
-  it('returns empty object for invalid JSON', () => {
-    expect(parseGroupRoleMap('invalid')).toEqual({});
-  });
-
   it('returns the object as-is if already an object', () => {
     const obj = { admin: ['1'] };
     expect(parseGroupRoleMap(obj)).toBe(obj);
   });
 
-  it('returns empty object for non-object non-string values', () => {
+  it('returns empty object for non-object values', () => {
     expect(parseGroupRoleMap(null)).toEqual({});
     expect(parseGroupRoleMap(42)).toEqual({});
+    expect(parseGroupRoleMap('invalid')).toEqual({});
   });
 });

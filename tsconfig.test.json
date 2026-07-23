@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["server", "shared"],
+  "exclude": ["node_modules/", "build/", "dist/", ".yalc", "admin"]
+}

@@ -32,6 +32,7 @@ export const RATE_LIMIT = {
 
 export const CACHE_TTL = {
   SETTINGS_MS: 5 * 60 * 1000, // 5 minutes
+  DISCOVERY_MS: 15 * 60 * 1000, // 15 minutes
 } as const;
 
 export const DEFAULT_RETENTION_DAYS = 90;

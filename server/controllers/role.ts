@@ -3,10 +3,15 @@ import { getRoleService } from '../utils/services';
 import { roleUpdateSchema } from '../schemas';
 import { toMessage } from '../../shared/utils';
 
+const OIDC_TYPE_DEF: { oauth_type: string; name: string; role?: unknown } = {
+  oauth_type: '4',
+  name: 'OIDC',
+};
+
 async function find(ctx: Context) {
   const roleService = getRoleService();
   const roles = await roleService.find();
-  const oidcConstants = roleService.getOidcRoles();
+  const oidcConstants = [OIDC_TYPE_DEF];
 
   for (const oidc of oidcConstants) {
     const matchedRole = roles.find((r) => r.oauth_type === oidc.oauth_type);

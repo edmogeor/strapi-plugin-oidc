@@ -48,7 +48,6 @@ export interface OAuthService {
     locale?: string,
   ): string;
   renderSignUpError(message: string, locale?: string): string;
-  addGmailAlias(email: string, alias: string): string;
 }
 
 export interface AdminRole {
@@ -60,7 +59,6 @@ export interface AdminRole {
 
 export interface RoleService {
   oidcRoles(): Promise<{ roles: string[] } | null>;
-  getOidcRoles(): AdminRole[];
   find(): Promise<AdminRole[]>;
   update(roles: unknown): Promise<void>;
 }

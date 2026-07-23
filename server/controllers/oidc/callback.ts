@@ -30,9 +30,10 @@ function readAndClearPkceCookies(ctx: StrapiContext): {
   const oidcState = readCookie(ctx, COOKIE_NAMES.state);
   const codeVerifier = readCookie(ctx, COOKIE_NAMES.codeVerifier);
   const oidcNonce = readCookie(ctx, COOKIE_NAMES.nonce);
-  ctx.cookies.set(COOKIE_NAMES.state, null, { maxAge: 0, expires: new Date(0) });
-  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null, { maxAge: 0, expires: new Date(0) });
-  ctx.cookies.set(COOKIE_NAMES.nonce, null, { maxAge: 0, expires: new Date(0) });
+  const expired = { maxAge: 0, expires: new Date(0) };
+  ctx.cookies.set(COOKIE_NAMES.state, null, expired);
+  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null, expired);
+  ctx.cookies.set(COOKIE_NAMES.nonce, null, expired);
   return { oidcState, codeVerifier, oidcNonce };
 }
 
@@ -99,20 +100,19 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
 
     const claims = tokens.claims();
     const sub = claims?.sub;
+    if (!sub || typeof sub !== 'string') {
+      throw new Error('ID token missing required "sub" claim');
+    }
     const idToken = tokens.id_token;
 
-    const userInfoData = await client.fetchUserInfo(
-      oidcConfig,
-      tokens.access_token,
-      sub ?? client.skipSubjectCheck,
-    );
+    const userInfoData = await client.fetchUserInfo(oidcConfig, tokens.access_token, sub);
 
     const secureFlag = shouldMarkSecure(strapi, ctx);
 
     if (idToken) {
       ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), idToken, {
         httpOnly: true,
-        path: '/',
+        path: '/admin',
         secure: secureFlag,
         sameSite: 'lax' as const,
       });
@@ -131,20 +131,18 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
         ctx,
       );
 
-    if (sub) {
-      try {
-        await strapi.db.connection.raw('UPDATE admin_users SET oidc_sub = ? WHERE id = ?', [
-          sub,
-          activateUser.id,
-        ]);
-      } catch (err: unknown) {
-        strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
-      }
+    try {
+      await strapi.db.connection.raw('UPDATE admin_users SET oidc_sub = ? WHERE id = ?', [
+        sub,
+        activateUser.id,
+      ]);
+    } catch (err: unknown) {
+      strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
     }
 
     ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), activateUser.email, {
       httpOnly: true,
-      path: '/',
+      path: '/admin',
       secure: secureFlag,
       sameSite: 'lax' as const,
     });

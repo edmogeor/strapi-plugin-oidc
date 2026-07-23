@@ -48,12 +48,21 @@ export async function handleCallbackError(
   const errorInfo = classifyOidcError(e, userInfo);
   const message = toMessage(e);
 
+  let detailsParams: Record<string, string> | undefined;
+  if (errorInfo.action === 'login_failure') {
+    detailsParams = { message };
+  } else if (errorInfo.action === 'whitelist_rejected' && userInfo?.email) {
+    detailsParams = { email: userInfo.email };
+  } else if (errorInfo.action === 'email_not_verified' && userInfo?.email) {
+    detailsParams = { email: userInfo.email };
+  }
+
   await auditLog.log({
     action: errorInfo.action,
     email: userInfo?.email,
     ip: getClientIp(strapi, ctx),
     detailsKey: errorInfo.action,
-    detailsParams: errorInfo.action === 'login_failure' ? { message } : undefined,
+    detailsParams,
   });
   strapi.log.error({
     code: errorInfo.code,

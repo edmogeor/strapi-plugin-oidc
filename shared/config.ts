@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { GroupRoleMap } from './constants';
 
+const groupRoleMapSchema = z.record(z.string(), z.array(z.string()));
+
 export const oidcUserInfoSchema = z
   .object({
     email: z.string().optional(),
@@ -42,9 +44,16 @@ export const pluginConfigSchema = z.object({
   OIDC_ENFORCE: coerceBoolNullable,
   AUDIT_LOG_RETENTION_DAYS: z.number().default(90),
   OIDC_GROUP_FIELD: z.string().default('groups'),
-  OIDC_GROUP_ROLE_MAP: z
-    .union([z.string(), z.record(z.string(), z.array(z.string()))])
-    .default('{}'),
+  OIDC_GROUP_ROLE_MAP: z.preprocess((v) => {
+    if (typeof v === 'string') {
+      try {
+        return JSON.parse(v);
+      } catch {
+        return {};
+      }
+    }
+    return v;
+  }, groupRoleMapSchema.default({})),
   OIDC_REQUIRE_EMAIL_VERIFIED: coerceBool(true),
   OIDC_TRUSTED_IP_HEADER: z.string().default(''),
   OIDC_ISSUER: z.string().default(''),
@@ -94,15 +103,8 @@ export function parseClientAssertion(raw: unknown): ClientAssertionConfig | null
 }
 
 export function parseGroupRoleMap(raw: unknown): GroupRoleMap {
-  if (typeof raw !== 'string') {
-    if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-      return raw as GroupRoleMap;
-    }
-    return {};
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as GroupRoleMap;
   }
-  try {
-    return JSON.parse(raw) as GroupRoleMap;
-  } catch {
-    return {};
-  }
+  return {};
 }

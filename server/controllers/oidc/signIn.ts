@@ -39,7 +39,7 @@ export async function oidcSignIn(ctx: StrapiContext) {
       maxAge: PKCE_COOKIE_MAX_AGE_MS,
       secure: secureFlag,
       sameSite: 'lax' as const,
-      path: '/',
+      path: '/strapi-plugin-oidc',
     };
 
     ctx.cookies.set(

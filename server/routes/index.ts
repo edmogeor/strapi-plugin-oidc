@@ -103,13 +103,13 @@ export default {
         method: 'GET',
         path: '/logout',
         handler: 'oidc.logout',
-        config: { auth: false },
+        config: { auth: false, middlewares: [rateLimitMiddleware] },
       },
       {
         method: 'POST',
         path: '/logout',
         handler: 'oidc.logout',
-        config: { auth: false },
+        config: { auth: false, middlewares: [rateLimitMiddleware] },
       },
       {
         method: 'POST',

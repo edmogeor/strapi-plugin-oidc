@@ -3,9 +3,10 @@ import type { Configuration, ClientAuth } from 'openid-client';
 import * as jose from 'jose';
 import type { PluginConfig } from '../../shared/config';
 import { parseClientAssertion } from '../../shared/config';
-import { OIDC_DISCOVERY_TIMEOUT_MS } from '../../shared/constants';
+import { OIDC_DISCOVERY_TIMEOUT_MS, CACHE_TTL } from '../../shared/constants';
 
 let configPromise: Promise<Configuration> | null = null;
+let configCreatedAt = 0;
 
 function tryDiscovery(
   issuer: string,
@@ -37,7 +38,17 @@ function tryDiscovery(
 }
 
 export function getOidcConfig(): Promise<Configuration> {
+  const now = Date.now();
+  if (configPromise && now - configCreatedAt < CACHE_TTL.DISCOVERY_MS) {
+    return configPromise;
+  }
+
+  if (configPromise && now - configCreatedAt >= CACHE_TTL.DISCOVERY_MS) {
+    configPromise = null;
+  }
+
   if (!configPromise) {
+    configCreatedAt = Date.now();
     const config = strapi.config.get('plugin::strapi-plugin-oidc') as PluginConfig;
     const { OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET } = config;
 
@@ -69,4 +80,5 @@ export function getOidcConfig(): Promise<Configuration> {
 
 export function resetOidcConfig(): void {
   configPromise = null;
+  configCreatedAt = 0;
 }

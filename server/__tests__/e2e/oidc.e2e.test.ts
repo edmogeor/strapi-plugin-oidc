@@ -217,6 +217,8 @@ describe('OIDC E2E Tests', () => {
       await assertInvalidTokenRejected('not.a.valid.jwt.at.all');
       const rows = await queryAuditLog(strapi, 'login_failure');
       expect(rows.length).toBeGreaterThan(0);
+      const detailParams = rows[0]?.detailsParams as Record<string, string> | undefined;
+      expect(detailParams?.message).toBeTruthy();
     });
 
     it('does not reflect user-supplied values in error responses', async () => {

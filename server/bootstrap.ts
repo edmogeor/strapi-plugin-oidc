@@ -26,8 +26,11 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
 
   try {
     await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sub TEXT');
-  } catch {
-    // Column already exists
+  } catch (err) {
+    const msg = (err as { message?: string })?.message ?? '';
+    if (!msg.includes('Duplicate column') && !msg.includes('already exists')) {
+      strapi.log.warn('[strapi-plugin-oidc] Failed to add oidc_sub column:', msg);
+    }
   }
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =

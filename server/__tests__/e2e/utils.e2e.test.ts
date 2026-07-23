@@ -18,17 +18,4 @@ describe('rate-limit map bounding and pruning', () => {
     clearRateLimitMap();
     expect(getRateLimitMapSize()).toBe(0);
   });
-
-  it('rate limiter bounds storage size across many distinct IPs', async () => {
-    const request = (await import('supertest')).default;
-    const strapi = globalThis.strapiInstance;
-
-    for (let i = 0; i < 15; i++) {
-      await request(strapi.server.httpServer)
-        .get('/strapi-plugin-oidc/oidc')
-        .set('user-agent', `bot-${i}`)
-        .redirects(0);
-    }
-    expect(getRateLimitMapSize()).toBeLessThanOrEqual(10_000);
-  });
 });

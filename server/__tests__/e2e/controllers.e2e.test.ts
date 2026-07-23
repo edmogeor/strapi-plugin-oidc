@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -323,9 +323,16 @@ describe('Controllers E2E', () => {
   });
 
   describe('OIDC Controller (Logout)', () => {
+    let savedAdminUrl: unknown;
+
     beforeEach(() => {
       resetOidcConfig();
       strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+      savedAdminUrl = strapi.config.get('admin.url');
+    });
+
+    afterEach(() => {
+      strapi.config.set('admin.url', savedAdminUrl);
     });
 
     it('should redirect to OIDC end session URL for OIDC sessions', async () => {
