@@ -49,7 +49,7 @@ async function addOidcColumns(strapi: Core.Strapi): Promise<void> {
   }
 }
 
-function resolveAdminPath(strapi: Core.Strapi): string {
+export function resolveAdminPath(strapi: Core.Strapi): string {
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =
     typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';
