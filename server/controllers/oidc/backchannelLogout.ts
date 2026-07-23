@@ -26,33 +26,26 @@ async function isJtiReplayed(jti: string): Promise<boolean> {
   pruneJtis();
   if (seenJtis.has(jti)) return true;
 
-  try {
-    const store = getJtiStore();
-    const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
-    const cutoff = Date.now() - JTI_TTL_MS;
-    if (stored && stored[jti] && stored[jti] > cutoff) return true;
-  } catch {
-    // Fall through — if the store is unavailable, rely on in-memory Map only
-  }
+  const store = getJtiStore();
+  const stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+  const cutoff = Date.now() - JTI_TTL_MS;
+  if (stored && stored[jti] && stored[jti] > cutoff) return true;
 
   return false;
 }
 
 async function persistJti(jti: string): Promise<void> {
   seenJtis.set(jti, Date.now());
-  try {
-    const store = getJtiStore();
-    let stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
-    if (!stored) stored = {};
-    const cutoff = Date.now() - JTI_TTL_MS;
-    for (const key of Object.keys(stored)) {
-      if (stored[key] < cutoff) delete stored[key];
-    }
-    stored[jti] = Date.now();
-    await store.set({ key: JTI_STORE_KEY, value: stored });
-  } catch {
-    // Accept in-memory-only persistence when the store is unavailable
+
+  const store = getJtiStore();
+  let stored = (await store.get({ key: JTI_STORE_KEY })) as Record<string, number> | null;
+  if (!stored) stored = {};
+  const cutoff = Date.now() - JTI_TTL_MS;
+  for (const key of Object.keys(stored)) {
+    if (stored[key] < cutoff) delete stored[key];
   }
+  stored[jti] = Date.now();
+  await store.set({ key: JTI_STORE_KEY, value: stored });
 }
 
 export async function pruneStoredJtis(): Promise<void> {
@@ -143,6 +136,22 @@ async function lookupUserByOidcSub(
   return null;
 }
 
+async function lookupUserByOidcSid(
+  strapi: StrapiContext['strapi'],
+  oidcSid: string,
+): Promise<{ id: number } | null> {
+  const raw = await strapi.db.connection.raw(
+    'SELECT id FROM admin_users WHERE oidc_sid = ? LIMIT 1',
+    [oidcSid],
+  );
+  const rows = raw?.rows ?? raw;
+  const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (firstRow && typeof firstRow.id === 'number') {
+    return { id: firstRow.id };
+  }
+  return null;
+}
+
 export async function backchannelLogout(ctx: StrapiContext) {
   const auditLog = getAuditLogService();
   const ip = getClientIp(strapi, ctx);
@@ -201,9 +210,11 @@ export async function backchannelLogout(ctx: StrapiContext) {
 
     let user: { id: number } | null = null;
     try {
-      const lookupValue = result.sub ?? result.sid;
-      if (lookupValue) {
-        user = await lookupUserByOidcSub(strapi, lookupValue);
+      if (result.sub) {
+        user = await lookupUserByOidcSub(strapi, result.sub);
+      }
+      if (!user && result.sid) {
+        user = await lookupUserByOidcSid(strapi, result.sid);
       }
     } catch {
       user = null;

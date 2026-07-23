@@ -62,7 +62,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
     httpOnly: true,
     secure: secureFlag,
     sameSite: 'lax' as const,
-    path: '/strapi-plugin-oidc',
+    path: '/',
     maxAge: 0,
     expires: new Date(0),
   };
@@ -71,7 +71,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/admin',
+    path: '/',
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),
@@ -79,7 +79,7 @@ export function clearAuthCookies(strapi: Core.Strapi, ctx: StrapiContext) {
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), '', {
     httpOnly: true,
     secure: secureFlag,
-    path: '/admin',
+    path: '/',
     sameSite: 'lax' as const,
     maxAge: 0,
     expires: new Date(0),

@@ -399,21 +399,20 @@ describe('cookies utils', () => {
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
-          c.name === reconcileCookieName(COOKIE_NAMES.idToken, false) && c.opts?.path === '/admin',
+          c.name === reconcileCookieName(COOKIE_NAMES.idToken, false) && c.opts?.path === '/',
       ),
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
-          c.name === reconcileCookieName(COOKIE_NAMES.userEmail, false) &&
-          c.opts?.path === '/admin',
+          c.name === reconcileCookieName(COOKIE_NAMES.userEmail, false) && c.opts?.path === '/',
       ),
     ).toBe(true);
     expect(
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.state, false) &&
-          c.opts?.path === '/strapi-plugin-oidc' &&
+          c.opts?.path === '/' &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);
@@ -421,7 +420,7 @@ describe('cookies utils', () => {
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.codeVerifier, false) &&
-          c.opts?.path === '/strapi-plugin-oidc' &&
+          c.opts?.path === '/' &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);
@@ -429,7 +428,7 @@ describe('cookies utils', () => {
       ctxCookies.calls.some(
         (c: CookieCall) =>
           c.name === reconcileCookieName(COOKIE_NAMES.nonce, false) &&
-          c.opts?.path === '/strapi-plugin-oidc' &&
+          c.opts?.path === '/' &&
           c.opts?.maxAge === 0,
       ),
     ).toBe(true);

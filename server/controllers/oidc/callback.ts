@@ -103,6 +103,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     if (!sub || typeof sub !== 'string') {
       throw new Error('ID token missing required "sub" claim');
     }
+    const sid = typeof claims?.sid === 'string' ? claims.sid : undefined;
     const idToken = tokens.id_token;
 
     const userInfoData = await client.fetchUserInfo(oidcConfig, tokens.access_token, sub);
@@ -112,7 +113,7 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
     if (idToken) {
       ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.idToken, secureFlag), idToken, {
         httpOnly: true,
-        path: '/admin',
+        path: '/',
         secure: secureFlag,
         sameSite: 'lax' as const,
       });
@@ -136,13 +137,19 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
         sub,
         activateUser.id,
       ]);
+      if (sid) {
+        await strapi.db.connection.raw('UPDATE admin_users SET oidc_sid = ? WHERE id = ?', [
+          sid,
+          activateUser.id,
+        ]);
+      }
     } catch (err: unknown) {
-      strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub:', err);
+      strapi.log.error('[strapi-plugin-oidc] Failed to persist oidc_sub/oidc_sid:', err);
     }
 
     ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.userEmail, secureFlag), activateUser.email, {
       httpOnly: true,
-      path: '/admin',
+      path: '/',
       secure: secureFlag,
       sameSite: 'lax' as const,
     });

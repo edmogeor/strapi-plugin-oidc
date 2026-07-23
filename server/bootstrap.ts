@@ -32,6 +32,15 @@ export default async function bootstrap({ strapi }: { strapi: Core.Strapi }) {
       strapi.log.warn('[strapi-plugin-oidc] Failed to add oidc_sub column:', msg);
     }
   }
+
+  try {
+    await strapi.db.connection.raw('ALTER TABLE admin_users ADD COLUMN oidc_sid TEXT');
+  } catch (err) {
+    const msg = (err as { message?: string })?.message ?? '';
+    if (!msg.includes('Duplicate column') && !msg.includes('already exists')) {
+      strapi.log.warn('[strapi-plugin-oidc] Failed to add oidc_sid column:', msg);
+    }
+  }
   const rawAdminUrl = strapi.config.get('admin.url');
   const adminUrl =
     typeof rawAdminUrl === 'string' && rawAdminUrl.length > 0 ? rawAdminUrl : '/admin';
