@@ -1,4 +1,4 @@
-import strapiUtils from '@strapi/utils';
+import * as strapiUtils from '@strapi/utils';
 import generator from 'generate-password';
 import { randomUUID } from 'node:crypto';
 import type { Core, UID } from '@strapi/types';

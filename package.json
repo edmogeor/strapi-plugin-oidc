@@ -19,7 +19,7 @@
     "test": "npm run typecheck && npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run -c vitest.config.unit.ts",
     "test:e2e": "vitest run -c vitest.config.e2e.ts",
-    "lint": "eslint",
+    "lint": "oxlint",
     "fallow:check": "fallow",
     "fallow:fix": "fallow fix --yes",
     "prepare": "husky"
@@ -55,11 +55,11 @@
     "@strapi/icons": "^2.2.3",
     "@strapi/utils": "^5.51.0",
     "generate-password": "^1.7.1",
+    "jose": "^6.2.3",
     "lucide-react": "^1.25.0",
     "openid-client": "^6.8.4",
     "rate-limiter-flexible": "^11.2.0",
     "react-intl": "^6.8.9",
-    "jose": "^6.2.3",
     "zod": "^3.25.76"
   },
   "author": {
@@ -87,27 +87,30 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@strapi/sdk-plugin": "^6.1.1",
+    "@strapi/strapi": "^5.51.0",
+    "@strapi/typescript-utils": "^5.51.0",
     "@types/node": "^26.1.1",
     "@types/supertest": "^7.2.1",
-    "@typescript-eslint/eslint-plugin": "^8.64.0",
-    "@typescript-eslint/parser": "^8.64.0",
     "@vitest/coverage-v8": "^4.1.10",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
-    "eslint": "^10.7.0",
-    "globals": "^17.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.1.0",
     "msw": "^2.15.0",
+    "oxlint": "^1.75.0",
     "prettier": "^3.9.5",
     "react": "^18.3.1",
     "react-router-dom": "^6.30.4",
     "styled-components": "^6.3.12",
     "supertest": "^7.2.2",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "react-intl": {
+      "typescript": ">=4.7"
+    }
   },
   "exports": {
     "./package.json": "./package.json",

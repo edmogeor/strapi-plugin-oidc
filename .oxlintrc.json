@@ -1,0 +1,49 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "typescript", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "warn",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "no-control-regex": "off",
+    "typescript/prefer-namespace-keyword": "off",
+    "eslint/sort-keys": "off",
+    "eslint/sort-imports": "off",
+    "eslint/curly": "off",
+    "eslint/capitalized-comments": "off",
+    "eslint/complexity": "off",
+    "eslint/max-params": "off",
+    "eslint/max-statements": "off",
+    "eslint/no-magic-numbers": "off",
+    "eslint/no-ternary": "off",
+    "eslint/no-implicit-coercion": "off",
+    "eslint/no-underscore-dangle": "off",
+    "eslint/id-length": "off",
+    "eslint/prefer-destructuring": "off",
+    "unicorn/no-null": "off",
+    "unicorn/prefer-global-this": "off",
+
+    "unicorn/numeric-separators-style": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "import/no-anonymous-default-export": "off"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "jest": true
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "test-app/**",
+    "node_modules/**",
+    ".fallow/**",
+    "coverage/**",
+    "*.config.ts",
+    "references/**"
+  ]
+}
