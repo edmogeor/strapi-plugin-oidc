@@ -67,15 +67,6 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Update package.json version and commit
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          npm version $VERSION --allow-same-version --no-git-tag-version
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git commit -am "chore(release): bump version to ${VERSION} [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:main || echo "Could not push to main"
-
       - name: Install npm for trusted publishing
         run: npm install -g npm@12.0.2
 
