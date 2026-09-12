@@ -18,7 +18,7 @@ export function reconcileCookieName(name: string, secure: boolean): string {
   return name;
 }
 
-export function readCookie(ctx: StrapiContext, name: string): string | undefined {
+export function readCookie(ctx: Pick<StrapiContext, 'cookies'>, name: string): string | undefined {
   const value = ctx.cookies.get(name);
   if (value !== undefined) return value;
   if (name.startsWith('__Host-')) {
