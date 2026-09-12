@@ -35,7 +35,7 @@ function parseAcceptLanguage(header: string): WeightedTag[] {
       acc.push({ tag: match[1].toLowerCase(), q: Number.isFinite(q) ? q : 1 });
       return acc;
     }, [])
-    .sort((a, b) => b.q - a.q);
+    .toSorted((a, b) => b.q - a.q);
 }
 
 export function negotiateLocale(acceptLanguage?: string | null): string {

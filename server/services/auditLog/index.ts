@@ -72,13 +72,13 @@ export default function auditLogService({ strapi }: { strapi: Core.Strapi }) {
     },
 
     async clearAll(): Promise<void> {
-      let deletedCount: number;
-      do {
+      const deleteBatch = async (): Promise<void> => {
         const result = await strapi.db
           .query(CONTENT_TYPES.AUDIT_LOG)
           .deleteMany({ limit: BATCH_SIZE });
-        deletedCount = result.count;
-      } while (deletedCount === BATCH_SIZE);
+        if (result.count === BATCH_SIZE) await deleteBatch();
+      };
+      await deleteBatch();
     },
 
     async cleanup(retentionDays: number): Promise<void> {

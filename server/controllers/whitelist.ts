@@ -101,17 +101,15 @@ async function register(ctx: Context) {
   }
 
   const whitelistService = getWhitelistService();
-  let acceptedCount = 0;
-  let alreadyWhitelistedCount = 0;
-  for (const singleEmail of validEmails) {
-    const alreadyWhitelisted = await whitelistService.hasUser(singleEmail);
-    if (alreadyWhitelisted) {
-      alreadyWhitelistedCount++;
-    } else {
+  const results = await Promise.all(
+    [...new Set(validEmails)].map(async (singleEmail) => {
+      if (await whitelistService.hasUser(singleEmail)) return 'alreadyWhitelisted';
       await whitelistService.registerUser(singleEmail);
-      acceptedCount++;
-    }
-  }
+      return 'accepted';
+    }),
+  );
+  const acceptedCount = results.filter((result) => result === 'accepted').length;
+  const alreadyWhitelistedCount = results.length - acceptedCount;
 
   ctx.body = { acceptedCount, alreadyWhitelistedCount, rejectedEmails };
 }

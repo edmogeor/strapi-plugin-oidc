@@ -10,31 +10,30 @@ import { AUDIT_LOG_DEFAULTS } from '../../shared/constants';
 async function* ndjsonRowStream(
   service: AuditLogService,
   filters?: AuditLogFilters,
+  page = 1,
 ): AsyncGenerator<Buffer> {
-  let page = 1;
-  while (true) {
-    const { results } = await service.find({
-      page,
-      pageSize: AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE,
-      filters,
-    });
-    if (results.length === 0) return;
+  const { results } = await service.find({
+    page,
+    pageSize: AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE,
+    filters,
+  });
+  if (results.length === 0) return;
 
-    let chunk = '';
-    for (const row of results) {
-      chunk +=
-        JSON.stringify({
-          datetime: row.createdAt,
-          action: row.action,
-          email: row.email ?? null,
-          ip: row.ip ?? null,
-          details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
-        }) + '\n';
-    }
-    yield Buffer.from(chunk, 'utf8');
+  let chunk = '';
+  for (const row of results) {
+    chunk +=
+      JSON.stringify({
+        datetime: row.createdAt,
+        action: row.action,
+        email: row.email ?? null,
+        ip: row.ip ?? null,
+        details: row.detailsKey ? translateDetails(row.detailsKey, row.detailsParams) : null,
+      }) + '\n';
+  }
+  yield Buffer.from(chunk, 'utf8');
 
-    if (results.length < AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE) return;
-    page++;
+  if (results.length === AUDIT_LOG_DEFAULTS.EXPORT_PAGE_SIZE) {
+    yield* ndjsonRowStream(service, filters, page + 1);
   }
 }
 

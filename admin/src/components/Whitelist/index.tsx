@@ -82,7 +82,7 @@ export default function Whitelist({
               .trim()
               .toLowerCase(),
           )
-          .filter((email: string) => EMAIL_REGEX.test(email));
+          .filter((importedEmail: string) => EMAIL_REGEX.test(importedEmail));
         const count = await onImport(emails);
         if (count === 0) {
           toggleNotification({

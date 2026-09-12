@@ -33,19 +33,18 @@ function warnIfSecureCookiesForced(strapi: Core.Strapi): void {
 }
 
 async function addOidcColumns(strapi: Core.Strapi): Promise<void> {
-  const columns = ['oidc_sub', 'oidc_sid'];
-  for (const name of columns) {
+  const addColumn = async (name: string): Promise<void> => {
     try {
-      const hasColumn = await strapi.db.connection.schema.hasColumn('admin_users', name);
-      if (!hasColumn) {
-        await strapi.db.connection.schema.alterTable('admin_users', (table) => {
-          table.text(name);
-        });
+      if (!(await strapi.db.connection.schema.hasColumn('admin_users', name))) {
+        await strapi.db.connection.schema.alterTable('admin_users', (table) => table.text(name));
       }
     } catch (err) {
       strapi.log.warn(`[strapi-plugin-oidc] Failed to add ${name} column: ${toMessage(err)}`);
     }
-  }
+  };
+
+  await addColumn('oidc_sub');
+  await addColumn('oidc_sid');
 }
 
 export function resolveAdminPath(strapi: Core.Strapi): string {
@@ -98,19 +97,31 @@ async function syncEnvConfigToDatabase(strapi: Core.Strapi): Promise<void> {
     },
   ];
 
-  for (const { key, getter, dbField } of configSyncJobs) {
-    const configValue = getter(strapi);
-    if (configValue === null) continue;
-    try {
-      const whitelistService = getWhitelistService();
-      const settings = await whitelistService.getSettings();
-      if (settings[dbField] !== configValue) {
-        await whitelistService.setSettings({ ...settings, [dbField]: configValue });
-        strapi.log.info(`[strapi-plugin-oidc] ${key}=${configValue} written to database settings`);
-      }
-    } catch (err) {
-      strapi.log.error(errorMessages.ENFORCE_SYNC_ERROR, err);
+  const updates = configSyncJobs
+    .map(({ key, getter, dbField }) => ({ key, dbField, value: getter(strapi) }))
+    .filter(
+      (
+        update,
+      ): update is { key: string; dbField: 'enforceOIDC' | 'skipLoginPage'; value: boolean } =>
+        update.value !== null,
+    );
+  if (updates.length === 0) return;
+
+  try {
+    const whitelistService = getWhitelistService();
+    const settings = await whitelistService.getSettings();
+    const changed = updates.filter(({ dbField, value }) => settings[dbField] !== value);
+    if (changed.length === 0) return;
+
+    await whitelistService.setSettings({
+      ...settings,
+      ...Object.fromEntries(changed.map(({ dbField, value }) => [dbField, value])),
+    });
+    for (const { key, value } of changed) {
+      strapi.log.info(`[strapi-plugin-oidc] ${key}=${value} written to database settings`);
     }
+  } catch (err) {
+    strapi.log.error(errorMessages.ENFORCE_SYNC_ERROR, err);
   }
 }
 

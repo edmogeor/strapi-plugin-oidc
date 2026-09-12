@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 import { Flex, Typography } from '@strapi/design-system';
 
 const SwitchContainer = styled.label<{ $disabled?: boolean }>`

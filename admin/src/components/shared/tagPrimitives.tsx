@@ -1,6 +1,6 @@
 import { InputHTMLAttributes, ReactNode, RefObject, useRef, useState } from 'react';
 import { Box, Flex } from '@strapi/design-system';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 import { Cross } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';

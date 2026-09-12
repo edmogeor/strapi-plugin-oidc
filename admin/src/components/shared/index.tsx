@@ -11,7 +11,7 @@ import {
   Table,
   Typography,
 } from '@strapi/design-system';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 import { WarningCircle } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';

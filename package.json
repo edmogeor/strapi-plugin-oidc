@@ -105,7 +105,7 @@
     "react-router-dom": "^6.30.6",
     "styled-components": "^6.5.3",
     "supertest": "^7.2.2",
-    "typescript": "^7.0.2",
+    "typescript": "5.9.3",
     "vitest": "^4.1.11"
   },
   "overrides": {

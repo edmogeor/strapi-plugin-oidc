@@ -1,7 +1,7 @@
 import { Alert } from '@strapi/design-system';
 import getTrad from '../../utils/getTrad';
 import { useIntl } from 'react-intl';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 
 const AlertMessage = styled.div`
   position: fixed;

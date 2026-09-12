@@ -248,9 +248,11 @@ describe('AuditLog Controller', () => {
     const auditLogService = strapi
       .plugin('strapi-plugin-oidc')
       .service('auditLog') as AuditLogService;
-    for (let i = 0; i < N; i++) {
-      await auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' });
-    }
+    await Promise.all(
+      Array.from({ length: N }, (_, i) =>
+        auditLogService.log({ action: 'login_success', email: `u${i}@x.com`, ip: '1.1.1.1' }),
+      ),
+    );
     const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const ctx = createSilentExportCtx(strapi);
     await auditLogController.export(ctx);
@@ -270,9 +272,11 @@ describe('AuditLog Controller', () => {
     const auditLogService = strapi
       .plugin('strapi-plugin-oidc')
       .service('auditLog') as AuditLogService;
-    for (let i = 0; i < 501; i++) {
-      await auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' });
-    }
+    await Promise.all(
+      Array.from({ length: 501 }, (_, i) =>
+        auditLogService.log({ action: 'login_success', email: `e${i}@x.com`, ip: '1.1.1.1' }),
+      ),
+    );
     const auditLogController = getPluginController<AuditLogController>(strapi, 'auditLog');
     const realFind = auditLogService.find;
     let call = 0;

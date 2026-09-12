@@ -10,7 +10,7 @@ const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.js
 
 export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: string) {
   const tokenRefreshPath = `${adminPath}/token/refresh`;
-  const excludedPaths = [
+  const excludedPaths = new Set([
     `${adminPath}/login`,
     `${adminPath}/access-token`,
     `${adminPath}/logout`,
@@ -19,7 +19,7 @@ export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: stri
     `${adminPath}/register-admin`,
     `${adminPath}/forgot-password`,
     `${adminPath}/reset-password`,
-  ];
+  ]);
 
   return async function enforceOidcMiddleware(ctx: Context, next: Next): Promise<void> {
     const path = ctx.request.path;
@@ -27,7 +27,7 @@ export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: stri
     const isTokenRefresh = path === tokenRefreshPath;
     const isGet = ctx.request.method === 'GET';
     const isAdminPath = path === adminPath || path.startsWith(`${adminPath}/`);
-    const isExcluded = excludedPaths.includes(path);
+    const isExcluded = excludedPaths.has(path);
     const isStatic = STATIC_EXTENSIONS.some((ext) => path.endsWith(ext));
     const isAuthenticated = !!ctx.cookies.get(COOKIE_NAMES.adminRefresh);
 

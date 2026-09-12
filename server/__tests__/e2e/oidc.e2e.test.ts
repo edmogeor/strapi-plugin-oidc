@@ -578,8 +578,8 @@ describe('OIDC E2E Tests', () => {
 
       await setupGroupRoleMapping(strapi, { 'test-group': [targetRole.name] });
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const user = await fetchUserWithRoles(strapi, 'group-match@test.com');
       expect(user).not.toBeNull();
@@ -609,8 +609,8 @@ describe('OIDC E2E Tests', () => {
 
       await setupGroupRoleMapping(strapi, { 'audit-group': [targetRole.name] });
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const logs = await queryAuditLog(strapi, 'user_created');
       expect(logs.length).toBeGreaterThan(0);
@@ -696,8 +696,8 @@ describe('OIDC E2E Tests', () => {
 
       await setupGroupRoleMapping(strapi, {});
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const user = await fetchUserWithRoles(strapi, 'role-removed@test.com');
       const userRoleIds = user.roles.map((r: { id: number }) => String(r.id));
@@ -738,8 +738,8 @@ describe('OIDC E2E Tests', () => {
         'group-b': [roleB.name],
       });
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const user = await fetchUserWithRoles(strapi, 'group-changed@test.com');
       const userRoleIds = user.roles.map((r: { id: number }) => r.id);
@@ -771,8 +771,8 @@ describe('OIDC E2E Tests', () => {
       await setupGroupRoleMapping(strapi, { 'special-group': [targetRole.name] });
       await setSettings(strapi, true, false);
 
-      const agent = createAgent();
-      const callbackRes = await loginAndExpectSuccess(agent);
+      const loginAgent = createAgent();
+      const callbackRes = await loginAndExpectSuccess(loginAgent);
       expect(callbackRes.text).toContain('jwtToken');
 
       const user = await fetchUserWithRoles(strapi, 'whitelist-group@test.com');
@@ -810,8 +810,8 @@ describe('OIDC E2E Tests', () => {
 
       await setupGroupRoleMapping(strapi, { 'some-group': [groupMappedRole.name] });
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const user = await fetchUserWithRoles(strapi, 'existing-group@test.com');
       const userRoleIds = user.roles.map((r: { id: number }) => r.id);
@@ -851,8 +851,8 @@ describe('OIDC E2E Tests', () => {
 
       await setupGroupRoleMapping(strapi, { 'group-a': [roleA.name] });
 
-      const agent = createAgent();
-      await initiateLoginAndCallback(agent);
+      const loginAgent = createAgent();
+      await initiateLoginAndCallback(loginAgent);
 
       const user = await fetchUserWithRoles(strapi, 'no-role-user@test.com');
       const userRoleIds = user.roles.map((r: { id: number }) => r.id);

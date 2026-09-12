@@ -4,6 +4,7 @@
     "rootDir": ".",
     "module": "esnext",
     "target": "esnext",
+    "lib": ["ES2023", "DOM"],
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "esModuleInterop": true,

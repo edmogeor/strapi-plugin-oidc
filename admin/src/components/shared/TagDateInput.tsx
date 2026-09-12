@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useId, FocusEvent, KeyboardEvent } from 'react';
 import { Flex } from '@strapi/design-system';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 import { useIntl } from 'react-intl';
 import getTrad from '../../utils/getTrad';
 import { StartIconSlot, TagChip, TagInputWrapper } from './tagPrimitives';
@@ -186,8 +186,9 @@ function getDatesBetween(start: Date, end: Date): string[] {
   const dates: string[] = [];
   const current = new Date(Math.min(start.getTime(), end.getTime()));
   const endDate = new Date(Math.max(start.getTime(), end.getTime()));
-  while (current <= endDate) {
+  while (true) {
     dates.push(toUtcMidnightIso(current));
+    if (current >= endDate) break;
     current.setDate(current.getDate() + 1);
   }
   return dates;
@@ -260,7 +261,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
   const selectedIsoSet = new Set(value.flatMap((s) => s.dates));
   const pendingSorted =
     pendingDates.length >= 2
-      ? [...pendingDates].sort((a, b) => a.getTime() - b.getTime())
+      ? pendingDates.toSorted((a, b) => a.getTime() - b.getTime())
       : pendingDates;
   const rangeStart = pendingSorted[0] ?? null;
   const rangeEnd = pendingSorted[pendingSorted.length - 1] ?? null;
@@ -289,7 +290,7 @@ export function TagDateInput({ value = [], onChange, placeholder, startIcon }: T
   const handleConfirm = () => {
     if (pendingDates.length === 0) return;
 
-    const sortedPending = [...pendingDates].sort((a, b) => a.getTime() - b.getTime());
+    const sortedPending = pendingDates.toSorted((a, b) => a.getTime() - b.getTime());
     const display =
       sortedPending.length === 1
         ? DATE_FORMATTER.format(sortedPending[0])
