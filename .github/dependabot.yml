@@ -1,0 +1,57 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '@strapi/sdk-plugin'
+        versions: ['>=7.0.0']
+      - dependency-name: '@strapi/typescript-utils'
+        versions: ['>=6.0.0']
+      - dependency-name: '@strapi/strapi'
+        versions: ['>=6.0.0']
+      - dependency-name: '@vitest/coverage-v8'
+        versions: ['>=6.0.0']
+      - dependency-name: 'typescript'
+        versions: ['>=6.0.0']
+      - dependency-name: 'vitest'
+        versions: ['>=6.0.0']
+
+  - package-ecosystem: npm
+    directory: /test-app
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
+    groups:
+      minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '@strapi/plugin-cloud'
+        versions: ['>=6.0.0']
+      - dependency-name: '@strapi/plugin-users-permissions'
+        versions: ['>=6.0.0']
+      - dependency-name: '@strapi/strapi'
+        versions: ['>=6.0.0']
+      - dependency-name: 'better-sqlite3'
+        versions: ['>=13.0.0']
+      - dependency-name: 'react'
+        versions: ['>=19.0.0']
+      - dependency-name: 'react-dom'
+        versions: ['>=19.0.0']
+      - dependency-name: 'react-router-dom'
+        versions: ['>=7.0.0']
+      - dependency-name: 'typescript'
+        versions: ['>=6.0.0']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 1
