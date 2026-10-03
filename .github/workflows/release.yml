@@ -80,7 +80,7 @@ jobs:
         run: npm publish --provenance --access public
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body: ${{ steps.extract_release_notes.outputs.release_notes }}
           # The release tag name is automatically taken from the triggered github ref
