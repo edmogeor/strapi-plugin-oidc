@@ -44,17 +44,16 @@ describe('Skip Login Page E2E', () => {
       await enableSkipLoginPage();
     });
 
-    it('redirects GET /admin to /strapi-plugin-oidc/oidc when unauthenticated', async () => {
-      const res = await request(strapi.server.httpServer).get('/admin').redirects(0);
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
-    });
-
-    it('redirects GET /admin/auth/login to /strapi-plugin-oidc/oidc', async () => {
-      const res = await request(strapi.server.httpServer).get('/admin/auth/login').redirects(0);
-      expect(res.status).toBe(302);
-      expect(res.headers.location).toBe(OIDC_SIGN_IN_PATH);
-    });
+    it.each(['/admin', '/admin/auth/login'])(
+      'redirects unauthenticated GET %s to OIDC',
+      async (path) => {
+        const res = await request(strapi.server.httpServer).get(path).redirects(0);
+        expect(res.status).toBe(302);
+        const redirect = new URL(res.headers.location, 'https://example.com');
+        expect(redirect.pathname).toBe(OIDC_SIGN_IN_PATH);
+        expect(redirect.searchParams.get('redirectTo')).toBe(strapi.config.get('admin.url'));
+      },
+    );
 
     it('does NOT redirect excluded API path GET /admin/init', async () => {
       const res = await request(strapi.server.httpServer).get('/admin/init').redirects(0);
@@ -108,13 +107,13 @@ describe('Skip Login Page E2E', () => {
         .get('/admin')
         .set('Cookie', 'strapi_admin_refresh=fake-refresh-token')
         .redirects(0);
-      expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
+      expect(res.headers.location ?? '').not.toContain(OIDC_SIGN_IN_PATH);
     });
 
     it('does NOT redirect when skip is disabled', async () => {
       await disableSkipLoginPage();
       const res = await request(strapi.server.httpServer).get('/admin').redirects(0);
-      expect(res.headers.location).not.toBe(OIDC_SIGN_IN_PATH);
+      expect(res.headers.location ?? '').not.toContain(OIDC_SIGN_IN_PATH);
     });
   });
 

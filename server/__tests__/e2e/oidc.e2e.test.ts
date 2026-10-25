@@ -26,6 +26,8 @@ import {
 } from './test-helpers';
 import { t } from '../../i18n';
 import type { WhitelistService } from '../../types';
+import { getOidcSignInUrl } from '../../../admin/src/utils/shouldRedirect';
+import { runInNewContext } from 'node:vm';
 
 const createAgent = () => request.agent(strapi.server.httpServer);
 
@@ -65,6 +67,12 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.headers['content-security-policy']).toMatch(
       /^script-src 'nonce-[a-f0-9-]+'$/,
     );
+    const expired = callbackRes.headers['set-cookie'] as unknown as string[];
+    for (const name of ['oidc_state', 'oidc_code_verifier', 'oidc_nonce', 'oidc_redirect']) {
+      expect(expired.find((cookie) => cookie.startsWith(`${name}=`))).toContain(
+        'expires=Thu, 01 Jan 1970',
+      );
+    }
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
@@ -126,6 +134,197 @@ describe('OIDC E2E Tests', () => {
     await setSettings(strapi, false, false, false);
   });
 
+  describe('post-login destination', () => {
+    let savedAdminUrl: unknown;
+
+    beforeEach(async () => {
+      savedAdminUrl = strapi.config.get('admin.url');
+      strapi.config.set('admin.url', '/admin');
+      await applyDefaultOidcConfig(strapi);
+    });
+
+    afterEach(() => {
+      strapi.config.set('admin.url', savedAdminUrl);
+      strapi.config.set('plugin::strapi-plugin-oidc', MOCK_OIDC_CONFIG);
+    });
+
+    function getSuccessDestination(html: string): string {
+      const script = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
+      expect(script).toBeDefined();
+      const location = { href: '' };
+      runInNewContext(script!, {
+        window: { addEventListener: (_event: string, callback: () => void) => callback() },
+        document: { cookie: '' },
+        localStorage: { setItem: () => {} },
+        location,
+      });
+      return location.href;
+    }
+
+    async function completeLogin(signInUrl: string): Promise<string> {
+      const loginAgent = createAgent();
+      const login = await loginAgent.get(signInUrl).redirects(0);
+      expect(login.status).toBe(302);
+      storeNonceFromResponse(login);
+      const response = await performCallback(loginAgent, getStateFromLoginRes(login));
+      expect(response.status).toBe(200);
+      expect(response.text).toContain('jwtToken');
+      return getSuccessDestination(response.text);
+    }
+
+    it.each([
+      [
+        '/admin',
+        '/content-manager/collection-types/api::lesson.lesson/create?value=a%26b#details',
+        true,
+        '/admin/content-manager/collection-types/api::lesson.lesson/create?value=a%26b#details',
+      ],
+      ['/admin', '/admin/content-manager', false, '/admin/content-manager'],
+      ['/dashboard/', '/content-manager', false, '/dashboard/content-manager'],
+      [
+        'https://admin.example/dashboard',
+        '/content-manager',
+        true,
+        'https://admin.example/dashboard/content-manager',
+      ],
+    ])('preserves %s destination %s through SSO', async (adminUrl, target, automatic, expected) => {
+      strapi.config.set('admin.url', adminUrl);
+      const pathname = `${new URL(adminUrl, 'https://example.com').pathname.replace(/\/$/, '')}/auth/login`;
+      const signInUrl = getOidcSignInUrl(
+        { pathname, search: `?${new URLSearchParams({ redirectTo: target })}`, hash: '' },
+        automatic,
+      );
+      expect(await completeLogin(signInUrl)).toBe(expected);
+    });
+
+    it('preserves a deep link before the login page has mounted', async () => {
+      const signInUrl = getOidcSignInUrl(
+        { pathname: '/admin/content-manager', search: '?value=a%26b', hash: '#details' },
+        true,
+      );
+      expect(await completeLogin(signInUrl)).toBe('/admin/content-manager?value=a%26b#details');
+    });
+
+    it.each([
+      '/admin/content-manager?value=a%26b',
+      '/admin/auth/login?redirectTo=%2Fcontent-manager%3Fvalue%3Da%2526b',
+    ])('preserves the destination through the server-side redirect from %s', async (url) => {
+      const redirect = await request(strapi.server.httpServer).get(url).redirects(0);
+      expect(redirect.status).toBe(302);
+      expect(await completeLogin(redirect.headers.location)).toBe(
+        '/admin/content-manager?value=a%26b',
+      );
+    });
+
+    it('rejects protocol-relative paths after URL normalization when admin is mounted at root', async () => {
+      strapi.config.set('admin.url', '/');
+      expect(
+        await completeLogin('/strapi-plugin-oidc/oidc?redirectTo=%2F..%2F%2Fevil.example'),
+      ).toBe('/');
+    });
+
+    it('preserves destinations with Secure cookies', async () => {
+      strapi.config.set('plugin::strapi-plugin-oidc', {
+        ...MOCK_OIDC_CONFIG,
+        OIDC_FORCE_SECURE_COOKIES: true,
+      });
+      const login = await request(strapi.server.httpServer).get(
+        '/strapi-plugin-oidc/oidc?redirectTo=%2Fcontent-manager',
+      );
+      expect(login.status).toBe(302);
+      storeNonceFromResponse(login);
+      const cookies = login.headers['set-cookie'] as unknown as string[];
+      const destinationCookie = cookies.find((cookie) =>
+        cookie.startsWith('__Host-oidc_redirect='),
+      );
+      expect(destinationCookie).toContain('; secure');
+      expect(destinationCookie).toContain('; httponly');
+      const response = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc/callback')
+        .set('Cookie', cookies.map((cookie) => cookie.split(';')[0]).join('; '))
+        .query({ code: 'mock-code', state: getStateFromLoginRes(login) });
+      expect(getSuccessDestination(response.text)).toBe('/admin/content-manager');
+      const expired = response.headers['set-cookie'] as unknown as string[];
+      expect(expired.find((cookie) => cookie.startsWith('__Host-oidc_redirect='))).toContain(
+        'expires=Thu, 01 Jan 1970',
+      );
+    });
+
+    it('preserves the destination when automatic SSO falls back to the login page', async () => {
+      await setSettings(strapi, false, false, false);
+      const target = '/content-manager?value=a%26b#details';
+      const automatic = getOidcSignInUrl(
+        {
+          pathname: '/admin/auth/login',
+          search: `?${new URLSearchParams({ redirectTo: target })}`,
+          hash: '',
+        },
+        true,
+      );
+      const bounce = await request(strapi.server.httpServer).get(automatic).redirects(0);
+      const loginUrl = new URL(bounce.headers.location, 'https://example.com');
+      expect(loginUrl.pathname).toBe('/admin/auth/login');
+      expect(loginUrl.searchParams.get('oidc_redirect')).toBe('1');
+      const manual = getOidcSignInUrl(loginUrl);
+      expect(new URL(manual, loginUrl).searchParams.has('oidc_redirect')).toBe(false);
+      expect(await completeLogin(manual)).toBe('/admin/content-manager?value=a%26b#details');
+    });
+
+    it.each([
+      'https://evil.example/admin',
+      '//evil.example',
+      '/\\evil.example',
+      'javascript:alert(1)',
+      '/admin/../outside',
+      '/admin/%2e%2e/outside',
+      '/admin/auth/login',
+      '/auth/login',
+      '/admin/%61uth/login',
+      '/admin/logout',
+      '/admin/\nauth/login',
+      '/admin/%E0%A4%A',
+      '/content-manager' + 'a'.repeat(4000),
+    ])('falls back to admin home for unsafe destination %#', async (target) => {
+      const query = new URLSearchParams({ redirectTo: target });
+      expect(await completeLogin(`/strapi-plugin-oidc/oidc?${query}`)).toBe('/admin');
+    });
+
+    it('safely serializes destination text into the success-page script', async () => {
+      const target =
+        '/content-manager?quote=%27&value=a%26b#</script><script>throw "injected"</script>';
+      const expected = new URL(`/admin${target}`, 'https://example.com');
+      expect(
+        await completeLogin(
+          `/strapi-plugin-oidc/oidc?${new URLSearchParams({ redirectTo: target })}`,
+        ),
+      ).toBe(`${expected.pathname}${expected.search}${expected.hash}`);
+    });
+
+    it('does not reuse a destination cookie from a different login state', async () => {
+      const loginAgent = createAgent();
+      const previous = await loginAgent
+        .get('/strapi-plugin-oidc/oidc?redirectTo=%2Fcontent-manager')
+        .redirects(0);
+      const current = await loginAgent.get('/strapi-plugin-oidc/oidc').redirects(0);
+      storeNonceFromResponse(current);
+      const oldCookies = previous.headers['set-cookie'] as unknown as string[];
+      const currentCookies = current.headers['set-cookie'] as unknown as string[];
+      const cookies = [
+        ...currentCookies.filter((cookie) => !cookie.startsWith('oidc_redirect')),
+        ...oldCookies.filter((cookie) => cookie.startsWith('oidc_redirect')),
+      ];
+      const response = await request(strapi.server.httpServer)
+        .get('/strapi-plugin-oidc/oidc/callback')
+        .set('Cookie', cookies.map((cookie) => cookie.split(';')[0]).join('; '))
+        .query({
+          code: 'mock-code',
+          state: getStateFromLoginRes(current),
+          redirectTo: '//evil.example',
+        });
+      expect(getSuccessDestination(response.text)).toBe('/admin');
+    });
+  });
+
   it('should block login if whitelist is enabled and user is not in whitelist', async () => {
     await setSettings(strapi, true, false);
 
@@ -160,6 +359,65 @@ describe('OIDC E2E Tests', () => {
   });
 
   describe('OIDC callback error handling', () => {
+    it.each([
+      ['access_denied', true, 'user.authorization_denied', 'login_failure'],
+      ['server_error', true, 'user.signInError', 'login_failure'],
+      ['access_denied', false, 'user.invalid_state', 'state_mismatch'],
+    ])(
+      'handles provider error %s with matching state=%s',
+      async (error, validState, messageKey, action) => {
+        const loginAgent = createAgent();
+        const login = await loginAgent.get('/strapi-plugin-oidc/oidc').redirects(0);
+        expect(login.status).toBe(302);
+        const state = getStateFromLoginRes(login)!;
+        let tokenRequests = 0;
+        oidcServer.use(
+          http.post('https://mock-oidc.com/token', () => {
+            tokenRequests++;
+            return HttpResponse.json({}, { status: 500 });
+          }),
+        );
+        await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+
+        const response = await loginAgent
+          .get('/strapi-plugin-oidc/oidc/callback')
+          .query({
+            error,
+            state: validState ? state : 'wrong-state',
+            error_description: '<script>alert("untrusted-provider-error")</script>\r\nforged log',
+          })
+          .redirects(0);
+
+        expect(response.status).toBe(200);
+        expect(response.text).toContain(t('en', messageKey));
+        expect(response.text).not.toContain('untrusted-provider-error');
+        expect(response.headers['content-security-policy']).toMatch(
+          /^script-src 'nonce-[a-f0-9-]+'$/,
+        );
+        const cookies = response.headers['set-cookie'] as unknown as string[];
+        expect(
+          cookies.every((cookie) =>
+            /^(oidc_state|oidc_code_verifier|oidc_nonce|oidc_redirect)(\.sig)?=/.test(cookie),
+          ),
+        ).toBe(true);
+        for (const name of ['oidc_state', 'oidc_code_verifier', 'oidc_nonce', 'oidc_redirect']) {
+          expect(cookies.find((cookie) => cookie.startsWith(`${name}=`))).toContain(
+            'expires=Thu, 01 Jan 1970',
+          );
+        }
+        const logs = await queryAuditLog(strapi, action);
+        expect(logs).toHaveLength(1);
+        expect(JSON.stringify(logs)).not.toContain('untrusted-provider-error');
+
+        const replay = await loginAgent
+          .get('/strapi-plugin-oidc/oidc/callback')
+          .query({ code: 'mock-code', state })
+          .redirects(0);
+        expect(replay.text).toContain(t('en', 'user.invalid_state'));
+        expect(tokenRequests).toBe(0);
+      },
+    );
+
     const assertInvalidTokenRejected = async (idToken: string) => {
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () =>

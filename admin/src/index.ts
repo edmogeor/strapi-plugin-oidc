@@ -5,8 +5,8 @@ import pluginId from './pluginId';
 import Initializer from './components/Initializer';
 import { LogoutOverlay, LOGOUT_EVENT } from './components/LogoutOverlay';
 import { t, en } from './utils/getTrad';
-import { PERMISSIONS, AUTH_ROUTES, JWT_TOKEN_KEY, OIDC_SIGN_IN_PATH } from '../../shared/constants';
-import { shouldRedirectToOidc } from './utils/shouldRedirect';
+import { PERMISSIONS, JWT_TOKEN_KEY } from '../../shared/constants';
+import { getOidcSignInUrl, isAuthRoute, shouldRedirectToOidc } from './utils/shouldRedirect';
 import type { StrapiAdminApp, SettingsLink, RegisterTradsParams } from './types';
 
 const name = pluginPkg.strapi.displayName;
@@ -41,11 +41,6 @@ export default {
   },
 
   bootstrap() {
-    const authRouteNames = AUTH_ROUTES.filter((r) => r !== 'register-admin');
-    const authRoutePattern = new RegExp(`/auth/(${authRouteNames.join('|')})`);
-
-    const isAuthRoute = (path: string) => authRoutePattern.test(path);
-
     // If unauthenticated, redirect to OIDC immediately. This runs synchronously
     // in bootstrap — before React renders — so the login form never mounts.
     // We wipe the document first: nothing survives even if the redirect stalls.
@@ -60,12 +55,13 @@ export default {
       })
     ) {
       document.documentElement.innerHTML = '';
-      window.location.replace(`${OIDC_SIGN_IN_PATH}?oidc_redirect=1`);
+      const signInUrl = getOidcSignInUrl(window.location, true);
+      window.location.replace(signInUrl);
       // Fallback: if replace is blocked, try href after 2 seconds.
       // The page won't loop because OIDC_SIGN_IN_PATH is a server endpoint that
       // either proceeds with OIDC or bounces back with ?oidc_redirect=1.
       setTimeout(() => {
-        window.location.href = `${OIDC_SIGN_IN_PATH}?oidc_redirect=1`;
+        window.location.href = signInUrl;
       }, 2000);
       return;
     }
@@ -92,7 +88,7 @@ export default {
       btn.type = 'button';
       btn.className = submitButton.className;
       btn.onclick = () => {
-        window.location.href = OIDC_SIGN_IN_PATH;
+        window.location.href = getOidcSignInUrl(window.location);
       };
 
       const innerSpan = submitButton.querySelector('span');
@@ -160,7 +156,7 @@ export default {
     const startSkipLoginRedirect = () => {
       startObserver(() => {
         if (isAuthRoute(window.location.pathname)) {
-          window.location.href = `${OIDC_SIGN_IN_PATH}?oidc_redirect=1`;
+          window.location.href = getOidcSignInUrl(window.location, true);
         }
       });
     };

@@ -9,10 +9,12 @@ import { getLocaleFromContext, t } from '../../i18n';
 import { toMessage } from '../../../shared/utils';
 import { PKCE_COOKIE_MAX_AGE_MS, OIDC_COOKIE_PATH } from '../../../shared/constants';
 import type { StrapiContext } from '../../types';
+import { resolveAdminRedirect } from '../../utils/redirect';
 
 export async function oidcSignIn(ctx: StrapiContext) {
   try {
     const config = configValidation();
+    const redirectTo = resolveAdminRedirect(strapi, ctx.query.redirectTo);
 
     // Only gate auto-redirects (those with ?oidc_redirect=1). Explicit SSO
     // button clicks arrive without this param and always proceed.
@@ -20,9 +22,9 @@ export async function oidcSignIn(ctx: StrapiContext) {
       const whitelistService = getWhitelistService();
       const settings = await whitelistService.getSettings();
       if (!resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
-        const raw = strapi.config.get('admin.url');
-        const adminUrl = typeof raw === 'string' && raw.length > 0 ? raw : '/admin';
-        ctx.redirect(`${adminUrl}/auth/login?oidc_redirect=1`);
+        const adminUrl = resolveAdminRedirect(strapi);
+        const query = new URLSearchParams({ oidc_redirect: '1', redirectTo });
+        ctx.redirect(`${adminUrl.replace(/\/$/, '')}/auth/login?${query}`);
         return;
       }
     }
@@ -50,6 +52,11 @@ export async function oidcSignIn(ctx: StrapiContext) {
     );
     ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.state, secureFlag), state, cookieOptions);
     ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.nonce, secureFlag), nonce, cookieOptions);
+    ctx.cookies.set(
+      reconcileCookieName(COOKIE_NAMES.redirect, secureFlag),
+      `${state}:${encodeURIComponent(redirectTo)}`,
+      cookieOptions,
+    );
 
     const redirectUri = resolveRedirectUri(config);
     const authUrl = client.buildAuthorizationUrl(oidcConfig, {

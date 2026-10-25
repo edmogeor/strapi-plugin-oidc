@@ -6,6 +6,7 @@ export const COOKIE_NAMES = {
   state: '__Host-oidc_state',
   codeVerifier: '__Host-oidc_code_verifier',
   nonce: '__Host-oidc_nonce',
+  redirect: '__Host-oidc_redirect',
   idToken: '__Host-oidc_id_token',
   userEmail: '__Host-oidc_user_email',
   adminRefresh: 'strapi_admin_refresh',
@@ -100,4 +101,5 @@ export function clearAuthCookies(strapi: StrapiConfigLogger, ctx: CookieContext)
     pkceCookieOptions,
   );
   ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.nonce, secureFlag), '', pkceCookieOptions);
+  ctx.cookies.set(reconcileCookieName(COOKIE_NAMES.redirect, secureFlag), '', pkceCookieOptions);
 }

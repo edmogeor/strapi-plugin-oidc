@@ -99,6 +99,7 @@
   "user.missing_code": "Authorisation code was not received from the OIDC provider.",
   "user.invalid_state": "State parameter mismatch. Please restart the login flow.",
   "user.signInError": "Authentication failed. Please try again.",
+  "user.authorization_denied": "The identity provider denied access. Please contact your administrator if you believe you should have access.",
   "settings.section": "OIDC",
   "settings.configuration": "Configuration",
   "audit.login_failure": "Error: {message}",

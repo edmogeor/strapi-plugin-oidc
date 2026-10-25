@@ -5,6 +5,7 @@ import { getWhitelistService } from '../utils/services';
 import { resolveEnforceOIDC, resolveSkipLoginPage } from '../utils/configFlag';
 import { readCookie, COOKIE_NAMES } from '../utils/cookies';
 import { AUTH_ROUTES, OIDC_SIGN_IN_PATH } from '../../shared/constants';
+import { resolveAdminRedirect } from '../utils/redirect';
 
 const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.svg', '.ico', '.woff2', '.json', '.map'];
 
@@ -36,7 +37,11 @@ export function createEnforceOidcMiddleware(strapi: Core.Strapi, adminPath: stri
         const whitelistService = getWhitelistService();
         const settings = await whitelistService.getSettings();
         if (resolveSkipLoginPage(strapi, settings?.skipLoginPage)) {
-          ctx.redirect(OIDC_SIGN_IN_PATH);
+          const target = path.startsWith(`${adminPath}/auth/`)
+            ? ctx.query.redirectTo
+            : ctx.originalUrl;
+          const query = new URLSearchParams({ redirectTo: resolveAdminRedirect(strapi, target) });
+          ctx.redirect(`${OIDC_SIGN_IN_PATH}?${query}`);
           return;
         }
       } catch (err) {
