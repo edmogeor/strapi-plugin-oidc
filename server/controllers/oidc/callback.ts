@@ -33,10 +33,11 @@ function readAndClearPkceCookies(ctx: StrapiContext): {
   const oidcState = readCookie(ctx, COOKIE_NAMES.state);
   const codeVerifier = readCookie(ctx, COOKIE_NAMES.codeVerifier);
   const oidcNonce = readCookie(ctx, COOKIE_NAMES.nonce);
-  const expired = { maxAge: 0, expires: new Date(0) };
-  ctx.cookies.set(COOKIE_NAMES.state, null, expired);
-  ctx.cookies.set(COOKIE_NAMES.codeVerifier, null, expired);
-  ctx.cookies.set(COOKIE_NAMES.nonce, null, expired);
+  const secure = shouldMarkSecure(strapi, ctx);
+  const expiredOptions = { ...createOidcCookieOptions(secure), maxAge: 0, expires: new Date(0) };
+  for (const name of [COOKIE_NAMES.state, COOKIE_NAMES.codeVerifier, COOKIE_NAMES.nonce]) {
+    ctx.cookies.set(reconcileCookieName(name, secure), null, expiredOptions);
+  }
   return { oidcState, codeVerifier, oidcNonce };
 }
 
@@ -78,7 +79,7 @@ function requireCallbackCode(
   auditLog: AuditLogService,
   locale: string,
 ): boolean {
-  if (!ctx.query.code) {
+  if (typeof ctx.query.code !== 'string' || !ctx.query.code) {
     sendErrorResponse(ctx, oauthService, t(locale, 'user.missing_code'), locale);
     void auditLog.log({ action: 'missing_code', ip: getClientIp(strapi, ctx) });
     return false;
@@ -175,23 +176,41 @@ function renderSignInSuccess(
 }
 
 export async function oidcSignInCallback(ctx: StrapiContext) {
-  const config = configValidation();
-  const oidcConfig = await getOidcConfig();
+  const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
   const oauthService = getOauthService();
   const auditLog = getAuditLogService();
   const locale = getLocaleFromContext(ctx);
 
-  if (!requireCallbackCode(ctx, oauthService, auditLog, locale)) return;
+  const hasProviderError = ctx.query.error !== undefined;
+  if (!hasProviderError && !requireCallbackCode(ctx, oauthService, auditLog, locale)) return;
 
-  const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
-
-  if (!ctx.query.state || ctx.query.state !== oidcState) {
+  if (typeof ctx.query.state !== 'string' || !ctx.query.state || ctx.query.state !== oidcState) {
     await auditLog.log({ action: 'state_mismatch', ip: getClientIp(strapi, ctx) });
     return sendErrorResponse(ctx, oauthService, t(locale, 'user.invalid_state'), locale);
   }
 
+  if (hasProviderError) {
+    const accessDenied = ctx.query.error === 'access_denied';
+    await auditLog.log({
+      action: 'login_failure',
+      ip: getClientIp(strapi, ctx),
+      detailsKey: 'login_failure',
+      detailsParams: {
+        message: accessDenied ? 'OIDC authorization denied' : 'OIDC authorization failed',
+      },
+    });
+    return sendErrorResponse(
+      ctx,
+      oauthService,
+      t(locale, accessDenied ? 'user.authorization_denied' : 'user.signInError'),
+      locale,
+    );
+  }
+
   let userInfo: OidcUserInfo | undefined;
   try {
+    const config = configValidation();
+    const oidcConfig = await getOidcConfig();
     const tokens = await exchangeCodeForTokens(oidcConfig, ctx, codeVerifier, oidcState, oidcNonce);
     const idToken = tokens.id_token;
     const {

@@ -144,8 +144,8 @@ describe('oidcSignInCallback', () => {
     await oidcSignInCallback(ctx);
 
     const clearedNames = ctx.cookies.calls.filter((c) => c.value === null).map((c) => c.name);
-    expect(clearedNames).toContain(COOKIE_NAMES.state);
-    expect(clearedNames).toContain(COOKIE_NAMES.codeVerifier);
-    expect(clearedNames).toContain(COOKIE_NAMES.nonce);
+    expect(clearedNames).toContain('oidc_state');
+    expect(clearedNames).toContain('oidc_code_verifier');
+    expect(clearedNames).toContain('oidc_nonce');
   });
 });

@@ -65,6 +65,12 @@ describe('OIDC E2E Tests', () => {
     expect(callbackRes.headers['content-security-policy']).toMatch(
       /^script-src 'nonce-[a-f0-9-]+'$/,
     );
+    const expired = callbackRes.headers['set-cookie'] as unknown as string[];
+    for (const name of ['oidc_state', 'oidc_code_verifier', 'oidc_nonce']) {
+      expect(expired.find((cookie) => cookie.startsWith(`${name}=`))).toContain(
+        'expires=Thu, 01 Jan 1970',
+      );
+    }
   });
 
   it('should expose public settings for OIDC enforcement', async () => {
@@ -160,6 +166,65 @@ describe('OIDC E2E Tests', () => {
   });
 
   describe('OIDC callback error handling', () => {
+    it.each([
+      ['access_denied', true, 'user.authorization_denied', 'login_failure'],
+      ['server_error', true, 'user.signInError', 'login_failure'],
+      ['access_denied', false, 'user.invalid_state', 'state_mismatch'],
+    ])(
+      'handles provider error %s with matching state=%s',
+      async (error, validState, messageKey, action) => {
+        const loginAgent = createAgent();
+        const login = await loginAgent.get('/strapi-plugin-oidc/oidc').redirects(0);
+        expect(login.status).toBe(302);
+        const state = getStateFromLoginRes(login)!;
+        let tokenRequests = 0;
+        oidcServer.use(
+          http.post('https://mock-oidc.com/token', () => {
+            tokenRequests++;
+            return HttpResponse.json({}, { status: 500 });
+          }),
+        );
+        await strapi.db.query('plugin::strapi-plugin-oidc.audit-log').deleteMany({});
+
+        const response = await loginAgent
+          .get('/strapi-plugin-oidc/oidc/callback')
+          .query({
+            error,
+            state: validState ? state : 'wrong-state',
+            error_description: '<script>alert("untrusted-provider-error")</script>\r\nforged log',
+          })
+          .redirects(0);
+
+        expect(response.status).toBe(200);
+        expect(response.text).toContain(t('en', messageKey));
+        expect(response.text).not.toContain('untrusted-provider-error');
+        expect(response.headers['content-security-policy']).toMatch(
+          /^script-src 'nonce-[a-f0-9-]+'$/,
+        );
+        const cookies = response.headers['set-cookie'] as unknown as string[];
+        expect(
+          cookies.every((cookie) =>
+            /^(oidc_state|oidc_code_verifier|oidc_nonce)(\.sig)?=/.test(cookie),
+          ),
+        ).toBe(true);
+        for (const name of ['oidc_state', 'oidc_code_verifier', 'oidc_nonce']) {
+          expect(cookies.find((cookie) => cookie.startsWith(`${name}=`))).toContain(
+            'expires=Thu, 01 Jan 1970',
+          );
+        }
+        const logs = await queryAuditLog(strapi, action);
+        expect(logs).toHaveLength(1);
+        expect(JSON.stringify(logs)).not.toContain('untrusted-provider-error');
+
+        const replay = await loginAgent
+          .get('/strapi-plugin-oidc/oidc/callback')
+          .query({ code: 'mock-code', state })
+          .redirects(0);
+        expect(replay.text).toContain(t('en', 'user.invalid_state'));
+        expect(tokenRequests).toBe(0);
+      },
+    );
+
     const assertInvalidTokenRejected = async (idToken: string) => {
       oidcServer.use(
         http.post('https://mock-oidc.com/token', () =>
