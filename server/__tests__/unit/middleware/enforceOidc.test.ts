@@ -29,6 +29,7 @@ const makeCtx = (opts: {
   const calls: MockCookieCall[] = [];
   const ctx = {
     request: { path: opts.path, method: opts.method ?? 'GET' },
+    originalUrl: opts.path,
     cookies: {
       get(name: string) {
         return opts.cookies?.[name];
@@ -87,7 +88,7 @@ describe('createEnforceOidcMiddleware', () => {
 
       await middleware(ctx, next as Next);
 
-      expect(ctx.redirectedTo).toBe(OIDC_SIGN_IN_PATH);
+      expect(ctx.redirectedTo).toBe(`${OIDC_SIGN_IN_PATH}?redirectTo=%2Fadmin`);
       expect(next).not.toHaveBeenCalled();
     });
 
@@ -284,7 +285,7 @@ describe('createEnforceOidcMiddleware', () => {
 
       await middleware(ctx, next as Next);
 
-      expect(ctx.redirectedTo).toBe(OIDC_SIGN_IN_PATH);
+      expect(ctx.redirectedTo).toBe(`${OIDC_SIGN_IN_PATH}?redirectTo=%2Fadmin%2Fdashboard`);
     });
   });
 

@@ -8,6 +8,7 @@ import { t } from '../i18n';
 import { shouldMarkSecure, COOKIE_NAMES } from '../utils/cookies';
 import { normalizeEmail } from '../utils/email';
 import { escapeHtml } from '../../shared/utils';
+import { resolveAdminRedirect } from '../utils/redirect';
 import { renderHtmlTemplate } from '../../shared/auth-template';
 import { getEventHub, getWebhookStore, getSessionManager } from '../utils/strapi-extensions';
 
@@ -88,6 +89,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       nonce: string,
       secure: boolean,
       locale: string = 'en',
+      redirectTo?: string,
     ) {
       const config = strapi.config.get('plugin::strapi-plugin-oidc') as
         { REMEMBER_ME?: boolean } | undefined;
@@ -95,7 +97,10 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
       const secureFlag = secure ? '; Secure' : '';
       const maxAgeSuffix = isRememberMe ? '; max-age=1209600' : '';
       const encodedToken = encodeURIComponent(jwtToken);
-      const adminUrl = strapi.config.admin.url ?? '/admin';
+      const destination = JSON.stringify(resolveAdminRedirect(strapi, redirectTo)).replace(
+        /</g,
+        '\\u003c',
+      );
       const title = t(locale, 'auth.page.authenticating.title');
       const noscriptHeading = t(locale, 'auth.page.authenticating.noscript.heading');
       const noscriptBody = t(locale, 'auth.page.authenticating.noscript.body');
@@ -115,7 +120,7 @@ export default function oauthService({ strapi }: { strapi: Core.Strapi }) {
      window.addEventListener('load', function() {
       document.cookie = 'jwtToken=${encodedToken}; Path=/${secureFlag}; SameSite=Strict${maxAgeSuffix}';
       localStorage.setItem('isLoggedIn', 'true');
-      location.href = '${adminUrl}'
+      location.href = ${destination}
      })
     </script>`;
 

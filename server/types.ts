@@ -83,6 +83,7 @@ export interface OAuthService {
     nonce: string,
     secure: boolean,
     locale?: string,
+    redirectTo?: string,
   ): string;
   renderSignUpError(message: string, locale?: string): string;
 }

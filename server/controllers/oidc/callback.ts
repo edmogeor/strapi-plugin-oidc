@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import * as client from 'openid-client';
 import { getOidcConfig } from '../../utils/oidc-client';
+import { readLoginRedirect } from '../../utils/redirect';
 import {
   shouldMarkSecure,
   COOKIE_NAMES,
@@ -25,20 +26,27 @@ import type { StrapiContext, AuditLogService, StrapiAdminUser, OAuthService } fr
 
 type TokenSet = Awaited<ReturnType<typeof client.authorizationCodeGrant>>;
 
-function readAndClearPkceCookies(ctx: StrapiContext): {
+function readAndClearLoginCookies(ctx: StrapiContext): {
   oidcState: string | undefined;
   codeVerifier: string | undefined;
   oidcNonce: string | undefined;
+  redirectCookie: string | undefined;
 } {
   const oidcState = readCookie(ctx, COOKIE_NAMES.state);
   const codeVerifier = readCookie(ctx, COOKIE_NAMES.codeVerifier);
   const oidcNonce = readCookie(ctx, COOKIE_NAMES.nonce);
+  const redirectCookie = readCookie(ctx, COOKIE_NAMES.redirect);
   const secure = shouldMarkSecure(strapi, ctx);
   const expiredOptions = { ...createOidcCookieOptions(secure), maxAge: 0, expires: new Date(0) };
-  for (const name of [COOKIE_NAMES.state, COOKIE_NAMES.codeVerifier, COOKIE_NAMES.nonce]) {
+  for (const name of [
+    COOKIE_NAMES.state,
+    COOKIE_NAMES.codeVerifier,
+    COOKIE_NAMES.nonce,
+    COOKIE_NAMES.redirect,
+  ]) {
     ctx.cookies.set(reconcileCookieName(name, secure), null, expiredOptions);
   }
-  return { oidcState, codeVerifier, oidcNonce };
+  return { oidcState, codeVerifier, oidcNonce, redirectCookie };
 }
 
 async function logSuccessfulAuth(
@@ -169,14 +177,15 @@ function renderSignInSuccess(
   user: StrapiAdminUser,
   secure: boolean,
   locale: string,
+  redirectTo: string | undefined,
 ): void {
   const nonce = randomUUID();
   ctx.state.oidcCsp = `script-src 'nonce-${nonce}'`;
-  ctx.send(oauthService.renderSignUpSuccess(jwtToken, user, nonce, secure, locale));
+  ctx.send(oauthService.renderSignUpSuccess(jwtToken, user, nonce, secure, locale, redirectTo));
 }
 
 export async function oidcSignInCallback(ctx: StrapiContext) {
-  const { oidcState, codeVerifier, oidcNonce } = readAndClearPkceCookies(ctx);
+  const { oidcState, codeVerifier, oidcNonce, redirectCookie } = readAndClearLoginCookies(ctx);
   const oauthService = getOauthService();
   const auditLog = getAuditLogService();
   const locale = getLocaleFromContext(ctx);
@@ -242,7 +251,8 @@ export async function oidcSignInCallback(ctx: StrapiContext) {
       rolesUpdated,
       resolvedRoleNames,
     );
-    renderSignInSuccess(ctx, oauthService, jwtToken, activateUser, secure, locale);
+    const redirectTo = readLoginRedirect(redirectCookie, ctx.query.state);
+    renderSignInSuccess(ctx, oauthService, jwtToken, activateUser, secure, locale, redirectTo);
   } catch (e) {
     await handleCallbackError(e, userInfo, auditLog, oauthService, ctx);
   }
